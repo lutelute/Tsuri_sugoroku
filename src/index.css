@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ocean-50: #eff6ff;
+  --color-ocean-100: #dbeafe;
+  --color-ocean-200: #bfdbfe;
+  --color-ocean-300: #93c5fd;
+  --color-ocean-400: #60a5fa;
+  --color-ocean-500: #3b82f6;
+  --color-ocean-600: #2563eb;
+  --color-ocean-700: #1d4ed8;
+  --color-ocean-800: #1e40af;
+  --color-ocean-900: #1e3a5f;
+
+  --color-fish-common: #6b7280;
+  --color-fish-uncommon: #22c55e;
+  --color-fish-rare: #3b82f6;
+  --color-fish-legendary: #a855f7;
+  --color-fish-mythical: #f59e0b;
+
+  --color-node-fishing: #3b82f6;
+  --color-node-fishing-special: #8b5cf6;
+  --color-node-shop: #f59e0b;
+  --color-node-event-good: #22c55e;
+  --color-node-event-bad: #ef4444;
+  --color-node-event-random: #a855f7;
+  --color-node-rest: #14b8a6;
+  --color-node-start: #10b981;
+  --color-node-goal: #f43f5e;
+
+  --font-sans: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "メイリオ", sans-serif;
+}
+
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100dvh;
+  height: 100vh; /* fallback */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100dvh;
+  height: 100vh;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  background: linear-gradient(135deg, #0c1445 0%, #1a237e 30%, #0d47a1 60%, #01579b 100%);
+  color: white;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ===== Animation Keyframes ===== */
+
+/* Bounce scale-in for modals and results */
+@keyframes bounce-in {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.15); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Dice result bounce */
+@keyframes dice-result-bounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.4); }
+  50% { transform: scale(0.9); }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Slide in from top */
+@keyframes slide-in-down {
+  0% { transform: translate(-50%, -100%); opacity: 0; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
+}
+
+/* Subtle pulse for inline icon */
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+}
+
+/* Rarity glow: common (gray) */
+@keyframes glow-common {
+  0%, 100% { box-shadow: 0 0 15px 5px rgba(107, 114, 128, 0.3); }
+  50% { box-shadow: 0 0 25px 10px rgba(107, 114, 128, 0.5); }
+}
+
+/* Rarity glow: uncommon (green) */
+@keyframes glow-uncommon {
+  0%, 100% { box-shadow: 0 0 15px 5px rgba(34, 197, 94, 0.3); }
+  50% { box-shadow: 0 0 25px 10px rgba(34, 197, 94, 0.5); }
+}
+
+/* Rarity glow: rare (blue) */
+@keyframes glow-rare {
+  0%, 100% { box-shadow: 0 0 15px 5px rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 25px 10px rgba(59, 130, 246, 0.5); }
+}
+
+/* Rarity glow: legendary (gold) */
+@keyframes glow-legendary {
+  0% { box-shadow: 0 0 20px 5px rgba(168, 85, 247, 0.4); }
+  25% { box-shadow: 0 0 30px 10px rgba(245, 158, 11, 0.6); }
+  50% { box-shadow: 0 0 20px 5px rgba(168, 85, 247, 0.4); }
+  75% { box-shadow: 0 0 30px 10px rgba(245, 158, 11, 0.6); }
+  100% { box-shadow: 0 0 20px 5px rgba(168, 85, 247, 0.4); }
+}
+
+/* Rarity glow: mythical (rainbow shimmer) */
+@keyframes glow-mythical {
+  0% { box-shadow: 0 0 20px 8px rgba(239, 68, 68, 0.5); }
+  20% { box-shadow: 0 0 25px 10px rgba(245, 158, 11, 0.5); }
+  40% { box-shadow: 0 0 25px 10px rgba(34, 197, 94, 0.5); }
+  60% { box-shadow: 0 0 25px 10px rgba(59, 130, 246, 0.5); }
+  80% { box-shadow: 0 0 25px 10px rgba(168, 85, 247, 0.5); }
+  100% { box-shadow: 0 0 20px 8px rgba(239, 68, 68, 0.5); }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s ease-out forwards;
+}
+
+.animate-dice-result {
+  animation: dice-result-bounce 0.5s ease-out;
+}
+
+.animate-slide-in-down {
+  animation: slide-in-down 0.4s ease-out forwards;
+}
+
+.animate-icon-pulse {
+  animation: icon-pulse 1.5s ease-in-out infinite;
+}
+
+.glow-common {
+  animation: glow-common 2s ease-in-out infinite;
+}
+
+.glow-uncommon {
+  animation: glow-uncommon 2s ease-in-out infinite;
+}
+
+.glow-rare {
+  animation: glow-rare 2s ease-in-out infinite;
+}
+
+.glow-legendary {
+  animation: glow-legendary 2s ease-in-out infinite;
+}
+
+.glow-mythical {
+  animation: glow-mythical 3s ease-in-out infinite;
+}
