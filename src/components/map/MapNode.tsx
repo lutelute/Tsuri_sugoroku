@@ -3,6 +3,19 @@ import { computeDistanceToGoal } from '../../utils/pathfinding';
 
 const distanceToGoal = computeDistanceToGoal();
 
+// 既存の主要ノードIDセット（中間ノードと区別するため）
+const MAJOR_NODE_IDS = new Set([
+  'start', 'goal',
+  'wakkanai', 'kushiro', 'sapporo', 'hakodate',
+  'aomori', 'sendai', 'akita', 'yamagata', 'fukushima',
+  'niigata', 'tokyo', 'choshi', 'yokohama', 'mito', 'kamakura',
+  'kanazawa', 'shizuoka', 'nagoya', 'toyama', 'numazu',
+  'osaka', 'wakayama', 'tango', 'kobe', 'nara',
+  'tottori', 'hiroshima', 'shimonoseki', 'matsue', 'okayama',
+  'kochi', 'matsuyama', 'tokushima',
+  'fukuoka', 'kumamoto', 'oita', 'nagasaki', 'miyazaki', 'kagoshima', 'yakushima', 'amami', 'naha',
+]);
+
 interface MapNodeProps {
   node: BoardNode;
   isReachable: boolean;
@@ -36,7 +49,10 @@ const NODE_ICONS: Record<NodeType, string> = {
 
 export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }: MapNodeProps) {
   const color = NODE_COLORS[node.type];
-  const radius = node.type === 'start' || node.type === 'goal' ? 2.5 : 2;
+  const isMajor = MAJOR_NODE_IDS.has(node.id);
+  const radius = node.type === 'start' || node.type === 'goal' ? 2.5 : isMajor ? 2 : 1.5;
+  const labelFontSize = isMajor ? 1.8 : 1.5;
+  const iconFontSize = isMajor ? 2 : 1.6;
   const dist = distanceToGoal.get(node.id);
 
   return (
@@ -103,7 +119,7 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }:
         y={node.y + 0.5}
         textAnchor="middle"
         dominantBaseline="middle"
-        fontSize="2"
+        fontSize={iconFontSize}
         className="pointer-events-none select-none"
       >
         {NODE_ICONS[node.type]}
@@ -112,9 +128,9 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }:
       {/* ラベル */}
       <text
         x={node.x}
-        y={node.y + 4.5}
+        y={node.y + (isMajor ? 4.5 : 3.5)}
         textAnchor="middle"
-        fontSize="1.8"
+        fontSize={labelFontSize}
         fill="white"
         opacity="0.7"
         className="pointer-events-none select-none"
