@@ -3,6 +3,7 @@ import { FISH_DATABASE } from '../data/fishDatabase';
 import { MAX_EQUIPMENT_LEVEL } from './constants';
 import { createCaughtFish } from './fishing';
 import { buildAdjacencyList } from '../data/boardEdges';
+import { getEquippedLevel, createEquipmentItem, damageEquipment } from './equipment';
 
 export interface EventResult {
   player: Player;
@@ -32,9 +33,14 @@ export function applyEvent(player: Player, event: EventCard, turn: number): Even
       return { player: p, message: 'もう一度プレイできる！' };
 
     case 'free_upgrade': {
-      const currentLevel = p.equipment[effect.equipmentType];
+      const currentLevel = getEquippedLevel(p.equipment, effect.equipmentType);
       if (currentLevel < MAX_EQUIPMENT_LEVEL) {
-        p.equipment = { ...p.equipment, [effect.equipmentType]: currentLevel + 1 };
+        const newItem = createEquipmentItem(effect.equipmentType, currentLevel + 1);
+        const newInventory = [...p.equipment.inventory, newItem];
+        p.equipment = {
+          equipped: { ...p.equipment.equipped, [effect.equipmentType]: newItem.id },
+          inventory: newInventory,
+        };
         return { player: p, message: `${getEquipmentTypeName(effect.equipmentType)}がアップグレードした！` };
       }
       p.money += 1000;
@@ -81,6 +87,16 @@ export function applyEvent(player: Player, event: EventCard, turn: number): Even
       }
       p.currentNode = current;
       return { player: p, message: `${Math.abs(effect.steps)}マス移動した！` };
+    }
+
+    case 'equipment_damage': {
+      const { equipment: newEquipment, broken } = damageEquipment(p.equipment, effect.equipmentType, effect.amount);
+      p.equipment = newEquipment;
+      const typeName = getEquipmentTypeName(effect.equipmentType);
+      if (broken) {
+        return { player: p, message: `${typeName}が壊れてしまった！修理が必要だ...` };
+      }
+      return { player: p, message: `${typeName}の耐久度が大きく下がった！` };
     }
 
     default:

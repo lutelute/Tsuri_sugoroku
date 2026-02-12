@@ -18,6 +18,9 @@ export const EVENT_CARDS: EventCard[] = [
   { id: 'seasick', name: '船酔い', type: 'bad', description: '船酔いで動けない...次のターンは休み', effect: { kind: 'skip_turn' } },
   { id: 'fine', name: '駐車違反', type: 'bad', description: '駐車場で違反切符を切られた...¥1,500失った', effect: { kind: 'money', amount: -1500 } },
   { id: 'jellyfish', name: 'クラゲ大量発生', type: 'bad', description: 'クラゲが大量発生！¥800の治療費...', effect: { kind: 'money', amount: -800 } },
+  { id: 'rod_snap', name: '竿が折れた！', type: 'bad', description: '岩場で足を滑らせ、竿を地面に叩きつけてしまった！', effect: { kind: 'equipment_damage', equipmentType: 'rod', amount: 100 } },
+  { id: 'reel_rust', name: 'リール浸水', type: 'bad', description: '突然の高波でリールが水没！耐久度が大幅ダウン...', effect: { kind: 'equipment_damage', equipmentType: 'reel', amount: 60 } },
+  { id: 'lure_lost', name: 'ルアー損傷', type: 'bad', description: '根がかりでルアーが大きく傷ついた！', effect: { kind: 'equipment_damage', equipmentType: 'lure', amount: 50 } },
 
   // ===== Random Events =====
   { id: 'lottery', name: '福引き', type: 'random', description: '地元の商店街で福引きを引いた！何が当たるかな...', effect: { kind: 'money', amount: 2500 } },

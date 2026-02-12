@@ -1,5 +1,5 @@
 import type { Player } from '../../game/types';
-import { getEquipmentName } from '../../game/equipment';
+import { getEquipmentName, getEquippedLevel } from '../../game/equipment';
 import { NODE_MAP } from '../../data/boardNodes';
 
 interface PlayerPanelProps {
@@ -37,9 +37,9 @@ export default function PlayerPanel({ player, isActive }: PlayerPanelProps) {
       {/* 装備 */}
       {isActive && (
         <div className="mt-2 pt-2 border-t border-white/10 text-xs text-white/50 space-y-0.5">
-          <div>🎣 {getEquipmentName('rod', player.equipment.rod)}</div>
-          <div>🔄 {getEquipmentName('reel', player.equipment.reel)}</div>
-          <div>🪱 {getEquipmentName('lure', player.equipment.lure)}</div>
+          <div>🎣 {getEquipmentName('rod', getEquippedLevel(player.equipment, 'rod')) || '未装着'}</div>
+          <div>🔄 {getEquipmentName('reel', getEquippedLevel(player.equipment, 'reel')) || '未装着'}</div>
+          <div>🪱 {getEquipmentName('lure', getEquippedLevel(player.equipment, 'lure')) || '未装着'}</div>
         </div>
       )}
 

@@ -23,7 +23,7 @@ export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }:
     startTimeRef.current = Date.now();
 
     const interval = window.setInterval(() => {
-      angleRef.current = (angleRef.current + 2.5) % 360;
+      angleRef.current = (angleRef.current + 2.7) % 360;
       setAngle(angleRef.current);
 
       const elapsed = Date.now() - startTimeRef.current;

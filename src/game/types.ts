@@ -86,10 +86,20 @@ export interface Equipment {
   effect: string;
 }
 
+export interface EquipmentItem {
+  id: string;
+  type: EquipmentType;
+  level: number;        // 1-5
+  durability: number;   // 100=新品, 0=壊れた
+}
+
 export interface PlayerEquipment {
-  rod: number; // レベル 1-5
-  reel: number;
-  lure: number;
+  equipped: {
+    rod: string | null;
+    reel: string | null;
+    lure: string | null;
+  };
+  inventory: EquipmentItem[];
 }
 
 // ===== イベント関連 =====
@@ -113,7 +123,8 @@ export type EventEffect =
   | { kind: 'free_upgrade'; equipmentType: EquipmentType }
   | { kind: 'fish_bonus'; multiplier: number; duration: number }
   | { kind: 'steal_fish' }
-  | { kind: 'random_fish'; rarity: FishRarity };
+  | { kind: 'random_fish'; rarity: FishRarity }
+  | { kind: 'equipment_damage'; equipmentType: EquipmentType; amount: number };
 
 // ===== プレイヤー =====
 

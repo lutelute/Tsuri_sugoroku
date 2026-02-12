@@ -23,7 +23,7 @@ export const FISHING_REELING_TARGET = 100;
 export const FISHING_REELING_TAP_BASE = 7;
 export const FISHING_REELING_TAP_PER_REEL_LEVEL = 2;
 export const FISHING_TENSION_MAX = 100;
-export const FISHING_TENSION_RISE_PER_TAP = 9;
+export const FISHING_TENSION_RISE_PER_TAP = 10;
 export const FISHING_TENSION_DECAY_RATE = 0.3;
 export const FISHING_TENSION_BREAK_THRESHOLD = 100;
 
@@ -70,6 +70,12 @@ export const MONEY_TO_POINTS_RATE = 0.5;
 
 // 休憩所
 export const REST_MONEY_BONUS = 500;
+
+// 装備耐久度
+export const DURABILITY_LOSS_BASE = 8;       // 釣り1回あたりの基本消耗
+export const DURABILITY_LOSS_PER_LEVEL = -1; // レベルが高いほど消耗が少ない（Lv5で-4）
+export const DURABILITY_BROKEN_THRESHOLD = 0; // この値以下で壊れた扱い
+export const REPAIR_COST_PER_POINT = 15;     // 耐久度1あたりの修理コスト
 
 // デフォルト設定
 export const DEFAULT_MAX_TURNS = 50;

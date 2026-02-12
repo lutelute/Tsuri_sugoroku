@@ -2,6 +2,7 @@ import type { Fish, FishRarity, PlayerEquipment, Region, CaughtFish } from './ty
 import { FISH_DATABASE } from '../data/fishDatabase';
 import { LURE_RARE_BONUS, LURE_BITE_SPEED_BONUS, EQUIPMENT_WEIGHTS } from './constants';
 import type { EquipmentAbility } from './constants';
+import { getEquipmentLevels } from './equipment';
 import { weightedRandom, randomFloat } from '../utils/random';
 
 const RARITY_BASE_WEIGHT: Record<FishRarity, number> = {
@@ -14,8 +15,9 @@ const RARITY_BASE_WEIGHT: Record<FishRarity, number> = {
 
 // 装備の重み付き実効レベルを計算
 export function getEffectiveLevel(equipment: PlayerEquipment, ability: EquipmentAbility): number {
+  const levels = getEquipmentLevels(equipment);
   const w = EQUIPMENT_WEIGHTS[ability];
-  return equipment.rod * w.rod + equipment.reel * w.reel + equipment.lure * w.lure;
+  return levels.rod * w.rod + levels.reel * w.reel + levels.lure * w.lure;
 }
 
 // レベル別配列から実数レベルで補間して値を取得
@@ -33,7 +35,8 @@ export function getAvailableFish(
   region: Region,
   equipment: PlayerEquipment,
 ): Fish[] {
-  const avgLevel = (equipment.rod + equipment.reel + equipment.lure) / 3;
+  const levels = getEquipmentLevels(equipment);
+  const avgLevel = (levels.rod + levels.reel + levels.lure) / 3;
 
   return FISH_DATABASE.filter(fish => {
     if (fish.minEquipmentLevel > avgLevel + 1) return false;

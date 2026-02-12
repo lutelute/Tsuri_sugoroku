@@ -11,6 +11,7 @@ import { applyEvent } from '../game/events';
 import { selectFish } from '../game/fishing';
 import { FISH_DATABASE } from '../data/fishDatabase';
 import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState } from '../utils/storage';
+import { createInitialEquipment, createEquipmentItem, applyDurabilityLoss, repairItem } from '../game/equipment';
 
 const MAX_FISHING_PER_TURN = 3;
 
@@ -25,7 +26,11 @@ interface GameActions {
   catchFish: (caught: CaughtFish) => void;
   failFishing: () => void;
   endFishing: () => void;
-  buyEquipment: (type: EquipmentType, cost: number) => void;
+  buyEquipment: (type: EquipmentType, level: number, cost: number) => void;
+  equipItem: (itemId: string) => void;
+  unequipItem: (type: EquipmentType) => void;
+  degradeEquipment: () => void;
+  repairEquipment: (itemId: string, cost: number) => void;
   skipShop: () => void;
   applyEventCard: () => void;
   doActionAgain: () => void;
@@ -45,7 +50,7 @@ function createInitialPlayers(settings: GameSettings): Player[] {
     color: PLAYER_COLORS[i],
     currentNode: 'start',
     money: INITIAL_MONEY,
-    equipment: { rod: 1, reel: 1, lure: 1 },
+    equipment: createInitialEquipment(),
     caughtFish: [],
     score: 0,
     hasFinished: false,
@@ -268,18 +273,78 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   endFishing: () => {
+    // 釣り後に装備消耗を適用
+    get().degradeEquipment();
     // 釣り後は action_choice へ（もう1回釣るか選べる）
     set({ fishingState: null, turnPhase: 'action_choice' });
   },
 
-  buyEquipment: (type, cost) => {
+  buyEquipment: (type, level, cost) => {
+    const { players, currentPlayerIndex } = get();
+    const player = players[currentPlayerIndex];
+    const newItem = createEquipmentItem(type, level);
+    const newInventory = [...player.equipment.inventory, newItem];
+    const newPlayers = [...players];
+    newPlayers[currentPlayerIndex] = {
+      ...player,
+      money: player.money - cost,
+      equipment: {
+        equipped: { ...player.equipment.equipped, [type]: newItem.id },
+        inventory: newInventory,
+      },
+    };
+    set({ players: newPlayers });
+  },
+
+  equipItem: (itemId) => {
+    const { players, currentPlayerIndex } = get();
+    const player = players[currentPlayerIndex];
+    const item = player.equipment.inventory.find(i => i.id === itemId);
+    if (!item) return;
+    const newPlayers = [...players];
+    newPlayers[currentPlayerIndex] = {
+      ...player,
+      equipment: {
+        ...player.equipment,
+        equipped: { ...player.equipment.equipped, [item.type]: itemId },
+      },
+    };
+    set({ players: newPlayers });
+  },
+
+  unequipItem: (type) => {
     const { players, currentPlayerIndex } = get();
     const player = players[currentPlayerIndex];
     const newPlayers = [...players];
     newPlayers[currentPlayerIndex] = {
       ...player,
+      equipment: {
+        ...player.equipment,
+        equipped: { ...player.equipment.equipped, [type]: null },
+      },
+    };
+    set({ players: newPlayers });
+  },
+
+  degradeEquipment: () => {
+    const { players, currentPlayerIndex } = get();
+    const player = players[currentPlayerIndex];
+    const newEquipment = applyDurabilityLoss(player.equipment);
+    const newPlayers = [...players];
+    newPlayers[currentPlayerIndex] = { ...player, equipment: newEquipment };
+    set({ players: newPlayers });
+  },
+
+  repairEquipment: (itemId, cost) => {
+    const { players, currentPlayerIndex } = get();
+    const player = players[currentPlayerIndex];
+    if (player.money < cost) return;
+    const newEquipment = repairItem(player.equipment, itemId);
+    const newPlayers = [...players];
+    newPlayers[currentPlayerIndex] = {
+      ...player,
       money: player.money - cost,
-      equipment: { ...player.equipment, [type]: player.equipment[type] + 1 },
+      equipment: newEquipment,
     };
     set({ players: newPlayers });
   },

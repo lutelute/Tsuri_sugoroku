@@ -31,18 +31,19 @@ export default function ShopOverlay() {
               {EQUIPMENT_DATA
                 .filter(e => e.type === type && e.level <= maxLevel)
                 .map(eq => {
-                  const currentLevel = player.equipment[type];
-                  const isNext = eq.level === currentLevel + 1;
                   const canAfford = player.money >= eq.cost;
+                  const canBuy = eq.cost > 0 && eq.level <= maxLevel;
 
                   return (
                     <EquipmentCard
                       key={`${eq.type}-${eq.level}`}
                       equipment={eq}
-                      currentLevel={currentLevel}
+                      ownedCount={player.equipment.inventory.filter(
+                        i => i.type === eq.type && i.level === eq.level
+                      ).length}
                       canAfford={canAfford}
-                      canBuy={isNext && eq.level <= maxLevel}
-                      onBuy={() => buyEquipment(type, eq.cost)}
+                      canBuy={canBuy}
+                      onBuy={() => buyEquipment(type, eq.level, eq.cost)}
                     />
                   );
                 })}

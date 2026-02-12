@@ -10,6 +10,8 @@ import ShopOverlay from '../shop/ShopOverlay';
 import EventOverlay from '../event/EventOverlay';
 import EncyclopediaOverlay from '../encyclopedia/EncyclopediaOverlay';
 import CreelOverlay from '../creel/CreelOverlay';
+import InventoryPanel from '../inventory/InventoryPanel';
+import RestOverlay from '../rest/RestOverlay';
 import Button from '../shared/Button';
 
 export default function GameScreen() {
@@ -20,6 +22,7 @@ export default function GameScreen() {
 
   const [showEncyclopedia, setShowEncyclopedia] = useState(false);
   const [showCreel, setShowCreel] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
 
   const player = players[currentPlayerIndex];
   const node = NODE_MAP.get(player?.currentNode || '');
@@ -81,6 +84,14 @@ export default function GameScreen() {
             <span>{node.name} に到着！</span>
           </div>
         )}
+
+        {/* インベントリボタン */}
+        <button
+          onClick={() => setShowInventory(true)}
+          className="absolute bottom-38 right-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer z-20"
+        >
+          🧰
+        </button>
 
         {/* クリールバッグボタン */}
         <button
@@ -153,18 +164,12 @@ export default function GameScreen() {
       {turnPhase === 'shop' && <ShopOverlay />}
       {turnPhase === 'event' && <EventOverlay />}
 
-      {/* 休憩メッセージ */}
+      {/* 休憩所（修理機能付き） */}
       {turnPhase === 'rest' && node && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-gradient-to-b from-teal-900/80 to-teal-950/80 rounded-2xl border border-teal-500/20 p-8 text-center max-w-sm w-[90%]">
-            <div className="text-5xl mb-4">🏖️</div>
-            <h3 className="text-xl font-bold mb-2">{node.name}で休憩</h3>
-            <p className="text-white/60 mb-4">ゆっくり休んで体力回復！¥500を獲得した！</p>
-            <Button onClick={() => setTurnPhase('action_choice')} variant="primary" className="w-full">
-              OK
-            </Button>
-          </div>
-        </div>
+        <RestOverlay
+          nodeName={node.name}
+          onClose={() => setTurnPhase('action_choice')}
+        />
       )}
 
       {/* ゴール到達メッセージ */}
@@ -186,6 +191,11 @@ export default function GameScreen() {
       {/* 釣果バッグ */}
       {showCreel && (
         <CreelOverlay onClose={() => setShowCreel(false)} />
+      )}
+
+      {/* インベントリ */}
+      {showInventory && (
+        <InventoryPanel onClose={() => setShowInventory(false)} />
       )}
     </div>
   );
