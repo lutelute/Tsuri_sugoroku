@@ -6,9 +6,9 @@ import MapNode from './MapNode';
 import MapEdge from './MapEdge';
 import PlayerToken from './PlayerToken';
 
-const DEFAULT_VIEWBOX = { x: -5, y: -5, width: 110, height: 120 };
-const MIN_WIDTH = 30;
-const MAX_WIDTH = 150;
+const DEFAULT_VIEWBOX = { x: -5, y: -5, width: 180, height: 180 };
+const MIN_WIDTH = 50;
+const MAX_WIDTH = 250;
 const DRAG_THRESHOLD = 5; // px on screen
 
 interface DragState {
@@ -60,8 +60,8 @@ export default function JapanMap() {
     const w = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, vb.width));
     const h = w; // keep aspect ratio 1:1
     // Keep viewBox within wide bounds so south (Okinawa/goal y:90+) is reachable
-    const x = Math.max(-30, Math.min(150 - w, vb.x));
-    const y = Math.max(-20, Math.min(200 - h, vb.y));
+    const x = Math.max(-50, Math.min(250 - w, vb.x));
+    const y = Math.max(-30, Math.min(350 - h, vb.y));
     return { x, y, width: w, height: h };
   }, []);
 

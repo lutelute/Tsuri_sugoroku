@@ -36,9 +36,9 @@ const NODE_ICONS: Record<NodeType, string> = {
 
 export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }: MapNodeProps) {
   const color = NODE_COLORS[node.type];
-  const radius = node.type === 'start' || node.type === 'goal' ? 2.5 : 2;
-  const labelFontSize = 1.8;
-  const iconFontSize = 2;
+  const radius = node.type === 'start' || node.type === 'goal' ? 4 : 3;
+  const labelFontSize = 2.8;
+  const iconFontSize = 3;
   const dist = distanceToGoal.get(node.id);
 
   return (
@@ -55,7 +55,7 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }:
       <circle
         cx={node.x}
         cy={node.y}
-        r={isReachable ? 6 : 4}
+        r={isReachable ? 10 : 6}
         fill="transparent"
         className={isReachable ? 'cursor-pointer' : ''}
       />
@@ -67,14 +67,14 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }:
           <circle
             cx={node.x}
             cy={node.y}
-            r={radius + 2}
+            r={radius + 3}
             fill="rgba(251, 191, 36, 0.15)"
             stroke="#fbbf24"
-            strokeWidth="0.6"
+            strokeWidth="0.8"
           >
             <animate
               attributeName="r"
-              values={`${radius + 1.5};${radius + 3};${radius + 1.5}`}
+              values={`${radius + 2.5};${radius + 5};${radius + 2.5}`}
               dur="1s"
               repeatCount="indefinite"
             />
@@ -95,14 +95,14 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }:
         r={radius}
         fill={color}
         stroke={isCurrentPlayer ? '#ffffff' : 'rgba(0,0,0,0.3)'}
-        strokeWidth={isCurrentPlayer ? 0.5 : 0.3}
+        strokeWidth={isCurrentPlayer ? 0.8 : 0.4}
         opacity={0.9}
       />
 
       {/* アイコン */}
       <text
         x={node.x}
-        y={node.y + 0.5}
+        y={node.y + 0.8}
         textAnchor="middle"
         dominantBaseline="middle"
         fontSize={iconFontSize}
@@ -114,7 +114,7 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }:
       {/* ラベル */}
       <text
         x={node.x}
-        y={node.y + 4.5}
+        y={node.y + 7}
         textAnchor="middle"
         fontSize={labelFontSize}
         fill="white"

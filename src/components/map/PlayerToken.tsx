@@ -12,9 +12,9 @@ export default function PlayerToken({ player, index, totalPlayers }: PlayerToken
   if (!node) return null;
 
   // 複数プレイヤーが同じノードにいる場合のオフセット
-  const offset = totalPlayers > 1 ? (index - (totalPlayers - 1) / 2) * 2.2 : 0;
+  const offset = totalPlayers > 1 ? (index - (totalPlayers - 1) / 2) * 3.5 : 0;
   const x = node.x + offset;
-  const y = node.y - 3.5;
+  const y = node.y - 5.5;
 
   return (
     <g
@@ -26,9 +26,9 @@ export default function PlayerToken({ player, index, totalPlayers }: PlayerToken
       {/* 影 */}
       <ellipse
         cx={0}
-        cy={2}
-        rx={1.2}
-        ry={0.4}
+        cy={3}
+        rx={2}
+        ry={0.7}
         fill="rgba(0,0,0,0.3)"
       />
 
@@ -36,19 +36,19 @@ export default function PlayerToken({ player, index, totalPlayers }: PlayerToken
       <circle
         cx={0}
         cy={0}
-        r={1.5}
+        r={2.5}
         fill={player.color}
         stroke="white"
-        strokeWidth="0.4"
+        strokeWidth="0.6"
       />
 
       {/* プレイヤー番号 */}
       <text
         x={0}
-        y={0.5}
+        y={0.7}
         textAnchor="middle"
         dominantBaseline="middle"
-        fontSize="1.4"
+        fontSize="2.2"
         fill="white"
         fontWeight="bold"
         className="pointer-events-none select-none"
