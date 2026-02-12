@@ -31,6 +31,15 @@ export const FISHING_TENSION_BREAK_THRESHOLD = 100;
 export const LURE_BITE_SPEED_BONUS = [0, 0, 0.15, 0.25, 0.35, 0.5];
 export const LURE_RARE_BONUS = [0, 0, 0.05, 0.1, 0.2, 0.35];
 
+// 魚の売却価格（レアリティ別）
+export const FISH_SELL_PRICE: Record<string, number> = {
+  common: 200,
+  uncommon: 500,
+  rare: 1000,
+  legendary: 2500,
+  mythical: 5000,
+};
+
 // スコア計算
 export const RARITY_BONUS: Record<string, number> = {
   common: 0,

@@ -1,4 +1,5 @@
 import type { Fish } from '../../game/types';
+import { FISH_SELL_PRICE } from '../../game/constants';
 import Button from '../shared/Button';
 import FishIllustration from '../shared/FishIllustration';
 
@@ -30,6 +31,7 @@ export default function FishCaughtModal({ fish, size, escaped, onClose }: FishCa
 
   const rarity = RARITY_LABELS[fish.rarity];
   const points = Math.round(fish.points * size);
+  const sellPrice = Math.round((FISH_SELL_PRICE[fish.rarity] ?? 200) * size);
   const sizeLabel = size >= 1.5 ? '巨大！' : size >= 1.2 ? '大きい' : size <= 0.7 ? '小さい' : '普通';
   const glowClass = escaped ? '' : (RARITY_GLOW[fish.rarity] || '');
   const weight = (fish.weight.min + (fish.weight.max - fish.weight.min) * size).toFixed(1);
@@ -57,7 +59,7 @@ export default function FishCaughtModal({ fish, size, escaped, onClose }: FishCa
               <span className="text-xs bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded-full">{fish.season}</span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 mb-6 text-sm">
+            <div className="grid grid-cols-4 gap-2 mb-6 text-sm">
               <div className="bg-white/5 rounded-lg p-2">
                 <div className="text-white/40 text-xs">重量</div>
                 <div className="font-bold">{weight}kg</div>
@@ -69,6 +71,10 @@ export default function FishCaughtModal({ fish, size, escaped, onClose }: FishCa
               <div className="bg-white/5 rounded-lg p-2">
                 <div className="text-white/40 text-xs">ポイント</div>
                 <div className="font-bold text-amber-400">{points.toLocaleString()}pt</div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-2">
+                <div className="text-white/40 text-xs">売却</div>
+                <div className="font-bold text-emerald-400">¥{sellPrice.toLocaleString()}</div>
               </div>
             </div>
 

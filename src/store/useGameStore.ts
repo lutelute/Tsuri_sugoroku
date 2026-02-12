@@ -3,12 +3,13 @@ import type {
   GameState, GameScreen, TurnPhase, Player, GameSettings,
   FishingState, CaughtFish, EquipmentType,
 } from '../game/types';
-import { INITIAL_MONEY, PLAYER_COLORS, PLAYER_DEFAULT_NAMES, REST_MONEY_BONUS, DEFAULT_MAX_TURNS } from '../game/constants';
+import { INITIAL_MONEY, PLAYER_COLORS, PLAYER_DEFAULT_NAMES, REST_MONEY_BONUS, DEFAULT_MAX_TURNS, FISH_SELL_PRICE } from '../game/constants';
 import { calculateReachableNodes } from '../game/movement';
 import { NODE_MAP } from '../data/boardNodes';
 import { getRandomEventCard } from '../data/eventCards';
 import { applyEvent } from '../game/events';
 import { selectFish } from '../game/fishing';
+import { FISH_DATABASE } from '../data/fishDatabase';
 import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState } from '../utils/storage';
 
 const MAX_FISHING_PER_TURN = 3;
@@ -231,10 +232,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { players, currentPlayerIndex, encyclopedia, nodeActionsThisTurn } = get();
     const player = players[currentPlayerIndex];
     const caughtWithBonus = { ...caught, bonusMultiplier: player.fishBonusMultiplier };
+
+    // 魚の売却でお金を獲得（レアリティ×サイズ）
+    const fishData = FISH_DATABASE.find(f => f.id === caught.fishId);
+    const sellPrice = fishData ? Math.round((FISH_SELL_PRICE[fishData.rarity] ?? 200) * caught.size) : 200;
+
     const newPlayers = [...players];
     newPlayers[currentPlayerIndex] = {
       ...player,
       caughtFish: [...player.caughtFish, caughtWithBonus],
+      money: player.money + sellPrice,
     };
 
     const newEncyclopedia = { ...encyclopedia, [caught.fishId]: true };
