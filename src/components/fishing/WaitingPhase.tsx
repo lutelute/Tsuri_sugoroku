@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+const STRIKE_TIMEOUT_MS = 2800;
+
 interface WaitingPhaseProps {
   hasBite: boolean;
   onStrike: (normalizedAngle: number) => void;
@@ -9,22 +11,28 @@ interface WaitingPhaseProps {
 
 export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }: WaitingPhaseProps) {
   const [angle, setAngle] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(1);
   const angleRef = useRef(0);
   const missTimeoutRef = useRef<number | null>(null);
+  const startTimeRef = useRef(0);
 
-  // 円形ゲージ回転
+  // 円形ゲージ回転 + 制限時間カウントダウン
   useEffect(() => {
     if (!hasBite) return;
+
+    startTimeRef.current = Date.now();
 
     const interval = window.setInterval(() => {
       angleRef.current = (angleRef.current + 2.5) % 360;
       setAngle(angleRef.current);
+
+      const elapsed = Date.now() - startTimeRef.current;
+      setTimeLeft(Math.max(0, 1 - elapsed / STRIKE_TIMEOUT_MS));
     }, 16);
 
-    // 2.5秒以内にストライクしないと逃す
     missTimeoutRef.current = window.setTimeout(() => {
       onMiss();
-    }, 2800);
+    }, STRIKE_TIMEOUT_MS);
 
     return () => {
       clearInterval(interval);
@@ -39,12 +47,15 @@ export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }:
     onStrike(normalizedAngle);
   }, [hasBite, onStrike]);
 
-  // 緑ゾーン: strikeLevel 1=25%, 5=45%
+  // 緑ゾーン: strikeLevel 1=27%, 5=47%
   const greenZoneSize = 0.27 + 0.05 * (strikeLevel - 1);
   const greenStartDeg = (0.5 - greenZoneSize / 2) * 360;
 
   // SVG円周
   const circumference = 2 * Math.PI * 40; // ~251.2
+
+  // タイムバーの色（残り少なくなると赤に）
+  const timerColor = timeLeft > 0.4 ? '#22c55e' : timeLeft > 0.2 ? '#f59e0b' : '#ef4444';
 
   return (
     <div className="flex flex-col items-center justify-center h-full" onClick={handleClick}>
@@ -102,7 +113,23 @@ export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }:
             </svg>
           </div>
 
-          <p className="text-sm text-white/40 mt-4">緑のゾーンでタップ！</p>
+          {/* 制限時間バー */}
+          <div className="w-48 mx-auto mt-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs text-white/50">⏱️</span>
+              <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-colors duration-200"
+                  style={{
+                    width: `${timeLeft * 100}%`,
+                    backgroundColor: timerColor,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <p className="text-sm text-white/40 mt-2">緑のゾーンでタップ！</p>
         </div>
       )}
     </div>
