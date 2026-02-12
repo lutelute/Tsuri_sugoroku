@@ -3,19 +3,6 @@ import { computeDistanceToGoal } from '../../utils/pathfinding';
 
 const distanceToGoal = computeDistanceToGoal();
 
-// 既存の主要ノードIDセット（中間ノードと区別するため）
-const MAJOR_NODE_IDS = new Set([
-  'start', 'goal',
-  'wakkanai', 'kushiro', 'sapporo', 'hakodate',
-  'aomori', 'sendai', 'akita', 'yamagata', 'fukushima',
-  'niigata', 'tokyo', 'choshi', 'yokohama', 'mito', 'kamakura',
-  'kanazawa', 'shizuoka', 'nagoya', 'toyama', 'numazu',
-  'osaka', 'wakayama', 'tango', 'kobe', 'nara',
-  'tottori', 'hiroshima', 'shimonoseki', 'matsue', 'okayama',
-  'kochi', 'matsuyama', 'tokushima',
-  'fukuoka', 'kumamoto', 'oita', 'nagasaki', 'miyazaki', 'kagoshima', 'yakushima', 'amami', 'naha',
-]);
-
 interface MapNodeProps {
   node: BoardNode;
   isReachable: boolean;
@@ -49,10 +36,9 @@ const NODE_ICONS: Record<NodeType, string> = {
 
 export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }: MapNodeProps) {
   const color = NODE_COLORS[node.type];
-  const isMajor = MAJOR_NODE_IDS.has(node.id);
-  const radius = node.type === 'start' || node.type === 'goal' ? 2.5 : isMajor ? 2 : 1.5;
-  const labelFontSize = isMajor ? 1.8 : 1.5;
-  const iconFontSize = isMajor ? 2 : 1.6;
+  const radius = node.type === 'start' || node.type === 'goal' ? 2.5 : 2;
+  const labelFontSize = 1.8;
+  const iconFontSize = 2;
   const dist = distanceToGoal.get(node.id);
 
   return (
@@ -128,7 +114,7 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }:
       {/* ラベル */}
       <text
         x={node.x}
-        y={node.y + (isMajor ? 4.5 : 3.5)}
+        y={node.y + 4.5}
         textAnchor="middle"
         fontSize={labelFontSize}
         fill="white"
