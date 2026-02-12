@@ -4,10 +4,10 @@ interface WaitingPhaseProps {
   hasBite: boolean;
   onStrike: (normalizedAngle: number) => void;
   onMiss: () => void;
-  rodLevel: number;
+  strikeLevel: number;
 }
 
-export default function WaitingPhase({ hasBite, onStrike, onMiss, rodLevel }: WaitingPhaseProps) {
+export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }: WaitingPhaseProps) {
   const [angle, setAngle] = useState(0);
   const angleRef = useRef(0);
   const missTimeoutRef = useRef<number | null>(null);
@@ -39,8 +39,8 @@ export default function WaitingPhase({ hasBite, onStrike, onMiss, rodLevel }: Wa
     onStrike(normalizedAngle);
   }, [hasBite, onStrike]);
 
-  // 緑ゾーン: rod Lv1=25%, Lv5=45%
-  const greenZoneSize = 0.25 + 0.05 * (rodLevel - 1);
+  // 緑ゾーン: strikeLevel 1=25%, 5=45%
+  const greenZoneSize = 0.25 + 0.05 * (strikeLevel - 1);
   const greenStartDeg = (0.5 - greenZoneSize / 2) * 360;
 
   // SVG円周

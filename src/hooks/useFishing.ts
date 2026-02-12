@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { getBiteDelay, createCaughtFish, generateFishSize } from '../game/fishing';
+import { getBiteDelay, createCaughtFish, generateFishSize, getEffectiveLevel } from '../game/fishing';
 import {
   FISHING_REELING_TAP_BASE,
   FISHING_REELING_TAP_PER_REEL_LEVEL,
@@ -35,21 +35,22 @@ export function useFishing() {
   useEffect(() => {
     if (fishingState?.phase !== 'waiting') return;
 
-    const delay = getBiteDelay(player.equipment.lure);
+    const delay = getBiteDelay(player.equipment);
     const timer = window.setTimeout(() => {
       updateFishingState({ hasBite: true });
     }, delay);
 
     setBiteTimer(timer as unknown as number);
     return () => clearTimeout(timer);
-  }, [fishingState?.phase, player.equipment.lure, updateFishingState]);
+  }, [fishingState?.phase, player.equipment, updateFishingState]);
 
   // ストライク処理
   const handleStrike = useCallback((normalizedAngle: number) => {
     if (!fishingState || fishingState.phase !== 'waiting' || !fishingState.hasBite) return;
 
-    // WaitingPhase と同じ計算: rod Lv1=30%, Lv5=50%
-    const greenZone = 0.25 + 0.05 * (player.equipment.rod - 1);
+    // 装備の重み付きストライクレベルで緑ゾーンを計算
+    const strikeLevel = getEffectiveLevel(player.equipment, 'strike');
+    const greenZone = 0.25 + 0.05 * (strikeLevel - 1);
 
     // 緑ゾーンの中心は0.5に配置
     const greenStart = 0.5 - greenZone / 2;
@@ -68,7 +69,7 @@ export function useFishing() {
       updateFishingState({ phase: 'strike', strikeSuccess: false });
       setTimeout(() => failFishing(), 1000);
     }
-  }, [fishingState, player.equipment.rod, updateFishingState, failFishing]);
+  }, [fishingState, player.equipment, updateFishingState, failFishing]);
 
   // リーリング: テンション自然減衰
   useEffect(() => {
@@ -93,8 +94,9 @@ export function useFishing() {
   const handleReelTap = useCallback(() => {
     if (!fishingState || fishingState.phase !== 'reeling') return;
 
+    const reelingLevel = getEffectiveLevel(player.equipment, 'reeling');
     const tapPower = FISHING_REELING_TAP_BASE +
-      FISHING_REELING_TAP_PER_REEL_LEVEL * (player.equipment.reel - 1);
+      FISHING_REELING_TAP_PER_REEL_LEVEL * (reelingLevel - 1);
 
     tensionRef.current += FISHING_TENSION_RISE_PER_TAP;
     progressRef.current += tapPower;
@@ -126,7 +128,7 @@ export function useFishing() {
       tension: tensionRef.current,
       reelingProgress: progressRef.current,
     });
-  }, [fishingState, player.equipment.reel, player.currentNode, turn, updateFishingState, failFishing, catchFish]);
+  }, [fishingState, player.equipment, player.currentNode, turn, updateFishingState, failFishing, catchFish]);
 
   // タイムアウト（バイトを逃す）
   const handleMiss = useCallback(() => {

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useFishing } from '../../hooks/useFishing';
+import { getEffectiveLevel } from '../../game/fishing';
 import WaitingPhase from './WaitingPhase';
 import StrikingPhase from './StrikingPhase';
 import ReelingPhase from './ReelingPhase';
@@ -45,7 +46,7 @@ export default function FishingOverlay() {
             hasBite={fishingState.hasBite}
             onStrike={handleStrike}
             onMiss={handleMiss}
-            rodLevel={player.equipment.rod}
+            strikeLevel={getEffectiveLevel(player.equipment, 'strike')}
           />
         )}
 

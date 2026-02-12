@@ -27,9 +27,20 @@ export const FISHING_TENSION_RISE_PER_TAP = 14;
 export const FISHING_TENSION_DECAY_RATE = 0.3;
 export const FISHING_TENSION_BREAK_THRESHOLD = 100;
 
-// ルアーの当たり確率補正
+// ルアーの当たり確率補正（レベル別配列、interpolateBonus で補間して使用）
 export const LURE_BITE_SPEED_BONUS = [0, 0, 0.15, 0.25, 0.35, 0.5];
 export const LURE_RARE_BONUS = [0, 0, 0.05, 0.1, 0.2, 0.35];
+
+// 装備の重み付け: 各装備は全能力に寄与するが、主要能力への貢献が大きい
+// rod=釣竿, reel=リール, lure=ルアー/餌
+export type EquipmentAbility = 'strike' | 'reeling' | 'rareChance' | 'biteSpeed';
+
+export const EQUIPMENT_WEIGHTS: Record<EquipmentAbility, { rod: number; reel: number; lure: number }> = {
+  strike:     { rod: 0.6, reel: 0.2, lure: 0.2 },   // 竿が主力
+  reeling:    { rod: 0.2, reel: 0.6, lure: 0.2 },   // リールが主力
+  rareChance: { rod: 0.1, reel: 0.2, lure: 0.7 },   // ルアーが主力
+  biteSpeed:  { rod: 0.15, reel: 0.15, lure: 0.7 },  // ルアーが主力
+};
 
 // 魚の売却価格（レアリティ別）
 export const FISH_SELL_PRICE: Record<string, number> = {

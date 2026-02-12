@@ -1,6 +1,7 @@
 import type { Fish, FishRarity, PlayerEquipment, Region, CaughtFish } from './types';
 import { FISH_DATABASE } from '../data/fishDatabase';
-import { LURE_RARE_BONUS } from './constants';
+import { LURE_RARE_BONUS, LURE_BITE_SPEED_BONUS, EQUIPMENT_WEIGHTS } from './constants';
+import type { EquipmentAbility } from './constants';
 import { weightedRandom, randomFloat } from '../utils/random';
 
 const RARITY_BASE_WEIGHT: Record<FishRarity, number> = {
@@ -10,6 +11,22 @@ const RARITY_BASE_WEIGHT: Record<FishRarity, number> = {
   legendary: 3,
   mythical: 0.5,
 };
+
+// 装備の重み付き実効レベルを計算
+export function getEffectiveLevel(equipment: PlayerEquipment, ability: EquipmentAbility): number {
+  const w = EQUIPMENT_WEIGHTS[ability];
+  return equipment.rod * w.rod + equipment.reel * w.reel + equipment.lure * w.lure;
+}
+
+// レベル別配列から実数レベルで補間して値を取得
+function interpolateBonus(values: number[], level: number): number {
+  const clamped = Math.max(1, Math.min(values.length - 1, level));
+  const lower = Math.floor(clamped);
+  const upper = Math.ceil(clamped);
+  if (lower === upper) return values[lower];
+  const frac = clamped - lower;
+  return values[lower] * (1 - frac) + values[upper] * frac;
+}
 
 export function getAvailableFish(
   nodeId: string,
@@ -38,7 +55,8 @@ export function selectFish(
     return FISH_DATABASE.find(f => f.rarity === 'common')!;
   }
 
-  const rareBonus = LURE_RARE_BONUS[equipment.lure] || 0;
+  const rareLevel = getEffectiveLevel(equipment, 'rareChance');
+  const rareBonus = interpolateBonus(LURE_RARE_BONUS, rareLevel);
   const specialBonus = isSpecialSpot ? 0.5 : 0;
 
   const weights = available.map(fish => {
@@ -73,10 +91,11 @@ export function createCaughtFish(fishId: string, nodeId: string, turn: number): 
   };
 }
 
-export function getBiteDelay(lureLevel: number): number {
+export function getBiteDelay(equipment: PlayerEquipment): number {
   const baseMin = 1500;
   const baseMax = 5000;
-  const speedBonus = [0, 0, 0.15, 0.25, 0.35, 0.5][lureLevel] || 0;
+  const biteLevel = getEffectiveLevel(equipment, 'biteSpeed');
+  const speedBonus = interpolateBonus(LURE_BITE_SPEED_BONUS, biteLevel);
   const adjustedMax = baseMax * (1 - speedBonus);
   return randomFloat(baseMin, Math.max(baseMin, adjustedMax));
 }
