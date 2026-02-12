@@ -49,7 +49,7 @@ export function useFishing() {
     if (!fishingState || fishingState.phase !== 'waiting' || !fishingState.hasBite) return;
 
     // WaitingPhase と同じ計算: rod Lv1=30%, Lv5=50%
-    const greenZone = 0.3 + 0.05 * (player.equipment.rod - 1);
+    const greenZone = 0.25 + 0.05 * (player.equipment.rod - 1);
 
     // 緑ゾーンの中心は0.5に配置
     const greenStart = 0.5 - greenZone / 2;
@@ -76,8 +76,8 @@ export function useFishing() {
 
     const interval = window.setInterval(() => {
       tensionRef.current = Math.max(0, tensionRef.current - FISHING_TENSION_DECAY_RATE * 3);
-      // 自然後退
-      progressRef.current = Math.max(0, progressRef.current - 0.3);
+      // 自然後退（魚の抵抗）
+      progressRef.current = Math.max(0, progressRef.current - 0.4);
 
       updateFishingState({
         tension: tensionRef.current,
