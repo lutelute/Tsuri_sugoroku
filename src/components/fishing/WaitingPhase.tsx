@@ -17,14 +17,14 @@ export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }:
     if (!hasBite) return;
 
     const interval = window.setInterval(() => {
-      angleRef.current = (angleRef.current + 3) % 360;
+      angleRef.current = (angleRef.current + 2.5) % 360;
       setAngle(angleRef.current);
     }, 16);
 
     // 2.5秒以内にストライクしないと逃す
     missTimeoutRef.current = window.setTimeout(() => {
       onMiss();
-    }, 2500);
+    }, 2800);
 
     return () => {
       clearInterval(interval);
@@ -40,7 +40,7 @@ export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }:
   }, [hasBite, onStrike]);
 
   // 緑ゾーン: strikeLevel 1=25%, 5=45%
-  const greenZoneSize = 0.25 + 0.05 * (strikeLevel - 1);
+  const greenZoneSize = 0.27 + 0.05 * (strikeLevel - 1);
   const greenStartDeg = (0.5 - greenZoneSize / 2) * 360;
 
   // SVG円周

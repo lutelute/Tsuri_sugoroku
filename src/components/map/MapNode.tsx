@@ -7,6 +7,7 @@ interface MapNodeProps {
   node: BoardNode;
   isReachable: boolean;
   isCurrentPlayer: boolean;
+  steps?: number;
   onClick?: () => void;
 }
 
@@ -34,7 +35,7 @@ const NODE_ICONS: Record<NodeType, string> = {
   rest: '🏖️',
 };
 
-export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }: MapNodeProps) {
+export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onClick }: MapNodeProps) {
   const color = NODE_COLORS[node.type];
   const radius = node.type === 'start' || node.type === 'goal' ? 4 : 3;
   const labelFontSize = 2.8;
@@ -110,6 +111,33 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, onClick }:
       >
         {NODE_ICONS[node.type]}
       </text>
+
+      {/* 歩数バッジ */}
+      {isReachable && steps !== undefined && (
+        <>
+          <circle
+            cx={node.x + radius + 1.5}
+            cy={node.y - radius - 1.5}
+            r={2.5}
+            fill="#fbbf24"
+            stroke="rgba(0,0,0,0.3)"
+            strokeWidth="0.3"
+            className="pointer-events-none"
+          />
+          <text
+            x={node.x + radius + 1.5}
+            y={node.y - radius - 1.2}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontSize={2.5}
+            fill="#1e293b"
+            fontWeight="bold"
+            className="pointer-events-none select-none"
+          >
+            {steps}
+          </text>
+        </>
+      )}
 
       {/* ラベル */}
       <text

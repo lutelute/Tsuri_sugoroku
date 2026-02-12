@@ -46,17 +46,22 @@ const distanceToGoal = computeDistanceToGoal();
 export function getReachableNodes(startNode: string, steps: number): string[][] {
   if (steps <= 0) return [[startNode]];
 
-  const startDist = distanceToGoal.get(startNode);
   const paths: string[][] = [];
 
   function dfs(current: string, remaining: number, path: string[]) {
-    // 残り0歩 → ゴール
+    // goalノードに到達した場合、残りステップがあっても停止
+    if (current === 'goal' && path.length > 1) {
+      paths.push([...path]);
+      return;
+    }
+
+    // 残り0歩 → 終点
     if (remaining === 0) {
       paths.push([...path]);
       return;
     }
 
-    const neighbors = adjacency.get(current) || [];
+    const neighbors = bidirectionalAdjacency.get(current) || [];
     let hasValidNeighbor = false;
 
     for (const neighbor of neighbors) {
@@ -85,27 +90,20 @@ export function getReachableNodes(startNode: string, steps: number): string[][] 
     }
   }
 
-  // 前進制約: 移動先のゴールまでの距離が現在地以下であることを保証
-  // （同じ距離 = 横移動は許可）
-  if (startDist !== undefined) {
-    for (const [endpoint] of uniqueEndpoints) {
-      const endDist = distanceToGoal.get(endpoint);
-      if (endDist !== undefined && endDist > startDist) {
-        uniqueEndpoints.delete(endpoint);
-      }
-    }
-  }
-
   // パスが見つからなかった場合、1歩〜steps-1歩で探す（フォールバック）
   if (uniqueEndpoints.size === 0) {
     for (let s = steps - 1; s >= 1; s--) {
       const fallbackPaths: string[][] = [];
       const fallbackDfs = (current: string, remaining: number, path: string[]) => {
+        if (current === 'goal' && path.length > 1) {
+          fallbackPaths.push([...path]);
+          return;
+        }
         if (remaining === 0) {
           fallbackPaths.push([...path]);
           return;
         }
-        const neighbors2 = adjacency.get(current) || [];
+        const neighbors2 = bidirectionalAdjacency.get(current) || [];
         for (const neighbor of neighbors2) {
           if (!path.includes(neighbor)) {
             path.push(neighbor);
@@ -119,11 +117,6 @@ export function getReachableNodes(startNode: string, steps: number): string[][] 
         const fallbackEndpoints = new Map<string, string[]>();
         for (const path of fallbackPaths) {
           const endpoint = path[path.length - 1];
-          const endDist = distanceToGoal.get(endpoint);
-          // フォールバックでも前進制約を適用
-          if (startDist !== undefined && endDist !== undefined && endDist > startDist) {
-            continue;
-          }
           if (!fallbackEndpoints.has(endpoint)) {
             fallbackEndpoints.set(endpoint, path);
           }
@@ -133,16 +126,8 @@ export function getReachableNodes(startNode: string, steps: number): string[][] 
         }
       }
     }
-    // 本当に移動先がない場合は隣接ノードへ1歩（前進制約を維持）
-    const neighbors = adjacency.get(startNode) || [];
-    const forwardNeighbors = neighbors.filter(n => {
-      const nDist = distanceToGoal.get(n);
-      return startDist === undefined || nDist === undefined || nDist <= startDist;
-    });
-    if (forwardNeighbors.length > 0) {
-      return forwardNeighbors.map(n => [startNode, n]);
-    }
-    // 本当にどこにも行けない場合は元の隣接ノードへ
+    // 本当にどこにも行けない場合は隣接ノードへ1歩
+    const neighbors = bidirectionalAdjacency.get(startNode) || [];
     return neighbors.map(n => [startNode, n]);
   }
 

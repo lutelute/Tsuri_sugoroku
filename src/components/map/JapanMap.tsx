@@ -48,6 +48,13 @@ export default function JapanMap() {
     reachableNodes.map(path => path[path.length - 1])
   );
 
+  // 各到達可能ノードの歩数（path.length - 1）を計算
+  const reachableSteps = new Map<string, number>();
+  for (const path of reachableNodes) {
+    const endpoint = path[path.length - 1];
+    reachableSteps.set(endpoint, path.length - 1);
+  }
+
   // Screen px -> SVG unit ratio
   const getScale = useCallback(() => {
     const svg = svgRef.current;
@@ -253,6 +260,7 @@ export default function JapanMap() {
             node={node}
             isReachable={turnPhase === 'path_selection' && reachableEndpoints.has(node.id)}
             isCurrentPlayer={currentPlayer?.currentNode === node.id}
+            steps={turnPhase === 'path_selection' ? reachableSteps.get(node.id) : undefined}
             onClick={() => handleNodeClick(node.id)}
           />
         ))}

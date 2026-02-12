@@ -50,7 +50,7 @@ export function useFishing() {
 
     // 装備の重み付きストライクレベルで緑ゾーンを計算
     const strikeLevel = getEffectiveLevel(player.equipment, 'strike');
-    const greenZone = 0.25 + 0.05 * (strikeLevel - 1);
+    const greenZone = 0.27 + 0.05 * (strikeLevel - 1);
 
     // 緑ゾーンの中心は0.5に配置
     const greenStart = 0.5 - greenZone / 2;
@@ -78,7 +78,7 @@ export function useFishing() {
     const interval = window.setInterval(() => {
       tensionRef.current = Math.max(0, tensionRef.current - FISHING_TENSION_DECAY_RATE * 3);
       // 自然後退（魚の抵抗）
-      progressRef.current = Math.max(0, progressRef.current - 0.4);
+      progressRef.current = Math.max(0, progressRef.current - 0.35);
 
       updateFishingState({
         tension: tensionRef.current,
