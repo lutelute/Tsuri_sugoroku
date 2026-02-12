@@ -1,73 +1,40 @@
-# React + TypeScript + Vite
+# 釣りすごろく - 日本列島 釣り旅
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+日本列島を舞台にしたすごろく型釣りボードゲーム。北海道から九州まで各地を巡り、魚を釣って高スコアを目指そう。
 
-Currently, two official plugins are available:
+**[>>> プレイする (GitHub Pages) <<<](https://lutelute.github.io/Tsuri_sugoroku/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![demo](docs/demo.gif)
 
-## React Compiler
+## 特徴
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- 日本全国8地方を巡るマップ (北海道・東北・関東・中部・近畿・中国・四国・九州)
+- 多彩な魚種 (common〜mythical の5段階レアリティ)
+- タイミングベースの釣りミニゲーム (アタリ合わせ → リーリング)
+- 装備のアップグレード (竿・リール・ルアー各Lv1〜5)
+- イベントマス・ショップ・休憩所など多様なノード
+- 1〜4人対戦
+- 図鑑コンプリート要素
 
-## Expanding the ESLint configuration
+## スクリーンショット
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| タイトル | セットアップ | ゲーム画面 |
+|:---:|:---:|:---:|
+| ![title](docs/demo-title.png) | ![setup](docs/demo-setup.png) | ![game](docs/demo-game.png) |
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 技術スタック
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- React 19 + TypeScript 5.9 + Vite 7
+- Tailwind CSS v4
+- Zustand (状態管理)
+- Playwright (E2Eテスト)
+- GitHub Actions → GitHub Pages 自動デプロイ
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## ローカル開発
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone https://github.com/lutelute/Tsuri_sugoroku.git
+cd Tsuri_sugoroku
+npm install
+npm run dev
 ```
