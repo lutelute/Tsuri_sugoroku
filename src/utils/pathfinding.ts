@@ -1,6 +1,5 @@
-import { buildAdjacencyList, buildDirectedAdjacencyList, BOARD_EDGES } from '../data/boardEdges';
+import { buildAdjacencyList, BOARD_EDGES } from '../data/boardEdges';
 
-const adjacency = buildDirectedAdjacencyList();
 const bidirectionalAdjacency = buildAdjacencyList();
 
 /**
@@ -39,9 +38,6 @@ export function computeDistanceToGoal(): Map<string, number> {
 
   return dist;
 }
-
-// モジュールレベルでキャッシュ（一度だけ計算）
-const distanceToGoal = computeDistanceToGoal();
 
 export function getReachableNodes(startNode: string, steps: number): string[][] {
   if (steps <= 0) return [[startNode]];
