@@ -23,37 +23,52 @@ export default function SetupScreen() {
   const [searching, setSearching] = useState<boolean[]>([false, false, false, false]);
 
   const [starting, setStarting] = useState(false);
+  const [carryOver, setCarryOver] = useState(true); // 引き継ぎモード
+
+  // 紐付けユーザーが1人でもいるか
+  const hasLinkedUser = linkedUsers.slice(0, playerCount).some(u => u !== null);
 
   const handleStart = async () => {
     setStarting(true);
     try {
       const uids = linkedUsers.slice(0, playerCount);
-      // 紐付けユーザーの装備とお金をFirestoreから読み込み
-      const savedEquipments: (PlayerEquipment | null)[] = [];
-      const savedMoneys: (number | null)[] = [];
-      for (const u of uids) {
-        if (u) {
-          const [eq, money] = await Promise.all([
-            loadUserEquipment(u.uid).catch(() => null),
-            loadUserMoney(u.uid).catch(() => null),
-          ]);
-          savedEquipments.push(eq as PlayerEquipment | null);
-          savedMoneys.push(money);
-        } else {
-          savedEquipments.push(null);
-          savedMoneys.push(null);
+
+      if (carryOver && hasLinkedUser) {
+        // 引き継ぎモード: Firestoreから装備とお金を読み込み
+        const savedEquipments: (PlayerEquipment | null)[] = [];
+        const savedMoneys: (number | null)[] = [];
+        for (const u of uids) {
+          if (u) {
+            const [eq, money] = await Promise.all([
+              loadUserEquipment(u.uid).catch(() => null),
+              loadUserMoney(u.uid).catch(() => null),
+            ]);
+            savedEquipments.push(eq as PlayerEquipment | null);
+            savedMoneys.push(money);
+          } else {
+            savedEquipments.push(null);
+            savedMoneys.push(null);
+          }
         }
-      }
-      startGame(
-        {
+        startGame(
+          {
+            playerCount,
+            playerNames: names.slice(0, playerCount),
+            playerUids: uids.map(u => u?.uid ?? null),
+            maxTurns,
+          },
+          savedEquipments,
+          savedMoneys,
+        );
+      } else {
+        // 引き継ぎなし: 全員初期装備・初期所持金
+        startGame({
           playerCount,
           playerNames: names.slice(0, playerCount),
           playerUids: uids.map(u => u?.uid ?? null),
           maxTurns,
-        },
-        savedEquipments,
-        savedMoneys,
-      );
+        });
+      }
     } catch {
       // 失敗してもデフォルト値で開始
       startGame({
@@ -237,6 +252,41 @@ export default function SetupScreen() {
             </div>
           ))}
         </div>
+
+        {/* 引き継ぎモード */}
+        {hasLinkedUser && (
+          <div className="mb-6">
+            <label className="block text-sm text-white/60 mb-2">装備・お金の引き継ぎ</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCarryOver(true)}
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer
+                  ${carryOver
+                    ? 'bg-emerald-600 text-white shadow-lg'
+                    : 'bg-white/10 text-white/60 hover:bg-white/20'
+                  }`}
+              >
+                引き継ぐ
+              </button>
+              <button
+                onClick={() => setCarryOver(false)}
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer
+                  ${!carryOver
+                    ? 'bg-orange-600 text-white shadow-lg'
+                    : 'bg-white/10 text-white/60 hover:bg-white/20'
+                  }`}
+              >
+                引き継がない
+              </button>
+            </div>
+            <p className="text-xs text-white/40 mt-1.5">
+              {carryOver
+                ? '前回の装備・所持金を引き継いでスタート'
+                : '全員初期装備・初期所持金で公平にスタート'
+              }
+            </p>
+          </div>
+        )}
 
         {/* ターン数設定 */}
         <div className="mb-8">
