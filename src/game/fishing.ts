@@ -1,6 +1,10 @@
 import type { Fish, FishRarity, PlayerEquipment, Region, CaughtFish } from './types';
 import { FISH_DATABASE } from '../data/fishDatabase';
-import { LURE_RARE_BONUS, LURE_BITE_SPEED_BONUS, EQUIPMENT_WEIGHTS } from './constants';
+import {
+  LURE_RARE_BONUS, LURE_BITE_SPEED_BONUS, EQUIPMENT_WEIGHTS,
+  ROD_SIZE_BONUS, ROD_RARITY_BOOST, LURE_TAIRYOU_CHANCE,
+  TAIRYOU_BONUS_MIN, TAIRYOU_BONUS_MAX,
+} from './constants';
 import type { EquipmentAbility } from './constants';
 import { getEquipmentLevels } from './equipment';
 import { weightedRandom, randomFloat } from '../utils/random';
@@ -21,7 +25,7 @@ export function getEffectiveLevel(equipment: PlayerEquipment, ability: Equipment
 }
 
 // レベル別配列から実数レベルで補間して値を取得
-function interpolateBonus(values: number[], level: number): number {
+export function interpolateBonus(values: number[], level: number): number {
   const clamped = Math.max(1, Math.min(values.length - 1, level));
   const lower = Math.floor(clamped);
   const upper = Math.ceil(clamped);
@@ -78,12 +82,21 @@ export function selectFish(
 
   const rareLevel = getEffectiveLevel(equipment, 'rareChance');
   const rareBonus = interpolateBonus(LURE_RARE_BONUS, rareLevel);
+  // 竿によるレア度全体ブースト
+  const rarityBoostLevel = getEffectiveLevel(equipment, 'rarityBoost');
+  const rarityBoost = interpolateBonus(ROD_RARITY_BOOST, rarityBoostLevel);
   const specialBonus = isSpecialSpot ? 0.5 : 0;
 
   const weights = available.map(fish => {
     let weight = RARITY_BASE_WEIGHT[fish.rarity];
     if (fish.rarity === 'rare' || fish.rarity === 'legendary' || fish.rarity === 'mythical') {
-      weight *= (1 + rareBonus + specialBonus);
+      weight *= (1 + rareBonus + rarityBoost + specialBonus);
+    } else if (fish.rarity === 'uncommon') {
+      weight *= (1 + rarityBoost * 0.5);
+    }
+    // 竿レア度ブーストでcommonの出現率を少し下げる
+    if (fish.rarity === 'common' && rarityBoost > 0) {
+      weight *= Math.max(0.3, 1 - rarityBoost * 0.6);
     }
     return weight;
   });
@@ -91,12 +104,29 @@ export function selectFish(
   return weightedRandom(available, weights);
 }
 
-export function generateFishSize(): number {
+export function generateFishSize(equipment?: PlayerEquipment): number {
   // 正規分布風: 平均1.0, ほとんど0.5-1.5, まれに2.0
   const u1 = Math.random();
   const u2 = Math.random();
   const normal = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-  return Math.max(0.5, Math.min(2.0, 1.0 + normal * 0.25));
+  // 竿のサイズボーナス: 平均サイズが上がる + 上限も拡大
+  const sizeLevel = equipment ? getEffectiveLevel(equipment, 'sizeBonus') : 0;
+  const sizeBonus = sizeLevel > 0 ? interpolateBonus(ROD_SIZE_BONUS, sizeLevel) : 0;
+  const base = 1.0 + sizeBonus;
+  const maxSize = 2.0 + sizeBonus * 0.5;
+  return Math.max(0.5, Math.min(maxSize, base + normal * 0.25));
+}
+
+// 大漁チェック: ルアー主体で追加の魚を獲得できるか判定
+export function checkTairyou(equipment: PlayerEquipment, isSpecialSpot: boolean): number {
+  const tairyouLevel = getEffectiveLevel(equipment, 'tairyouChance');
+  const baseChance = interpolateBonus(LURE_TAIRYOU_CHANCE, tairyouLevel);
+  const chance = baseChance + (isSpecialSpot ? 0.1 : 0);
+
+  if (Math.random() >= chance) return 0;
+
+  // 大漁発動！ 1〜3匹追加
+  return TAIRYOU_BONUS_MIN + Math.floor(Math.random() * (TAIRYOU_BONUS_MAX - TAIRYOU_BONUS_MIN + 1));
 }
 
 export function calculateFishPoints(fish: Fish, size: number, bonusMultiplier: number): number {

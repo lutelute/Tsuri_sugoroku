@@ -10,7 +10,7 @@ import FishCaughtModal from './FishCaughtModal';
 export default function FishingOverlay() {
   const { players, currentPlayerIndex, endFishing } = useGameStore();
   const player = players[currentPlayerIndex];
-  const { fishingState, begin, handleStrike, handleReelTap, handleMiss, reelingStartRef } = useFishing();
+  const { fishingState, begin, handleStrike, handleReelTap, handleMiss, reelingStartRef, tensionLimitRef, timeLimitRef } = useFishing();
 
   useEffect(() => {
     begin();
@@ -58,6 +58,8 @@ export default function FishingOverlay() {
           <ReelingPhase
             progress={fishingState.reelingProgress}
             tension={fishingState.tension}
+            tensionMax={tensionLimitRef.current}
+            timeLimit={timeLimitRef.current}
             onTap={handleReelTap}
             startTime={reelingStartRef.current}
           />
@@ -68,6 +70,7 @@ export default function FishingOverlay() {
             fish={fishingState.targetFish}
             size={fishingState.caughtSize}
             escaped={fishingState.escaped}
+            tairyouCount={fishingState.tairyouCount}
             onClose={endFishing}
           />
         )}

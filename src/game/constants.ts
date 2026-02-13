@@ -33,14 +33,32 @@ export const LURE_RARE_BONUS = [0, 0, 0.05, 0.1, 0.2, 0.35];
 
 // 装備の重み付け: 各装備は全能力に寄与するが、主要能力への貢献が大きい
 // rod=釣竿, reel=リール, lure=ルアー/餌
-export type EquipmentAbility = 'strike' | 'reeling' | 'rareChance' | 'biteSpeed';
+export type EquipmentAbility = 'strike' | 'reeling' | 'rareChance' | 'biteSpeed' | 'sizeBonus' | 'rarityBoost' | 'tensionTolerance' | 'tairyouChance';
 
 export const EQUIPMENT_WEIGHTS: Record<EquipmentAbility, { rod: number; reel: number; lure: number }> = {
-  strike:     { rod: 0.6, reel: 0.2, lure: 0.2 },   // 竿が主力
-  reeling:    { rod: 0.2, reel: 0.6, lure: 0.2 },   // リールが主力
-  rareChance: { rod: 0.1, reel: 0.2, lure: 0.7 },   // ルアーが主力
-  biteSpeed:  { rod: 0.15, reel: 0.15, lure: 0.7 },  // ルアーが主力
+  strike:            { rod: 0.6, reel: 0.2, lure: 0.2 },   // 竿が主力
+  reeling:           { rod: 0.2, reel: 0.6, lure: 0.2 },   // リールが主力
+  rareChance:        { rod: 0.1, reel: 0.2, lure: 0.7 },   // ルアーが主力
+  biteSpeed:         { rod: 0.15, reel: 0.15, lure: 0.7 },  // ルアーが主力
+  sizeBonus:         { rod: 0.7, reel: 0.2, lure: 0.1 },   // 竿が主力: 大物サイズ
+  rarityBoost:       { rod: 0.6, reel: 0.1, lure: 0.3 },   // 竿が主力: レア度全体UP
+  tensionTolerance:  { rod: 0.1, reel: 0.7, lure: 0.2 },   // リールが主力: テンション耐性
+  tairyouChance:     { rod: 0.1, reel: 0.2, lure: 0.7 },   // ルアーが主力: 大漁チャンス
 };
+
+// 竿: サイズボーナス（実効レベル別、interpolateBonus で補間）
+export const ROD_SIZE_BONUS = [0, 0, 0.06, 0.14, 0.24, 0.35];
+// 竿: レア度全体ブースト（rare以上の出現率倍率）
+export const ROD_RARITY_BOOST = [0, 0, 0.08, 0.18, 0.3, 0.45];
+// リール: テンション耐性（上限に加算）
+export const REEL_TENSION_TOLERANCE = [0, 0, 8, 16, 26, 38];
+// リール: リーリング制限時間延長（ミリ秒）
+export const REEL_TIME_EXTENSION = [0, 0, 2000, 4000, 7000, 10000];
+// ルアー: 大漁チャンス（確率）
+export const LURE_TAIRYOU_CHANCE = [0, 0, 0.08, 0.15, 0.25, 0.35];
+// 大漁時のボーナス匹数（1〜3匹追加）
+export const TAIRYOU_BONUS_MIN = 1;
+export const TAIRYOU_BONUS_MAX = 3;
 
 // 魚の売却価格（レアリティ別）
 export const FISH_SELL_PRICE: Record<string, number> = {

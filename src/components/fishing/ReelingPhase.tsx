@@ -1,27 +1,29 @@
 import { useState, useEffect } from 'react';
-import { FISHING_REELING_TIME_LIMIT_MS } from '../../game/constants';
 import ProgressBar from '../shared/ProgressBar';
 
 interface ReelingPhaseProps {
   progress: number;
   tension: number;
+  tensionMax: number;
+  timeLimit: number;
   onTap: () => void;
   startTime: number;
 }
 
-export default function ReelingPhase({ progress, tension, onTap, startTime }: ReelingPhaseProps) {
-  const tensionColor = tension > 80 ? 'bg-red-500' : tension > 50 ? 'bg-amber-500' : 'bg-green-500';
-  const [timeLeft, setTimeLeft] = useState(FISHING_REELING_TIME_LIMIT_MS);
+export default function ReelingPhase({ progress, tension, tensionMax, timeLimit, onTap, startTime }: ReelingPhaseProps) {
+  const tensionRatio = tension / tensionMax;
+  const tensionColor = tensionRatio > 0.8 ? 'bg-red-500' : tensionRatio > 0.5 ? 'bg-amber-500' : 'bg-green-500';
+  const [timeLeft, setTimeLeft] = useState(timeLimit);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
       const elapsed = Date.now() - startTime;
-      setTimeLeft(Math.max(0, FISHING_REELING_TIME_LIMIT_MS - elapsed));
+      setTimeLeft(Math.max(0, timeLimit - elapsed));
     }, 100);
     return () => clearInterval(interval);
-  }, [startTime]);
+  }, [startTime, timeLimit]);
 
-  const timeRatio = timeLeft / FISHING_REELING_TIME_LIMIT_MS;
+  const timeRatio = timeLeft / timeLimit;
   const timeColor = timeRatio > 0.4 ? 'bg-cyan-500' : timeRatio > 0.2 ? 'bg-amber-500' : 'bg-red-500';
 
   return (
@@ -52,7 +54,7 @@ export default function ReelingPhase({ progress, tension, onTap, startTime }: Re
       <div className="w-64 mb-3">
         <ProgressBar
           value={tension}
-          max={100}
+          max={tensionMax}
           color={tensionColor}
           height="h-3"
           showLabel
@@ -64,7 +66,7 @@ export default function ReelingPhase({ progress, tension, onTap, startTime }: Re
       <div className="w-64 mb-4">
         <ProgressBar
           value={timeLeft}
-          max={FISHING_REELING_TIME_LIMIT_MS}
+          max={timeLimit}
           color={timeColor}
           height="h-2"
           showLabel
@@ -72,7 +74,7 @@ export default function ReelingPhase({ progress, tension, onTap, startTime }: Re
         />
       </div>
 
-      {tension > 70 && (
+      {tensionRatio > 0.7 && (
         <p className="text-red-400 text-sm animate-pulse font-bold">
           テンション高い！少し待とう！
         </p>

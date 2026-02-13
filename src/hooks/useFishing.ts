@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { getBiteDelay, createCaughtFish, generateFishSize, getEffectiveLevel } from '../game/fishing';
+import { getBiteDelay, createCaughtFish, generateFishSize, getEffectiveLevel, checkTairyou, selectFish, interpolateBonus } from '../game/fishing';
+import { NODE_MAP } from '../data/boardNodes';
 import type { FishRarity } from '../game/types';
 import {
   FISHING_REELING_TAP_BASE,
@@ -10,6 +11,8 @@ import {
   FISHING_TENSION_BREAK_THRESHOLD,
   FISHING_REELING_TARGET,
   FISHING_REELING_TIME_LIMIT_MS,
+  REEL_TENSION_TOLERANCE,
+  REEL_TIME_EXTENSION,
 } from '../game/constants';
 
 // レア度による難易度倍率: テンション上昇・魚の抵抗が高くなり、タップ効果が下がる
@@ -35,6 +38,8 @@ export function useFishing() {
   const reelingStartRef = useRef(0);
   const tensionRef = useRef(0);
   const progressRef = useRef(0);
+  const tensionLimitRef = useRef(FISHING_TENSION_BREAK_THRESHOLD);
+  const timeLimitRef = useRef(FISHING_REELING_TIME_LIMIT_MS);
 
   // 釣り開始（fishingStateは既にstartFishing/startBoatFishingでセット済み）
   const begin = useCallback(() => {
@@ -93,6 +98,16 @@ export function useFishing() {
     const rarity = fishingState.targetFish?.rarity ?? 'common';
     const diff = RARITY_DIFFICULTY[rarity];
 
+    // リールのテンション耐性
+    const toleranceLevel = getEffectiveLevel(player.equipment, 'tensionTolerance');
+    const toleranceBonus = interpolateBonus(REEL_TENSION_TOLERANCE, toleranceLevel);
+    tensionLimitRef.current = FISHING_TENSION_BREAK_THRESHOLD + toleranceBonus;
+
+    // リールの制限時間延長
+    const timeExtLevel = getEffectiveLevel(player.equipment, 'tensionTolerance');
+    const timeExtBonus = interpolateBonus(REEL_TIME_EXTENSION, timeExtLevel);
+    timeLimitRef.current = FISHING_REELING_TIME_LIMIT_MS + timeExtBonus;
+
     const interval = window.setInterval(() => {
       tensionRef.current = Math.max(0, tensionRef.current - FISHING_TENSION_DECAY_RATE * 3);
       // 自然後退（魚の抵抗）— レア度で増加
@@ -108,7 +123,7 @@ export function useFishing() {
     const timeLimit = window.setTimeout(() => {
       if (reelingRef.current) clearInterval(reelingRef.current);
       failFishing();
-    }, FISHING_REELING_TIME_LIMIT_MS);
+    }, timeLimitRef.current);
 
     reelingRef.current = interval;
     reelingTimerRef.current = timeLimit;
@@ -133,11 +148,11 @@ export function useFishing() {
     tensionRef.current += FISHING_TENSION_RISE_PER_TAP * diff.tensionMul;
     progressRef.current += tapPower;
 
-    // テンション破断チェック
-    if (tensionRef.current >= FISHING_TENSION_BREAK_THRESHOLD) {
+    // テンション破断チェック（リールのテンション耐性を考慮）
+    if (tensionRef.current >= tensionLimitRef.current) {
       if (reelingRef.current) clearInterval(reelingRef.current);
       if (reelingTimerRef.current) clearTimeout(reelingTimerRef.current);
-      updateFishingState({ tension: FISHING_TENSION_BREAK_THRESHOLD, reelingProgress: progressRef.current });
+      updateFishingState({ tension: tensionLimitRef.current, reelingProgress: progressRef.current });
       failFishing();
       return;
     }
@@ -146,15 +161,31 @@ export function useFishing() {
     if (progressRef.current >= FISHING_REELING_TARGET) {
       if (reelingRef.current) clearInterval(reelingRef.current);
       if (reelingTimerRef.current) clearTimeout(reelingTimerRef.current);
-      const size = generateFishSize();
+      const size = generateFishSize(player.equipment);
       const caught = createCaughtFish(fishingState.targetFish!.id, player.currentNode, turn);
       caught.size = size;
+
+      // 大漁判定
+      const node = NODE_MAP.get(player.currentNode);
+      const isSpecial = node?.type === 'fishing_special';
+      const bonusCount = checkTairyou(player.equipment, isSpecial);
+      const bonusFish: typeof caught[] = [];
+      if (bonusCount > 0 && node) {
+        for (let i = 0; i < bonusCount; i++) {
+          const extraFish = selectFish(node.id, node.region, player.equipment, isSpecial, fishingState.boatFishing);
+          const extraSize = generateFishSize(player.equipment);
+          const extra = createCaughtFish(extraFish.id, player.currentNode, turn);
+          extra.size = extraSize;
+          bonusFish.push(extra);
+        }
+      }
+
       updateFishingState({
         tension: tensionRef.current,
         reelingProgress: FISHING_REELING_TARGET,
         caughtSize: size,
       });
-      catchFish(caught);
+      catchFish(caught, bonusFish);
       return;
     }
 
@@ -177,5 +208,7 @@ export function useFishing() {
     handleReelTap,
     handleMiss,
     reelingStartRef,
+    tensionLimitRef,
+    timeLimitRef,
   };
 }

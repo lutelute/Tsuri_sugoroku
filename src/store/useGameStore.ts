@@ -26,7 +26,7 @@ interface GameActions {
   startFishing: (boatFishing?: boolean) => void;
   startBoatFishing: () => void;
   updateFishingState: (state: Partial<FishingState>) => void;
-  catchFish: (caught: CaughtFish) => void;
+  catchFish: (caught: CaughtFish, bonusFish?: CaughtFish[]) => void;
   failFishing: () => void;
   endFishing: () => void;
   buyEquipment: (type: EquipmentType, level: number, cost: number) => void;
@@ -242,6 +242,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         caughtSize: 1,
         escaped: false,
         boatFishing: !!boatFishing,
+        tairyouCount: 0,
       },
       turnPhase: 'fishing',
     });
@@ -265,36 +266,41 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ fishingState: { ...fishingState, ...partial } });
   },
 
-  catchFish: (caught) => {
+  catchFish: (caught, bonusFish) => {
     const { players, currentPlayerIndex, encyclopedia, nodeActionsThisTurn } = get();
     const player = players[currentPlayerIndex];
-    const caughtWithBonus = { ...caught, bonusMultiplier: player.fishBonusMultiplier };
 
-    // 魚の売却でお金を獲得（レアリティ×サイズ）
-    const fishData = FISH_DATABASE.find(f => f.id === caught.fishId);
-    const sellPrice = fishData ? Math.round((FISH_SELL_PRICE[fishData.rarity] ?? 200) * caught.size) : 200;
+    // メイン + ボーナス魚を全てまとめる
+    const allCaught = [caught, ...(bonusFish ?? [])];
+    const allWithBonus = allCaught.map(c => ({ ...c, bonusMultiplier: player.fishBonusMultiplier }));
+
+    // 売却金合計
+    let totalSellPrice = 0;
+    let newEncyclopedia = { ...encyclopedia };
+    for (const c of allCaught) {
+      const fishData = FISH_DATABASE.find(f => f.id === c.fishId);
+      totalSellPrice += fishData ? Math.round((FISH_SELL_PRICE[fishData.rarity] ?? 200) * c.size) : 200;
+      newEncyclopedia[c.fishId] = true;
+      if (player.uid) {
+        saveEncyclopediaForPlayer(player.uid, c.fishId);
+      }
+    }
 
     const newPlayers = [...players];
     newPlayers[currentPlayerIndex] = {
       ...player,
-      caughtFish: [...player.caughtFish, caughtWithBonus],
-      money: player.money + sellPrice,
+      caughtFish: [...player.caughtFish, ...allWithBonus],
+      money: player.money + totalSellPrice,
     };
 
-    const newEncyclopedia = { ...encyclopedia, [caught.fishId]: true };
-    // ホストユーザーの図鑑を保存
     saveEncyclopedia(newEncyclopedia);
-    // 釣ったプレイヤーが紐付けユーザーなら、そのユーザーの図鑑にも反映
-    if (player.uid) {
-      saveEncyclopediaForPlayer(player.uid, caught.fishId);
-    }
 
     set({
       players: newPlayers,
       encyclopedia: newEncyclopedia,
       nodeActionsThisTurn: nodeActionsThisTurn + 1,
       fishingState: get().fishingState
-        ? { ...get().fishingState!, phase: 'result', escaped: false }
+        ? { ...get().fishingState!, phase: 'result', escaped: false, tairyouCount: bonusFish?.length ?? 0 }
         : null,
     });
   },

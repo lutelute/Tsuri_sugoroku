@@ -161,6 +161,7 @@ export interface FishingState {
   caughtSize: number;
   escaped: boolean;
   boatFishing: boolean;
+  tairyouCount: number;
 }
 
 // ===== ゲーム全体 =====

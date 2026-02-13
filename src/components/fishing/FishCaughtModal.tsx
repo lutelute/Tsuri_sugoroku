@@ -23,10 +23,11 @@ interface FishCaughtModalProps {
   fish: Fish | null;
   size: number;
   escaped: boolean;
+  tairyouCount: number;
   onClose: () => void;
 }
 
-export default function FishCaughtModal({ fish, size, escaped, onClose }: FishCaughtModalProps) {
+export default function FishCaughtModal({ fish, size, escaped, tairyouCount, onClose }: FishCaughtModalProps) {
   if (!fish) return null;
 
   const rarity = RARITY_LABELS[fish.rarity];
@@ -79,8 +80,13 @@ export default function FishCaughtModal({ fish, size, escaped, onClose }: FishCa
             </div>
 
             {size >= 1.5 && (
-              <div className="text-amber-400 text-sm mb-4 animate-pulse">
+              <div className="text-amber-400 text-sm mb-2 animate-pulse">
                 🌟 巨大魚ボーナス +200pt！
+              </div>
+            )}
+            {tairyouCount > 0 && (
+              <div className="text-cyan-300 text-sm mb-4 animate-bounce font-bold">
+                🐟 大漁！ +{tairyouCount}匹ボーナス！
               </div>
             )}
           </>
