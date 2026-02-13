@@ -132,6 +132,7 @@ export interface Player {
   id: number;
   name: string;
   color: string;
+  uid?: string; // Firebase UID（登録ユーザー紐付け時）
   currentNode: string;
   money: number;
   equipment: PlayerEquipment;
@@ -181,6 +182,7 @@ export type TurnPhase =
 export interface GameSettings {
   playerCount: number;
   playerNames: string[];
+  playerUids: (string | null)[]; // 各プレイヤーの Firebase UID（未紐付けは null）
   maxTurns: number; // 0 = ゴール到達で終了
 }
 

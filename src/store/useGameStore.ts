@@ -10,7 +10,7 @@ import { getRandomEventCard } from '../data/eventCards';
 import { applyEvent } from '../game/events';
 import { selectFish } from '../game/fishing';
 import { FISH_DATABASE } from '../data/fishDatabase';
-import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState, loadGameStateAsync, loadEncyclopediaAsync } from '../utils/storage';
+import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState, loadGameStateAsync, loadEncyclopediaAsync, saveEncyclopediaForPlayer } from '../utils/storage';
 import { createInitialEquipment, createEquipmentItem, applyDurabilityLoss, repairItem } from '../game/equipment';
 
 const MAX_FISHING_PER_TURN = 3;
@@ -50,6 +50,7 @@ function createInitialPlayers(settings: GameSettings): Player[] {
     id: i,
     name: settings.playerNames[i] || PLAYER_DEFAULT_NAMES[i],
     color: PLAYER_COLORS[i],
+    uid: settings.playerUids[i] ?? undefined,
     currentNode: 'start',
     money: INITIAL_MONEY,
     equipment: createInitialEquipment(),
@@ -66,7 +67,7 @@ function createInitialPlayers(settings: GameSettings): Player[] {
 
 const initialState: GameState = {
   screen: 'title',
-  settings: { playerCount: 1, playerNames: [PLAYER_DEFAULT_NAMES[0]], maxTurns: DEFAULT_MAX_TURNS },
+  settings: { playerCount: 1, playerNames: [PLAYER_DEFAULT_NAMES[0]], playerUids: [null], maxTurns: DEFAULT_MAX_TURNS },
   players: [],
   currentPlayerIndex: 0,
   turn: 1,
@@ -252,7 +253,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     };
 
     const newEncyclopedia = { ...encyclopedia, [caught.fishId]: true };
+    // ホストユーザーの図鑑を保存
     saveEncyclopedia(newEncyclopedia);
+    // 釣ったプレイヤーが紐付けユーザーなら、そのユーザーの図鑑にも反映
+    if (player.uid) {
+      saveEncyclopediaForPlayer(player.uid, caught.fishId);
+    }
 
     set({
       players: newPlayers,

@@ -1,6 +1,18 @@
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
+// ===== ユーザー名ルックアップ =====
+
+export async function registerUsername(uid: string, username: string): Promise<void> {
+  await setDoc(doc(db, 'usernames', username.toLowerCase()), { uid, displayName: username });
+}
+
+export async function lookupUserByUsername(username: string): Promise<{ uid: string; displayName: string } | null> {
+  const snap = await getDoc(doc(db, 'usernames', username.toLowerCase()));
+  if (!snap.exists()) return null;
+  return snap.data() as { uid: string; displayName: string };
+}
+
 // ===== 図鑑 =====
 
 export async function saveUserEncyclopedia(uid: string, encyclopedia: Record<string, boolean>): Promise<void> {

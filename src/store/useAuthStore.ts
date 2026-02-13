@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { saveUserProfile } from '../lib/firestore';
+import { saveUserProfile, registerUsername } from '../lib/firestore';
 
 function toEmail(username: string): string {
   return `${username.toLowerCase()}@tsuri.local`;
@@ -38,6 +38,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const cred = await createUserWithEmailAndPassword(auth, toEmail(username), password);
       await updateProfile(cred.user, { displayName: username });
       await saveUserProfile(cred.user.uid, username);
+      await registerUsername(cred.user.uid, username);
       set({ user: cred.user, loading: false });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '登録に失敗しました';
