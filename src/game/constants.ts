@@ -66,6 +66,7 @@ export const GIANT_FISH_THRESHOLD = 1.5;
 export const GIANT_FISH_BONUS = 200;
 
 export const FINISH_BONUS = [2000, 1200, 600, 200];
+export const GOAL_MONEY_REWARD = [10000, 6000, 3000, 1000]; // ゴール順位別の賞金
 export const MONEY_TO_POINTS_RATE = 0.5;
 
 // 休憩所

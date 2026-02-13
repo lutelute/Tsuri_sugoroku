@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore, MAX_FISHING_PER_TURN } from '../../store/useGameStore';
 import { NODE_MAP } from '../../data/boardNodes';
+import { GOAL_MONEY_REWARD } from '../../game/constants';
 import JapanMap from '../map/JapanMap';
 import AllPlayersBar from '../hud/AllPlayersBar';
 import TurnIndicator from '../hud/TurnIndicator';
@@ -19,6 +20,7 @@ export default function GameScreen() {
   const {
     turnPhase, players, currentPlayerIndex, nodeActionsThisTurn,
     setTurnPhase, executeNodeAction, endTurn, doActionAgain, rouletteResult,
+    setScreen,
   } = useGameStore();
 
   const [showEncyclopedia, setShowEncyclopedia] = useState(false);
@@ -127,6 +129,15 @@ export default function GameScreen() {
           </div>
         )}
 
+        {/* 左上: タイトルに戻る */}
+        <button
+          onClick={() => setScreen('title')}
+          className="absolute left-3 top-2 bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer z-20"
+          title="タイトルに戻る"
+        >
+          🏠
+        </button>
+
         {/* 右サイドボタン群 */}
         <div className="absolute right-3 bottom-4 flex flex-col gap-2 z-20">
           <button
@@ -176,7 +187,10 @@ export default function GameScreen() {
           <div className="bg-gradient-to-b from-amber-900/80 to-amber-950/80 rounded-2xl border border-amber-500/20 p-8 text-center max-w-sm w-[90%]">
             <div className="text-5xl mb-4">🏁</div>
             <h3 className="text-xl font-bold mb-2">ゴール！</h3>
-            <p className="text-white/60">{player.name}がゴールに到達した！</p>
+            <p className="text-white/60 mb-3">{player.name}がゴールに到達した！</p>
+            <p className="text-amber-300 font-bold text-lg">
+              賞金 ¥{(GOAL_MONEY_REWARD[player.finishOrder ?? 0] ?? GOAL_MONEY_REWARD[GOAL_MONEY_REWARD.length - 1]).toLocaleString()} 獲得！
+            </p>
           </div>
         </div>
       )}

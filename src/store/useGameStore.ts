@@ -3,7 +3,7 @@ import type {
   GameState, GameScreen, TurnPhase, Player, GameSettings,
   FishingState, CaughtFish, EquipmentType,
 } from '../game/types';
-import { INITIAL_MONEY, PLAYER_COLORS, PLAYER_DEFAULT_NAMES, REST_MONEY_BONUS, DEFAULT_MAX_TURNS, FISH_SELL_PRICE, BOAT_FISHING_COST } from '../game/constants';
+import { INITIAL_MONEY, PLAYER_COLORS, PLAYER_DEFAULT_NAMES, REST_MONEY_BONUS, DEFAULT_MAX_TURNS, FISH_SELL_PRICE, BOAT_FISHING_COST, GOAL_MONEY_REWARD } from '../game/constants';
 import { calculateReachableNodes } from '../game/movement';
 import { NODE_MAP } from '../data/boardNodes';
 import { getRandomEventCard } from '../data/eventCards';
@@ -200,11 +200,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
       case 'goal': {
         const finishedCount = players.filter(p => p.hasFinished).length;
+        const reward = GOAL_MONEY_REWARD[finishedCount] ?? GOAL_MONEY_REWARD[GOAL_MONEY_REWARD.length - 1];
         const newPlayers = [...players];
         newPlayers[currentPlayerIndex] = {
           ...player,
           hasFinished: true,
           finishOrder: finishedCount,
+          money: player.money + reward,
         };
         set({ players: newPlayers, turnPhase: 'turn_end' });
         break;
