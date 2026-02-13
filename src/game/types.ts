@@ -163,7 +163,7 @@ export interface FishingState {
 
 // ===== ゲーム全体 =====
 
-export type GameScreen = 'title' | 'setup' | 'game' | 'result';
+export type GameScreen = 'title' | 'setup' | 'game' | 'result' | 'login';
 
 export type TurnPhase =
   | 'idle'

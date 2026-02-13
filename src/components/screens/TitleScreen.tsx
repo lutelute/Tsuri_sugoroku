@@ -1,4 +1,5 @@
 import { useGameStore, hasSavedGame } from '../../store/useGameStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import Button from '../shared/Button';
 
 export default function TitleScreen() {
@@ -6,8 +7,33 @@ export default function TitleScreen() {
   const resumeGame = useGameStore(s => s.resumeGame);
   const savedExists = hasSavedGame();
 
+  const user = useAuthStore(s => s.user);
+  const signOut = useAuthStore(s => s.signOut);
+
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 select-none">
+      {/* ユーザー情報 */}
+      <div className="absolute top-4 right-4 flex items-center gap-3">
+        {user ? (
+          <>
+            <span className="text-sm text-white/60">{user.displayName ?? 'ユーザー'}</span>
+            <button
+              onClick={signOut}
+              className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer"
+            >
+              ログアウト
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setScreen('login')}
+            className="text-sm text-cyan-300/70 hover:text-cyan-300 transition-colors cursor-pointer"
+          >
+            ログイン
+          </button>
+        )}
+      </div>
+
       {/* タイトルロゴ */}
       <div className="mb-8 text-center">
         <div className="text-6xl mb-4 animate-bounce">🎣</div>

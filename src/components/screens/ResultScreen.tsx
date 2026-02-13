@@ -1,10 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { calculateScore } from '../../game/scoring';
+import { saveEncyclopedia } from '../../utils/storage';
 import Button from '../shared/Button';
 
 export default function ResultScreen() {
   const { players, encyclopedia, resetGame } = useGameStore();
+  const user = useAuthStore(s => s.user);
 
   const results = useMemo(() => {
     return players
@@ -14,6 +17,13 @@ export default function ResultScreen() {
       }))
       .sort((a, b) => b.score.total - a.score.total);
   }, [players, encyclopedia]);
+
+  // ゲーム終了時に図鑑をクラウドに確実に保存
+  useEffect(() => {
+    if (user) {
+      saveEncyclopedia(encyclopedia);
+    }
+  }, [user, encyclopedia]);
 
   const RANK_ICONS = ['🥇', '🥈', '🥉', '4️⃣'];
 

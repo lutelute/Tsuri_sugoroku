@@ -10,7 +10,7 @@ import { getRandomEventCard } from '../data/eventCards';
 import { applyEvent } from '../game/events';
 import { selectFish } from '../game/fishing';
 import { FISH_DATABASE } from '../data/fishDatabase';
-import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState } from '../utils/storage';
+import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState, loadGameStateAsync, loadEncyclopediaAsync } from '../utils/storage';
 import { createInitialEquipment, createEquipmentItem, applyDurabilityLoss, repairItem } from '../game/equipment';
 
 const MAX_FISHING_PER_TURN = 3;
@@ -39,6 +39,7 @@ interface GameActions {
   setTurnPhase: (phase: TurnPhase) => void;
   resetGame: () => void;
   resumeGame: () => void;
+  syncFromCloud: () => Promise<void>;
 }
 
 type GameStore = GameState & GameActions;
@@ -494,6 +495,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
       encyclopedia: loadEncyclopedia(),
       nodeActionsThisTurn: saved.nodeActionsThisTurn,
     });
+  },
+
+  syncFromCloud: async () => {
+    const [encyclopedia, savedGame] = await Promise.all([
+      loadEncyclopediaAsync(),
+      loadGameStateAsync(),
+    ]);
+    // ローカルの図鑑とクラウドの図鑑をマージ（両方のtrue値を保持）
+    const localEnc = get().encyclopedia;
+    const merged = { ...localEnc, ...encyclopedia };
+    set({ encyclopedia: merged });
+    // マージ結果をlocalStorageに反映
+    saveEncyclopedia(merged);
+    // セーブデータがクラウドにあればlocalStorageにも書き込む
+    if (savedGame) {
+      saveGameState(savedGame);
+    }
   },
 }));
 
