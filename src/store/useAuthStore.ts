@@ -54,6 +54,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const cred = await signInWithEmailAndPassword(auth, toEmail(username), password);
       await saveUserProfile(cred.user.uid, username);
+      // 既存ユーザーでもusernamesコレクションに登録（検索用）
+      await registerUsername(cred.user.uid, username).catch(() => {});
       set({ user: cred.user, loading: false });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'ログインに失敗しました';
