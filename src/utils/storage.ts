@@ -7,23 +7,32 @@ import {
   loadUserEncyclopedia,
 } from '../lib/firestore';
 
-const SAVE_KEY = 'tsuri_sugoroku_save';
-const ENCYCLOPEDIA_KEY = 'tsuri_sugoroku_encyclopedia';
+const SAVE_KEY_BASE = 'tsuri_sugoroku_save';
+const ENCYCLOPEDIA_KEY_BASE = 'tsuri_sugoroku_encyclopedia';
 
 function getUid(): string | null {
   return useAuthStore.getState().user?.uid ?? null;
 }
 
+// ユーザーごとにlocalStorageキーを分離
+function saveKey(): string {
+  const uid = getUid();
+  return uid ? `${SAVE_KEY_BASE}_${uid}` : SAVE_KEY_BASE;
+}
+
+function encyclopediaKey(): string {
+  const uid = getUid();
+  return uid ? `${ENCYCLOPEDIA_KEY_BASE}_${uid}` : ENCYCLOPEDIA_KEY_BASE;
+}
+
 // ===== ゲームセーブ =====
 
 export function saveGameState(state: unknown): void {
-  // localStorage に常に保存（即座に）
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    localStorage.setItem(saveKey(), JSON.stringify(state));
   } catch {
     // localStorage full or unavailable
   }
-  // ログイン中は Firestore にも保存（非同期、fire-and-forget）
   const uid = getUid();
   if (uid) {
     saveUserGameState(uid, state).catch(() => {});
@@ -32,7 +41,7 @@ export function saveGameState(state: unknown): void {
 
 export function loadGameState(): unknown | null {
   try {
-    const data = localStorage.getItem(SAVE_KEY);
+    const data = localStorage.getItem(saveKey());
     return data ? JSON.parse(data) : null;
   } catch {
     return null;
@@ -53,7 +62,7 @@ export async function loadGameStateAsync(): Promise<unknown | null> {
 }
 
 export function clearGameState(): void {
-  localStorage.removeItem(SAVE_KEY);
+  localStorage.removeItem(saveKey());
   const uid = getUid();
   if (uid) {
     clearUserGameState(uid).catch(() => {});
@@ -64,7 +73,7 @@ export function clearGameState(): void {
 
 export function saveEncyclopedia(encyclopedia: Record<string, boolean>): void {
   try {
-    localStorage.setItem(ENCYCLOPEDIA_KEY, JSON.stringify(encyclopedia));
+    localStorage.setItem(encyclopediaKey(), JSON.stringify(encyclopedia));
   } catch {
     // ignore
   }
@@ -76,7 +85,7 @@ export function saveEncyclopedia(encyclopedia: Record<string, boolean>): void {
 
 export function loadEncyclopedia(): Record<string, boolean> {
   try {
-    const data = localStorage.getItem(ENCYCLOPEDIA_KEY);
+    const data = localStorage.getItem(encyclopediaKey());
     return data ? JSON.parse(data) : {};
   } catch {
     return {};
@@ -88,7 +97,7 @@ export async function loadEncyclopediaAsync(): Promise<Record<string, boolean>> 
   if (uid) {
     try {
       const remote = await loadUserEncyclopedia(uid);
-      if (remote && Object.keys(remote).length > 0) return remote;
+      if (remote) return remote;
     } catch {
       // Firestore失敗時はlocalStorageにフォールバック
     }

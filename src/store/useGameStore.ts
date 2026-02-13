@@ -40,6 +40,7 @@ interface GameActions {
   resetGame: () => void;
   resumeGame: () => void;
   syncFromCloud: () => Promise<void>;
+  clearUserData: () => void;
 }
 
 type GameStore = GameState & GameActions;
@@ -502,16 +503,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       loadEncyclopediaAsync(),
       loadGameStateAsync(),
     ]);
-    // ローカルの図鑑とクラウドの図鑑をマージ（両方のtrue値を保持）
-    const localEnc = get().encyclopedia;
-    const merged = { ...localEnc, ...encyclopedia };
-    set({ encyclopedia: merged });
-    // マージ結果をlocalStorageに反映
-    saveEncyclopedia(merged);
-    // セーブデータがクラウドにあればlocalStorageにも書き込む
+    // クラウドのデータで上書き（ユーザー固有データが正）
+    set({ encyclopedia });
+    saveEncyclopedia(encyclopedia);
     if (savedGame) {
       saveGameState(savedGame);
     }
+  },
+
+  clearUserData: () => {
+    set({ encyclopedia: {}, players: [], gameOver: false });
+    clearGameState();
   },
 }));
 

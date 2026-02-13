@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useGameStore } from './store/useGameStore';
 import { useAuthStore } from './store/useAuthStore';
 import TitleScreen from './components/screens/TitleScreen';
@@ -10,9 +10,12 @@ import LoginScreen from './components/screens/LoginScreen';
 export default function App() {
   const screen = useGameStore(s => s.screen);
   const syncFromCloud = useGameStore(s => s.syncFromCloud);
+  const clearUserData = useGameStore(s => s.clearUserData);
+  const setScreen = useGameStore(s => s.setScreen);
   const init = useAuthStore(s => s.init);
   const user = useAuthStore(s => s.user);
   const initialized = useAuthStore(s => s.initialized);
+  const prevUidRef = useRef<string | null>(null);
 
   // Firebase Auth リスナー初期化
   useEffect(() => {
@@ -20,12 +23,24 @@ export default function App() {
     return unsubscribe;
   }, [init]);
 
-  // ログイン状態変化時にクラウドからデータ同期
+  // ユーザー切替時のデータ同期・リセット
   useEffect(() => {
-    if (initialized && user) {
-      syncFromCloud();
+    if (!initialized) return;
+    const currentUid = user?.uid ?? null;
+    const prevUid = prevUidRef.current;
+
+    if (currentUid !== prevUid) {
+      if (currentUid) {
+        // ログイン → クラウドからそのユーザーのデータを読込
+        syncFromCloud();
+      } else if (prevUid) {
+        // ログアウト → メモリ上のデータをクリアしてタイトルに戻る
+        clearUserData();
+        setScreen('title');
+      }
+      prevUidRef.current = currentUid;
     }
-  }, [initialized, user, syncFromCloud]);
+  }, [initialized, user, syncFromCloud, clearUserData, setScreen]);
 
   // 認証初期化待ち
   if (!initialized) {
