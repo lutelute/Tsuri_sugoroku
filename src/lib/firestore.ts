@@ -1,16 +1,37 @@
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from './firebase';
 
 // ===== ユーザー名ルックアップ =====
 
 export async function registerUsername(uid: string, username: string): Promise<void> {
   await setDoc(doc(db, 'usernames', username.toLowerCase()), { uid, displayName: username });
+  // 検索用プロフィールコレクションにも書き込み
+  await setDoc(doc(db, 'profiles', uid), {
+    uid,
+    displayName: username,
+    displayNameLower: username.toLowerCase(),
+  }, { merge: true });
 }
 
 export async function lookupUserByUsername(username: string): Promise<{ uid: string; displayName: string } | null> {
+  // 1. usernamesコレクションから検索（高速）
   const snap = await getDoc(doc(db, 'usernames', username.toLowerCase()));
-  if (!snap.exists()) return null;
-  return snap.data() as { uid: string; displayName: string };
+  if (snap.exists()) return snap.data() as { uid: string; displayName: string };
+
+  // 2. profilesコレクションからフォールバック検索
+  const q = query(
+    collection(db, 'profiles'),
+    where('displayNameLower', '==', username.toLowerCase()),
+  );
+  const querySnap = await getDocs(q);
+  if (!querySnap.empty) {
+    const data = querySnap.docs[0].data() as { uid: string; displayName: string };
+    // 次回以降のためにusernamesにも登録
+    registerUsername(data.uid, data.displayName).catch(() => {});
+    return { uid: data.uid, displayName: data.displayName };
+  }
+
+  return null;
 }
 
 // ===== 図鑑 =====
@@ -71,4 +92,10 @@ export async function saveUserProfile(uid: string, displayName: string): Promise
     displayName,
     lastLoginAt: new Date().toISOString(),
   }, { merge: true });
+  // 検索用プロフィールコレクションにも書き込み
+  await setDoc(doc(db, 'profiles', uid), {
+    uid,
+    displayName,
+    displayNameLower: displayName.toLowerCase(),
+  }, { merge: true }).catch(() => {});
 }
