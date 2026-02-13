@@ -68,7 +68,7 @@ export default function GameScreen() {
         <TurnIndicator />
       </div>
 
-      {/* メインマップ */}
+      {/* メインマップ + フローティングUI */}
       <div className="flex-1 min-h-0 relative overflow-hidden">
         <JapanMap />
 
@@ -85,78 +85,74 @@ export default function GameScreen() {
           </div>
         )}
 
-        {/* インベントリボタン */}
-        <button
-          onClick={() => setShowInventory(true)}
-          className="absolute bottom-38 right-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer z-20"
-        >
-          🧰
-        </button>
+        {/* === フローティング: サイコロボタン === */}
+        {turnPhase === 'idle' && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-xs">
+            <Button
+              onClick={() => setTurnPhase('roulette')}
+              variant="gold"
+              size="lg"
+              className="w-full shadow-2xl"
+            >
+              🎲 サイコロを振る
+            </Button>
+          </div>
+        )}
 
-        {/* クリールバッグボタン */}
-        <button
-          onClick={() => setShowCreel(true)}
-          className="absolute bottom-26 right-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer z-20"
-        >
-          🎒
-        </button>
+        {/* === フローティング: アクション選択 === */}
+        {turnPhase === 'action_choice' && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-xs space-y-2">
+            <div className="text-center text-xs text-white/70 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1.5">
+              📍 {node?.name || '???'} — 何をする？
+            </div>
+            {canDoActionAgain && (
+              <Button
+                onClick={doActionAgain}
+                variant="primary"
+                size="md"
+                className="w-full shadow-xl"
+              >
+                {actionLabel}
+              </Button>
+            )}
+            <Button
+              onClick={() => setTurnPhase('turn_end')}
+              variant="secondary"
+              size="md"
+              className="w-full shadow-xl"
+            >
+              ターンを終了する
+            </Button>
+          </div>
+        )}
 
-        {/* 図鑑ボタン */}
-        <button
-          onClick={() => setShowEncyclopedia(true)}
-          className="absolute bottom-14 right-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer z-20"
-        >
-          📖
-        </button>
+        {/* 右サイドボタン群 */}
+        <div className="absolute right-3 bottom-4 flex flex-col gap-2 z-20">
+          <button
+            onClick={() => setShowInventory(true)}
+            className="bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer"
+          >
+            🧰
+          </button>
+          <button
+            onClick={() => setShowCreel(true)}
+            className="bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer"
+          >
+            🎒
+          </button>
+          <button
+            onClick={() => setShowEncyclopedia(true)}
+            className="bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer"
+          >
+            📖
+          </button>
+        </div>
       </div>
 
       {/* プレイヤーバー */}
       <div className="shrink-0">
         <AllPlayersBar />
       </div>
-
-      {/* === 下部アクションエリア === */}
-
-      {/* サイコロを振る */}
-      {turnPhase === 'idle' && (
-        <div className="p-3 bg-black/30">
-          <Button
-            onClick={() => setTurnPhase('roulette')}
-            variant="gold"
-            size="lg"
-            className="w-full"
-          >
-            🎲 サイコロを振る
-          </Button>
-        </div>
-      )}
-
-      {/* アクション選択メニュー */}
-      {turnPhase === 'action_choice' && (
-        <div className="p-3 bg-black/40 backdrop-blur-sm space-y-2">
-          <div className="text-center text-sm text-white/60 mb-1">
-            📍 {node?.name || '???'} — 何をする？
-          </div>
-          {canDoActionAgain && (
-            <Button
-              onClick={doActionAgain}
-              variant="primary"
-              size="md"
-              className="w-full"
-            >
-              {actionLabel}
-            </Button>
-          )}
-          <Button
-            onClick={() => setTurnPhase('turn_end')}
-            variant="secondary"
-            size="md"
-            className="w-full"
-          >
-            ターンを終了する
-          </Button>
-        </div>
-      )}
 
       {/* オーバーレイ */}
       {turnPhase === 'roulette' && <RouletteOverlay />}
