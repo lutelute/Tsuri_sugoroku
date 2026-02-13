@@ -59,6 +59,17 @@ export default function FishDetail({ fish, caught, onClose }: FishDetailProps) {
             <div className="text-xs text-white/40 mt-2">
               地域: {fish.regions.join(', ')}
             </div>
+
+            {fish.wikiUrl && (
+              <a
+                href={fish.wikiUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block mt-3 text-center text-sm text-cyan-400 hover:text-cyan-300 underline transition"
+              >
+                📚 詳しく見る（Wikipedia）
+              </a>
+            )}
           </div>
         ) : (
           <p className="mt-4 text-sm text-white/40 text-center">まだ釣っていません</p>

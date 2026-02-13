@@ -21,6 +21,9 @@ export const EVENT_CARDS: EventCard[] = [
   { id: 'rod_snap', name: '竿が折れた！', type: 'bad', description: '岩場で足を滑らせ、竿を地面に叩きつけてしまった！', effect: { kind: 'equipment_damage', equipmentType: 'rod', amount: 100 } },
   { id: 'reel_rust', name: 'リール浸水', type: 'bad', description: '突然の高波でリールが水没！耐久度が大幅ダウン...', effect: { kind: 'equipment_damage', equipmentType: 'reel', amount: 60 } },
   { id: 'lure_lost', name: 'ルアー損傷', type: 'bad', description: '根がかりでルアーが大きく傷ついた！', effect: { kind: 'equipment_damage', equipmentType: 'lure', amount: 50 } },
+  { id: 'rod_crack', name: '竿にヒビ', type: 'bad', description: '大物とのファイトで竿にヒビが入った...', effect: { kind: 'equipment_damage', equipmentType: 'rod', amount: 40 } },
+  { id: 'reel_jam', name: 'リール故障', type: 'bad', description: '砂がリールに入り込んで動きが悪い...', effect: { kind: 'equipment_damage', equipmentType: 'reel', amount: 45 } },
+  { id: 'lure_crack', name: 'ルアー破損', type: 'bad', description: '岩にぶつけてルアーが割れてしまった...', effect: { kind: 'equipment_damage', equipmentType: 'lure', amount: 100 } },
 
   // ===== Random Events =====
   { id: 'lottery', name: '福引き', type: 'random', description: '地元の商店街で福引きを引いた！何が当たるかな...', effect: { kind: 'money', amount: 2500 } },
@@ -29,6 +32,8 @@ export const EVENT_CARDS: EventCard[] = [
   { id: 'drifting', name: '潮の流れ', type: 'random', description: '潮の流れに乗って思わぬ場所へ...2マス戻る', effect: { kind: 'move_steps', steps: -2 } },
   { id: 'festival', name: '地元の祭り', type: 'random', description: 'お祭りで散財してしまった...¥500失った', effect: { kind: 'money', amount: -500 } },
   { id: 'rare_catch', name: '不思議な気配', type: 'random', description: '水面が不思議に光っている...珍しい魚が釣れるかも！', effect: { kind: 'random_fish', rarity: 'uncommon' } },
+  { id: 'monkeys', name: '猿の悪戯', type: 'random', description: '猿が道具をいじってルアーを壊した！', effect: { kind: 'equipment_damage', equipmentType: 'lure', amount: 70 } },
+  { id: 'bear_scare', name: '熊出没注意', type: 'random', description: '熊に驚いて荷物を落とした！竿が傷ついた...', effect: { kind: 'equipment_damage', equipmentType: 'rod', amount: 50 } },
 ];
 
 export function getRandomEventCard(type?: string): EventCard {

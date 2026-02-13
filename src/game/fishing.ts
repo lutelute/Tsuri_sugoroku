@@ -6,7 +6,7 @@ import {
   TAIRYOU_BONUS_MIN, TAIRYOU_BONUS_MAX,
 } from './constants';
 import type { EquipmentAbility } from './constants';
-import { getEquipmentLevels } from './equipment';
+import { getEquipmentLevels, getEquippedItem } from './equipment';
 import { weightedRandom, randomFloat } from '../utils/random';
 
 const RARITY_BASE_WEIGHT: Record<FishRarity, number> = {
@@ -60,6 +60,15 @@ export function selectFish(
   const available = getAvailableFish(nodeId, region, equipment);
 
   if (available.length === 0) {
+    return FISH_DATABASE.find(f => f.rarity === 'common')!;
+  }
+
+  // ルアーなし: コモンのみ
+  if (!getEquippedItem(equipment, 'lure')) {
+    const commonOnly = available.filter(f => f.rarity === 'common');
+    if (commonOnly.length > 0) {
+      return commonOnly[Math.floor(Math.random() * commonOnly.length)];
+    }
     return FISH_DATABASE.find(f => f.rarity === 'common')!;
   }
 

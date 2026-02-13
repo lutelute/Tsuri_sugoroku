@@ -1,11 +1,23 @@
 import { useGameStore } from '../../store/useGameStore';
 import { BOAT_FISHING_COST } from '../../game/constants';
+import { getEquippedItem } from '../../game/equipment';
 import Button from '../shared/Button';
 
 export default function FishingChoiceOverlay() {
   const { players, currentPlayerIndex, startFishing, startBoatFishing, setTurnPhase } = useGameStore();
   const player = players[currentPlayerIndex];
   const canAffordBoat = player.money >= BOAT_FISHING_COST;
+
+  const rodItem = getEquippedItem(player.equipment, 'rod');
+  const reelItem = getEquippedItem(player.equipment, 'reel');
+  const lureItem = getEquippedItem(player.equipment, 'lure');
+  const hasRod = !!rodItem;
+  const hasReel = !!reelItem;
+  const hasLure = !!lureItem;
+
+  const missingWarnings: string[] = [];
+  if (!hasReel) missingWarnings.push('リールなし: 巻き上げが困難');
+  if (!hasLure) missingWarnings.push('ルアーなし: 当たりが遅くコモンのみ');
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -15,11 +27,32 @@ export default function FishingChoiceOverlay() {
           所持金: ¥{player.money.toLocaleString()}
         </p>
 
+        {/* 装備なし警告 */}
+        {!hasRod && (
+          <div className="bg-red-900/60 border border-red-500/30 rounded-lg p-3 text-center">
+            <p className="text-red-300 font-bold text-sm">🚫 釣竿がありません！</p>
+            <p className="text-red-300/70 text-xs mt-1">竿がないと釣りはできません。ショップで購入しましょう。</p>
+          </div>
+        )}
+
+        {hasRod && missingWarnings.length > 0 && (
+          <div className="bg-amber-900/40 border border-amber-500/20 rounded-lg p-2">
+            {missingWarnings.map((w, i) => (
+              <p key={i} className="text-amber-300/80 text-xs">⚠️ {w}</p>
+            ))}
+          </div>
+        )}
+
         <div className="space-y-3">
           {/* 通常釣り */}
           <button
-            onClick={() => startFishing(false)}
-            className="w-full bg-blue-600/60 hover:bg-blue-600/80 border border-blue-400/30 rounded-xl p-4 text-left transition cursor-pointer"
+            onClick={() => hasRod && startFishing(false)}
+            disabled={!hasRod}
+            className={`w-full border rounded-xl p-4 text-left transition
+              ${hasRod
+                ? 'bg-blue-600/60 hover:bg-blue-600/80 border-blue-400/30 cursor-pointer'
+                : 'bg-white/5 border-white/10 opacity-40 cursor-not-allowed'
+              }`}
           >
             <div className="flex items-center gap-3">
               <span className="text-3xl">🎣</span>
@@ -32,10 +65,10 @@ export default function FishingChoiceOverlay() {
 
           {/* 船釣り */}
           <button
-            onClick={() => canAffordBoat && startBoatFishing()}
-            disabled={!canAffordBoat}
+            onClick={() => hasRod && canAffordBoat && startBoatFishing()}
+            disabled={!hasRod || !canAffordBoat}
             className={`w-full border rounded-xl p-4 text-left transition
-              ${canAffordBoat
+              ${hasRod && canAffordBoat
                 ? 'bg-amber-600/60 hover:bg-amber-600/80 border-amber-400/30 cursor-pointer'
                 : 'bg-white/5 border-white/10 opacity-40 cursor-not-allowed'
               }`}

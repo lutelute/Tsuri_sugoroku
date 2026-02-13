@@ -13,7 +13,11 @@ import {
   FISHING_REELING_TIME_LIMIT_MS,
   REEL_TENSION_TOLERANCE,
   REEL_TIME_EXTENSION,
+  NO_REEL_TAP_MULTIPLIER,
+  NO_REEL_TENSION_MULTIPLIER,
+  NO_LURE_BITE_DELAY_MULTIPLIER,
 } from '../game/constants';
+import { getEquippedItem } from '../game/equipment';
 
 // レア度による難易度倍率: テンション上昇・魚の抵抗が高くなり、タップ効果が下がる
 // バランス: mythicalでも20秒あれば高レベル装備なしで釣り上げ可能
@@ -53,7 +57,11 @@ export function useFishing() {
   useEffect(() => {
     if (fishingState?.phase !== 'waiting') return;
 
-    const delay = getBiteDelay(player.equipment);
+    let delay = getBiteDelay(player.equipment);
+    // ルアーなしペナルティ: バイト待ちが大幅に遅くなる
+    if (!getEquippedItem(player.equipment, 'lure')) {
+      delay *= NO_LURE_BITE_DELAY_MULTIPLIER;
+    }
     const timer = window.setTimeout(() => {
       updateFishingState({ hasBite: true });
     }, delay);
@@ -143,9 +151,16 @@ export function useFishing() {
     const reelingLevel = getEffectiveLevel(player.equipment, 'reeling');
     const baseTapPower = FISHING_REELING_TAP_BASE +
       FISHING_REELING_TAP_PER_REEL_LEVEL * (reelingLevel - 1);
-    const tapPower = baseTapPower * diff.tapMul;
+    let tapPower = baseTapPower * diff.tapMul;
+    let tensionRise = FISHING_TENSION_RISE_PER_TAP * diff.tensionMul;
 
-    tensionRef.current += FISHING_TENSION_RISE_PER_TAP * diff.tensionMul;
+    // リールなしペナルティ
+    if (!getEquippedItem(player.equipment, 'reel')) {
+      tapPower *= NO_REEL_TAP_MULTIPLIER;
+      tensionRise *= NO_REEL_TENSION_MULTIPLIER;
+    }
+
+    tensionRef.current += tensionRise;
     progressRef.current += tapPower;
 
     // テンション破断チェック（リールのテンション耐性を考慮）

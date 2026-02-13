@@ -63,6 +63,7 @@ export interface Fish {
   season: string; // 旬の時期
   habitat: string; // 生息場所
   difficulty: number; // 釣り難易度 1-5
+  wikiUrl?: string; // Wikipedia等の詳細情報URL
 }
 
 export interface CaughtFish {

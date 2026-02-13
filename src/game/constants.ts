@@ -102,5 +102,11 @@ export const BOAT_FISHING_COST = 10000;
 // リーリング制限時間（ミリ秒）
 export const FISHING_REELING_TIME_LIMIT_MS = 20000;
 
+// 装備なしペナルティ
+// 竿なし: 釣り不可（FishingChoiceOverlayで制御）
+export const NO_REEL_TAP_MULTIPLIER = 0.3;   // リールなし: タップ効果30%
+export const NO_REEL_TENSION_MULTIPLIER = 1.8; // リールなし: テンション上昇1.8倍
+export const NO_LURE_BITE_DELAY_MULTIPLIER = 2.5; // ルアーなし: バイト待ち2.5倍
+
 // デフォルト設定
 export const DEFAULT_MAX_TURNS = 50;
