@@ -76,6 +76,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   init: () => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       set({ user, initialized: true });
+      // 既存ユーザーでもusernamesコレクションに自動登録（検索可能にする）
+      if (user?.displayName) {
+        registerUsername(user.uid, user.displayName).catch(() => {});
+      }
     });
     return unsubscribe;
   },
