@@ -3,7 +3,7 @@ import type {
   GameState, GameScreen, TurnPhase, Player, GameSettings,
   FishingState, CaughtFish, EquipmentType,
 } from '../game/types';
-import { INITIAL_MONEY, PLAYER_COLORS, PLAYER_DEFAULT_NAMES, REST_MONEY_BONUS, DEFAULT_MAX_TURNS, FISH_SELL_PRICE } from '../game/constants';
+import { INITIAL_MONEY, PLAYER_COLORS, PLAYER_DEFAULT_NAMES, REST_MONEY_BONUS, DEFAULT_MAX_TURNS, FISH_SELL_PRICE, BOAT_FISHING_COST } from '../game/constants';
 import { calculateReachableNodes } from '../game/movement';
 import { NODE_MAP } from '../data/boardNodes';
 import { getRandomEventCard } from '../data/eventCards';
@@ -11,17 +11,20 @@ import { applyEvent } from '../game/events';
 import { selectFish } from '../game/fishing';
 import { FISH_DATABASE } from '../data/fishDatabase';
 import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState, loadGameStateAsync, loadEncyclopediaAsync, saveEncyclopediaForPlayer } from '../utils/storage';
-import { createInitialEquipment, createEquipmentItem, applyDurabilityLoss, repairItem } from '../game/equipment';
+import { createInitialEquipment, createEquipmentItem, applyDurabilityLoss, repairItem, isBroken } from '../game/equipment';
+import { saveUserEquipment, saveUserMoney } from '../lib/firestore';
+import type { PlayerEquipment } from '../game/types';
 
 const MAX_FISHING_PER_TURN = 3;
 
 interface GameActions {
   setScreen: (screen: GameScreen) => void;
-  startGame: (settings: GameSettings) => void;
+  startGame: (settings: GameSettings, savedEquipments?: (PlayerEquipment | null)[], savedMoneys?: (number | null)[]) => void;
   rollDice: (result: number) => void;
   selectPath: (pathIndex: number) => void;
   executeNodeAction: () => void;
-  startFishing: () => void;
+  startFishing: (boatFishing?: boolean) => void;
+  startBoatFishing: () => void;
   updateFishingState: (state: Partial<FishingState>) => void;
   catchFish: (caught: CaughtFish) => void;
   failFishing: () => void;
@@ -45,15 +48,19 @@ interface GameActions {
 
 type GameStore = GameState & GameActions;
 
-function createInitialPlayers(settings: GameSettings): Player[] {
+function createInitialPlayers(
+  settings: GameSettings,
+  savedEquipments?: (PlayerEquipment | null)[],
+  savedMoneys?: (number | null)[],
+): Player[] {
   return Array.from({ length: settings.playerCount }, (_, i) => ({
     id: i,
     name: settings.playerNames[i] || PLAYER_DEFAULT_NAMES[i],
     color: PLAYER_COLORS[i],
     uid: settings.playerUids[i] ?? undefined,
     currentNode: 'start',
-    money: INITIAL_MONEY,
-    equipment: createInitialEquipment(),
+    money: savedMoneys?.[i] ?? INITIAL_MONEY,
+    equipment: savedEquipments?.[i] ?? createInitialEquipment(),
     caughtFish: [],
     score: 0,
     hasFinished: false,
@@ -86,8 +93,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setScreen: (screen) => set({ screen }),
 
-  startGame: (settings) => {
-    const players = createInitialPlayers(settings);
+  startGame: (settings, savedEquipments, savedMoneys) => {
+    const players = createInitialPlayers(settings, savedEquipments, savedMoneys);
     set({
       screen: 'game',
       settings,
@@ -157,7 +164,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     switch (node.type) {
       case 'fishing':
       case 'fishing_special':
-        set({ turnPhase: 'fishing' });
+        set({ turnPhase: 'fishing_choice' });
         break;
       case 'shop':
         set({ turnPhase: 'shop' });
@@ -186,6 +193,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         set({ players: newPlayers, turnPhase: 'rest' });
         break;
       }
+      case 'start': {
+        // スタート地点でもショップが利用可能
+        set({ turnPhase: 'shop' });
+        break;
+      }
       case 'goal': {
         const finishedCount = players.filter(p => p.hasFinished).length;
         const newPlayers = [...players];
@@ -202,7 +214,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  startFishing: () => {
+  startFishing: (boatFishing) => {
     const { players, currentPlayerIndex } = get();
     const player = players[currentPlayerIndex];
     const node = NODE_MAP.get(player.currentNode);
@@ -213,6 +225,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       node.region,
       player.equipment,
       node.type === 'fishing_special',
+      boatFishing,
     );
 
     set({
@@ -226,8 +239,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
         tension: 0,
         caughtSize: 1,
         escaped: false,
+        boatFishing: !!boatFishing,
       },
+      turnPhase: 'fishing',
     });
+  },
+
+  startBoatFishing: () => {
+    const { players, currentPlayerIndex } = get();
+    const player = players[currentPlayerIndex];
+    if (player.money < BOAT_FISHING_COST) return;
+    // お金を差し引き
+    const newPlayers = [...players];
+    newPlayers[currentPlayerIndex] = { ...player, money: player.money - BOAT_FISHING_COST };
+    set({ players: newPlayers });
+    // 船釣りフラグ付きで釣り開始
+    get().startFishing(true);
   },
 
   updateFishingState: (partial) => {
@@ -309,6 +336,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const player = players[currentPlayerIndex];
     const item = player.equipment.inventory.find(i => i.id === itemId);
     if (!item) return;
+    if (isBroken(item)) return; // 壊れた装備は装着不可
     const newPlayers = [...players];
     newPlayers[currentPlayerIndex] = {
       ...player,
@@ -384,7 +412,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     switch (node.type) {
       case 'fishing':
       case 'fishing_special':
-        set({ turnPhase: 'fishing' });
+        set({ turnPhase: 'fishing_choice' });
         break;
       case 'shop':
         set({ turnPhase: 'shop' });
@@ -402,6 +430,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const maxTurnsReached = settings.maxTurns > 0 && state.turn >= settings.maxTurns;
 
     if (allFinished || maxTurnsReached) {
+      // 紐付けユーザーの装備・所持金をFirestoreに保存
+      for (const p of players) {
+        if (p.uid) {
+          saveUserEquipment(p.uid, p.equipment).catch(() => {});
+          saveUserMoney(p.uid, p.money).catch(() => {});
+        }
+      }
       set({ gameOver: true, screen: 'result', turnPhase: 'idle' });
       clearGameState();
       return;

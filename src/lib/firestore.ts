@@ -40,6 +40,30 @@ export async function clearUserGameState(uid: string): Promise<void> {
   await setDoc(doc(db, 'users', uid, 'data', 'saveData'), { state: null });
 }
 
+// ===== 装備 =====
+
+export async function saveUserEquipment(uid: string, equipment: unknown): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'data', 'equipment'), { equipment });
+}
+
+export async function loadUserEquipment(uid: string): Promise<unknown | null> {
+  const snap = await getDoc(doc(db, 'users', uid, 'data', 'equipment'));
+  if (!snap.exists()) return null;
+  return (snap.data() as { equipment: unknown }).equipment;
+}
+
+// ===== 所持金 =====
+
+export async function saveUserMoney(uid: string, money: number): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'data', 'money'), { money });
+}
+
+export async function loadUserMoney(uid: string): Promise<number | null> {
+  const snap = await getDoc(doc(db, 'users', uid, 'data', 'money'));
+  if (!snap.exists()) return null;
+  return (snap.data() as { money: number }).money;
+}
+
 // ===== プロフィール =====
 
 export async function saveUserProfile(uid: string, displayName: string): Promise<void> {

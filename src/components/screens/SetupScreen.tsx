@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { PLAYER_DEFAULT_NAMES, PLAYER_COLORS, DEFAULT_MAX_TURNS } from '../../game/constants';
-import { lookupUserByUsername } from '../../lib/firestore';
+import { lookupUserByUsername, loadUserEquipment, loadUserMoney } from '../../lib/firestore';
+import type { PlayerEquipment } from '../../game/types';
 import Button from '../shared/Button';
 
 interface LinkedUser {
@@ -21,13 +22,49 @@ export default function SetupScreen() {
   const [searchErrors, setSearchErrors] = useState<(string | null)[]>([null, null, null, null]);
   const [searching, setSearching] = useState<boolean[]>([false, false, false, false]);
 
-  const handleStart = () => {
-    startGame({
-      playerCount,
-      playerNames: names.slice(0, playerCount),
-      playerUids: linkedUsers.slice(0, playerCount).map(u => u?.uid ?? null),
-      maxTurns,
-    });
+  const [starting, setStarting] = useState(false);
+
+  const handleStart = async () => {
+    setStarting(true);
+    try {
+      const uids = linkedUsers.slice(0, playerCount);
+      // 紐付けユーザーの装備とお金をFirestoreから読み込み
+      const savedEquipments: (PlayerEquipment | null)[] = [];
+      const savedMoneys: (number | null)[] = [];
+      for (const u of uids) {
+        if (u) {
+          const [eq, money] = await Promise.all([
+            loadUserEquipment(u.uid).catch(() => null),
+            loadUserMoney(u.uid).catch(() => null),
+          ]);
+          savedEquipments.push(eq as PlayerEquipment | null);
+          savedMoneys.push(money);
+        } else {
+          savedEquipments.push(null);
+          savedMoneys.push(null);
+        }
+      }
+      startGame(
+        {
+          playerCount,
+          playerNames: names.slice(0, playerCount),
+          playerUids: uids.map(u => u?.uid ?? null),
+          maxTurns,
+        },
+        savedEquipments,
+        savedMoneys,
+      );
+    } catch {
+      // 失敗してもデフォルト値で開始
+      startGame({
+        playerCount,
+        playerNames: names.slice(0, playerCount),
+        playerUids: linkedUsers.slice(0, playerCount).map(u => u?.uid ?? null),
+        maxTurns,
+      });
+    } finally {
+      setStarting(false);
+    }
   };
 
   const updateName = (index: number, name: string) => {
@@ -234,8 +271,9 @@ export default function SetupScreen() {
             onClick={handleStart}
             variant="gold"
             className="flex-1"
+            disabled={starting}
           >
-            はじめる
+            {starting ? '読込中...' : 'はじめる'}
           </Button>
         </div>
       </div>

@@ -160,6 +160,7 @@ export interface FishingState {
   tension: number;
   caughtSize: number;
   escaped: boolean;
+  boatFishing: boolean;
 }
 
 // ===== ゲーム全体 =====
@@ -172,6 +173,7 @@ export type TurnPhase =
   | 'moving'
   | 'path_selection'
   | 'node_action'
+  | 'fishing_choice'
   | 'fishing'
   | 'shop'
   | 'event'

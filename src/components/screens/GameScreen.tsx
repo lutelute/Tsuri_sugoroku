@@ -5,6 +5,7 @@ import JapanMap from '../map/JapanMap';
 import AllPlayersBar from '../hud/AllPlayersBar';
 import TurnIndicator from '../hud/TurnIndicator';
 import RouletteOverlay from '../roulette/RouletteOverlay';
+import FishingChoiceOverlay from '../fishing/FishingChoiceOverlay';
 import FishingOverlay from '../fishing/FishingOverlay';
 import ShopOverlay from '../shop/ShopOverlay';
 import EventOverlay from '../event/EventOverlay';
@@ -156,6 +157,7 @@ export default function GameScreen() {
 
       {/* オーバーレイ */}
       {turnPhase === 'roulette' && <RouletteOverlay />}
+      {turnPhase === 'fishing_choice' && <FishingChoiceOverlay />}
       {turnPhase === 'fishing' && <FishingOverlay />}
       {turnPhase === 'shop' && <ShopOverlay />}
       {turnPhase === 'event' && <EventOverlay />}

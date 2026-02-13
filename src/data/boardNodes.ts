@@ -2,7 +2,7 @@ import type { BoardNode } from '../game/types';
 
 export const BOARD_NODES: BoardNode[] = [
   // スタート・ゴール
-  { id: 'start', name: 'スタート', type: 'start', region: 'hokkaido', x: 150, y: 6, description: '冒険の始まり！' },
+  { id: 'start', name: 'スタート', type: 'start', region: 'hokkaido', x: 150, y: 6, shopTier: 1, description: '冒険の始まり！装備を整えよう' },
   { id: 'goal', name: 'ゴール', type: 'goal', region: 'kyushu', x: 12, y: 200, description: '旅の終着点' },
 
   // 北海道

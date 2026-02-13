@@ -10,7 +10,7 @@ import FishCaughtModal from './FishCaughtModal';
 export default function FishingOverlay() {
   const { players, currentPlayerIndex, endFishing } = useGameStore();
   const player = players[currentPlayerIndex];
-  const { fishingState, begin, handleStrike, handleReelTap, handleMiss } = useFishing();
+  const { fishingState, begin, handleStrike, handleReelTap, handleMiss, reelingStartRef } = useFishing();
 
   useEffect(() => {
     begin();
@@ -23,7 +23,7 @@ export default function FishingOverlay() {
       {/* ヘッダー */}
       <div className="absolute top-0 left-0 right-0 bg-black/30 px-4 py-2 flex justify-between items-center z-10">
         <span className="text-sm text-white/60">
-          🎣 {player.name} の釣り
+          {fishingState.boatFishing ? '🚢' : '🎣'} {player.name} の{fishingState.boatFishing ? '船釣り' : '釣り'}
         </span>
         {fishingState.targetFish && fishingState.phase === 'reeling' && (
           <span className="text-sm text-amber-400">
@@ -59,6 +59,7 @@ export default function FishingOverlay() {
             progress={fishingState.reelingProgress}
             tension={fishingState.tension}
             onTap={handleReelTap}
+            startTime={reelingStartRef.current}
           />
         )}
 

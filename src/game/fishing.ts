@@ -51,11 +51,29 @@ export function selectFish(
   region: Region,
   equipment: PlayerEquipment,
   isSpecialSpot: boolean,
+  boatFishing?: boolean,
 ): Fish {
   const available = getAvailableFish(nodeId, region, equipment);
 
   if (available.length === 0) {
     return FISH_DATABASE.find(f => f.rarity === 'common')!;
+  }
+
+  // 船釣り: レア以上の魚のみ
+  if (boatFishing) {
+    const rareOrAbove = available.filter(
+      f => f.rarity === 'rare' || f.rarity === 'legendary' || f.rarity === 'mythical',
+    );
+    if (rareOrAbove.length > 0) {
+      const weights = rareOrAbove.map(fish => RARITY_BASE_WEIGHT[fish.rarity]);
+      return weightedRandom(rareOrAbove, weights);
+    }
+    // レア以上がいない場合はuncommon以上
+    const uncommonOrAbove = available.filter(f => f.rarity !== 'common');
+    if (uncommonOrAbove.length > 0) {
+      const weights = uncommonOrAbove.map(fish => RARITY_BASE_WEIGHT[fish.rarity]);
+      return weightedRandom(uncommonOrAbove, weights);
+    }
   }
 
   const rareLevel = getEffectiveLevel(equipment, 'rareChance');

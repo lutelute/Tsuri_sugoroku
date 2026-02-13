@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { getBiteDelay, createCaughtFish, generateFishSize, getEffectiveLevel } from '../game/fishing';
+import type { FishRarity } from '../game/types';
 import {
   FISHING_REELING_TAP_BASE,
   FISHING_REELING_TAP_PER_REEL_LEVEL,
@@ -8,28 +9,40 @@ import {
   FISHING_TENSION_DECAY_RATE,
   FISHING_TENSION_BREAK_THRESHOLD,
   FISHING_REELING_TARGET,
+  FISHING_REELING_TIME_LIMIT_MS,
 } from '../game/constants';
+
+// レア度による難易度倍率: テンション上昇・魚の抵抗が高くなり、タップ効果が下がる
+// バランス: mythicalでも20秒あれば高レベル装備なしで釣り上げ可能
+const RARITY_DIFFICULTY: Record<FishRarity, { tensionMul: number; resistMul: number; tapMul: number }> = {
+  common:    { tensionMul: 1.0,  resistMul: 1.0,  tapMul: 1.0 },
+  uncommon:  { tensionMul: 1.03, resistMul: 1.08, tapMul: 0.97 },
+  rare:      { tensionMul: 1.07, resistMul: 1.18, tapMul: 0.92 },
+  legendary: { tensionMul: 1.12, resistMul: 1.3,  tapMul: 0.85 },
+  mythical:  { tensionMul: 1.18, resistMul: 1.45, tapMul: 0.78 },
+};
 
 export function useFishing() {
   const {
     fishingState, players, currentPlayerIndex, turn,
-    startFishing, updateFishingState, catchFish, failFishing,
+    updateFishingState, catchFish, failFishing,
   } = useGameStore();
 
   const player = players[currentPlayerIndex];
   const [biteTimer, setBiteTimer] = useState<number | null>(null);
   const reelingRef = useRef<number | null>(null);
+  const reelingTimerRef = useRef<number | null>(null);
+  const reelingStartRef = useRef(0);
   const tensionRef = useRef(0);
   const progressRef = useRef(0);
 
-  // 釣り開始
+  // 釣り開始（fishingStateは既にstartFishing/startBoatFishingでセット済み）
   const begin = useCallback(() => {
-    startFishing();
     // cast → waiting 自動遷移
     setTimeout(() => {
       updateFishingState({ phase: 'waiting' });
     }, 1500);
-  }, [startFishing, updateFishingState]);
+  }, [updateFishingState]);
 
   // waiting フェーズ: バイト待ち
   useEffect(() => {
@@ -71,14 +84,19 @@ export function useFishing() {
     }
   }, [fishingState, player.equipment, updateFishingState, failFishing]);
 
-  // リーリング: テンション自然減衰
+  // リーリング: テンション自然減衰 + 制限時間
   useEffect(() => {
     if (fishingState?.phase !== 'reeling') return;
 
+    reelingStartRef.current = Date.now();
+
+    const rarity = fishingState.targetFish?.rarity ?? 'common';
+    const diff = RARITY_DIFFICULTY[rarity];
+
     const interval = window.setInterval(() => {
       tensionRef.current = Math.max(0, tensionRef.current - FISHING_TENSION_DECAY_RATE * 3);
-      // 自然後退（魚の抵抗）
-      progressRef.current = Math.max(0, progressRef.current - 0.35);
+      // 自然後退（魚の抵抗）— レア度で増加
+      progressRef.current = Math.max(0, progressRef.current - 0.35 * diff.resistMul);
 
       updateFishingState({
         tension: tensionRef.current,
@@ -86,24 +104,39 @@ export function useFishing() {
       });
     }, 50);
 
+    // 制限時間タイマー
+    const timeLimit = window.setTimeout(() => {
+      if (reelingRef.current) clearInterval(reelingRef.current);
+      failFishing();
+    }, FISHING_REELING_TIME_LIMIT_MS);
+
     reelingRef.current = interval;
-    return () => clearInterval(interval);
-  }, [fishingState?.phase, updateFishingState]);
+    reelingTimerRef.current = timeLimit;
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeLimit);
+    };
+  }, [fishingState?.phase, updateFishingState, failFishing]);
 
   // リーリング: タップ
   const handleReelTap = useCallback(() => {
     if (!fishingState || fishingState.phase !== 'reeling') return;
 
-    const reelingLevel = getEffectiveLevel(player.equipment, 'reeling');
-    const tapPower = FISHING_REELING_TAP_BASE +
-      FISHING_REELING_TAP_PER_REEL_LEVEL * (reelingLevel - 1);
+    const rarity = fishingState.targetFish?.rarity ?? 'common';
+    const diff = RARITY_DIFFICULTY[rarity];
 
-    tensionRef.current += FISHING_TENSION_RISE_PER_TAP;
+    const reelingLevel = getEffectiveLevel(player.equipment, 'reeling');
+    const baseTapPower = FISHING_REELING_TAP_BASE +
+      FISHING_REELING_TAP_PER_REEL_LEVEL * (reelingLevel - 1);
+    const tapPower = baseTapPower * diff.tapMul;
+
+    tensionRef.current += FISHING_TENSION_RISE_PER_TAP * diff.tensionMul;
     progressRef.current += tapPower;
 
     // テンション破断チェック
     if (tensionRef.current >= FISHING_TENSION_BREAK_THRESHOLD) {
       if (reelingRef.current) clearInterval(reelingRef.current);
+      if (reelingTimerRef.current) clearTimeout(reelingTimerRef.current);
       updateFishingState({ tension: FISHING_TENSION_BREAK_THRESHOLD, reelingProgress: progressRef.current });
       failFishing();
       return;
@@ -112,6 +145,7 @@ export function useFishing() {
     // 釣り上げ成功チェック
     if (progressRef.current >= FISHING_REELING_TARGET) {
       if (reelingRef.current) clearInterval(reelingRef.current);
+      if (reelingTimerRef.current) clearTimeout(reelingTimerRef.current);
       const size = generateFishSize();
       const caught = createCaughtFish(fishingState.targetFish!.id, player.currentNode, turn);
       caught.size = size;
@@ -142,5 +176,6 @@ export function useFishing() {
     handleStrike,
     handleReelTap,
     handleMiss,
+    reelingStartRef,
   };
 }

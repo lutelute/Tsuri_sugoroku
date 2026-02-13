@@ -77,5 +77,11 @@ export const DURABILITY_LOSS_PER_LEVEL = -1; // レベルが高いほど消耗�
 export const DURABILITY_BROKEN_THRESHOLD = 0; // この値以下で壊れた扱い
 export const REPAIR_COST_PER_POINT = 15;     // 耐久度1あたりの修理コスト
 
+// 船釣り
+export const BOAT_FISHING_COST = 10000;
+
+// リーリング制限時間（ミリ秒）
+export const FISHING_REELING_TIME_LIMIT_MS = 20000;
+
 // デフォルト設定
 export const DEFAULT_MAX_TURNS = 50;
