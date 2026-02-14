@@ -34,7 +34,7 @@ export interface BoardEdge {
 
 export type FishRarity = 'common' | 'uncommon' | 'rare' | 'legendary' | 'mythical';
 
-export type FishBodyShape = 'standard' | 'elongated' | 'flat' | 'round' | 'eel' | 'squid' | 'octopus';
+export type FishBodyShape = 'standard' | 'elongated' | 'flat' | 'round' | 'eel' | 'squid' | 'octopus' | 'crab';
 export type FishPattern = 'stripes' | 'spots' | 'gradient' | 'none';
 export type FishFinStyle = 'normal' | 'large' | 'spiky' | 'long' | 'small';
 export type FishSizeClass = 'small' | 'medium' | 'large' | 'huge';

@@ -111,10 +111,31 @@ function OctopusBody({ fill, stroke }: { fill: string; stroke: string }) {
   );
 }
 
+function CrabBody({ fill, stroke }: { fill: string; stroke: string }) {
+  return (
+    <>
+      {/* Legs (4 pairs) */}
+      <path d="M 28,48 L 12,62 L 8,58" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M 34,52 L 18,68 L 14,64" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M 72,48 L 88,62 L 92,58" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M 66,52 L 82,68 L 86,64" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M 40,54 L 28,72 L 24,68" fill="none" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M 60,54 L 72,72 L 76,68" fill="none" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M 46,56 L 38,74 L 34,72" fill="none" stroke={stroke} strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M 54,56 L 62,74 L 66,72" fill="none" stroke={stroke} strokeWidth="1.3" strokeLinecap="round" />
+      {/* Claws */}
+      <path d="M 22,38 L 8,28 Q 2,24 4,18 Q 8,14 14,20 L 10,26 L 18,34" fill={fill} stroke={stroke} strokeWidth="1.5" />
+      <path d="M 78,38 L 92,28 Q 98,24 96,18 Q 92,14 86,20 L 90,26 L 82,34" fill={fill} stroke={stroke} strokeWidth="1.5" />
+      {/* Carapace (main body) */}
+      <ellipse cx="50" cy="40" rx="32" ry="20" fill={fill} stroke={stroke} strokeWidth="1.5" />
+    </>
+  );
+}
+
 // --- Fins ---
 
 function renderFins(shape: FishBodyShape, style: FishFinStyle, color: string) {
-  if (shape === 'squid' || shape === 'octopus' || shape === 'eel') return null;
+  if (shape === 'squid' || shape === 'octopus' || shape === 'eel' || shape === 'crab') return null;
 
   const bodyTop = shape === 'flat' ? 24 : shape === 'round' ? 10 : 14;
   const bodyBottom = shape === 'flat' ? 68 : shape === 'round' ? 70 : 66;
@@ -229,6 +250,9 @@ function PatternOverlay({ id, appearance }: { id: string; appearance: FishAppear
   if (bodyShape === 'flat') {
     return <ellipse cx="55" cy="46" rx="44" ry="22" fill={fillRef} />;
   }
+  if (bodyShape === 'crab') {
+    return <ellipse cx="50" cy="40" rx="32" ry="20" fill={fillRef} />;
+  }
   if (bodyShape === 'round') {
     return <ellipse cx="52" cy="40" rx="35" ry="30" fill={fillRef} />;
   }
@@ -257,6 +281,7 @@ function getEyePosition(shape: FishBodyShape): { cx: number; cy: number; r: numb
     case 'squid': return { cx: 30, cy: 36, r: 3.5 };
     case 'eel': return { cx: 16, cy: 38, r: 3 };
     case 'flat': return { cx: 30, cy: 40, r: 3.5 };
+    case 'crab': return { cx: 38, cy: 34, r: 3 };
     case 'round': return { cx: 35, cy: 32, r: 4 };
     case 'elongated': return { cx: 22, cy: 36, r: 3 };
     case 'standard':
@@ -267,7 +292,7 @@ function getEyePosition(shape: FishBodyShape): { cx: number; cy: number; r: numb
 // --- Pectoral fin (side fin) ---
 
 function PectoralFin({ shape, color }: { shape: FishBodyShape; color: string }) {
-  if (shape === 'squid' || shape === 'octopus' || shape === 'eel') return null;
+  if (shape === 'squid' || shape === 'octopus' || shape === 'eel' || shape === 'crab') return null;
 
   const baseX = shape === 'round' ? 38 : shape === 'flat' ? 35 : 35;
   const baseY = shape === 'flat' ? 48 : 44;
@@ -286,6 +311,14 @@ function PectoralFin({ shape, color }: { shape: FishBodyShape; color: string }) 
 // --- Second eye for octopus ---
 
 function SecondEye({ shape }: { shape: FishBodyShape }) {
+  if (shape === 'crab') {
+    return (
+      <>
+        <circle cx={62} cy={34} r={3} fill="white" />
+        <circle cx={62.8} cy={33.5} r={1.6} fill="#111" />
+      </>
+    );
+  }
   if (shape !== 'octopus') return null;
   return (
     <>
@@ -318,6 +351,7 @@ export default function FishIllustration({ fishId, width = 120, height = 80, sil
     eel: EelBody,
     squid: SquidBody,
     octopus: OctopusBody,
+    crab: CrabBody,
   }[appearance.bodyShape];
 
   return (
