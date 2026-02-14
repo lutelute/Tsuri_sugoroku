@@ -188,6 +188,7 @@ export interface GameSettings {
   playerNames: string[];
   playerUids: (string | null)[]; // 各プレイヤーの Firebase UID（未紐付けは null）
   maxTurns: number; // 0 = ゴール到達で終了
+  carryOver?: boolean; // 装備・所持金の引き継ぎモード（falseならゲーム終了時にFirestoreへ保存しない）
 }
 
 export interface GameState {
@@ -204,6 +205,7 @@ export interface GameState {
   gameOver: boolean;
   encyclopedia: Record<string, boolean>;
   nodeActionsThisTurn: number;
+  boatFishingRemaining: number; // 船釣り残り回数（0=通常モード）
 }
 
 // ===== スコア =====

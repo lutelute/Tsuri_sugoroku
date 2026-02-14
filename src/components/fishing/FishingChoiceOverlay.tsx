@@ -4,7 +4,7 @@ import { getEquippedItem } from '../../game/equipment';
 import Button from '../shared/Button';
 
 export default function FishingChoiceOverlay() {
-  const { players, currentPlayerIndex, startFishing, startBoatFishing, setTurnPhase } = useGameStore();
+  const { players, currentPlayerIndex, startFishing, startBoatFishing, setTurnPhase, boatFishingRemaining } = useGameStore();
   const player = players[currentPlayerIndex];
   const canAffordBoat = player.money >= BOAT_FISHING_COST;
 
@@ -43,7 +43,37 @@ export default function FishingChoiceOverlay() {
           </div>
         )}
 
+        {/* 船釣り続行中 */}
+        {boatFishingRemaining > 0 && (
+          <div className="bg-amber-900/40 border border-amber-400/30 rounded-lg p-3 text-center">
+            <p className="text-amber-300 font-bold text-sm">🚢 船釣り乗船中！ 残り{boatFishingRemaining}回</p>
+          </div>
+        )}
+
         <div className="space-y-3">
+          {/* 船釣り続行ボタン（残り回数がある場合は優先表示） */}
+          {boatFishingRemaining > 0 && (
+            <button
+              onClick={() => hasRod && startBoatFishing()}
+              disabled={!hasRod}
+              className={`w-full border rounded-xl p-4 text-left transition
+                ${hasRod
+                  ? 'bg-amber-600/60 hover:bg-amber-600/80 border-amber-400/30 cursor-pointer'
+                  : 'bg-white/5 border-white/10 opacity-40 cursor-not-allowed'
+                }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🚢</span>
+                <div>
+                  <p className="font-bold">船釣りを続ける
+                    <span className="text-emerald-300 ml-2 text-sm">無料</span>
+                  </p>
+                  <p className="text-xs text-white/50">残り{boatFishingRemaining}回（レア以上の魚を狙う）</p>
+                </div>
+              </div>
+            </button>
+          )}
+
           {/* 通常釣り */}
           <button
             onClick={() => hasRod && startFishing(false)}
@@ -63,26 +93,28 @@ export default function FishingChoiceOverlay() {
             </div>
           </button>
 
-          {/* 船釣り */}
-          <button
-            onClick={() => hasRod && canAffordBoat && startBoatFishing()}
-            disabled={!hasRod || !canAffordBoat}
-            className={`w-full border rounded-xl p-4 text-left transition
-              ${hasRod && canAffordBoat
-                ? 'bg-amber-600/60 hover:bg-amber-600/80 border-amber-400/30 cursor-pointer'
-                : 'bg-white/5 border-white/10 opacity-40 cursor-not-allowed'
-              }`}
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🚢</span>
-              <div>
-                <p className="font-bold">船釣り
-                  <span className="text-amber-300 ml-2 text-sm">¥{BOAT_FISHING_COST.toLocaleString()}</span>
-                </p>
-                <p className="text-xs text-white/50">沖に出てレア以上の魚を狙う</p>
+          {/* 船釣り（新規購入） */}
+          {boatFishingRemaining === 0 && (
+            <button
+              onClick={() => hasRod && canAffordBoat && startBoatFishing()}
+              disabled={!hasRod || !canAffordBoat}
+              className={`w-full border rounded-xl p-4 text-left transition
+                ${hasRod && canAffordBoat
+                  ? 'bg-amber-600/60 hover:bg-amber-600/80 border-amber-400/30 cursor-pointer'
+                  : 'bg-white/5 border-white/10 opacity-40 cursor-not-allowed'
+                }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🚢</span>
+                <div>
+                  <p className="font-bold">船釣り
+                    <span className="text-amber-300 ml-2 text-sm">¥{BOAT_FISHING_COST.toLocaleString()}</span>
+                  </p>
+                  <p className="text-xs text-white/50">沖に出て3回レア以上の魚を狙う</p>
+                </div>
               </div>
-            </div>
-          </button>
+            </button>
+          )}
         </div>
 
         <Button

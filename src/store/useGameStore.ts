@@ -86,6 +86,7 @@ const initialState: GameState = {
   gameOver: false,
   encyclopedia: loadEncyclopedia(),
   nodeActionsThisTurn: 0,
+  boatFishingRemaining: 0,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -108,6 +109,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       currentEvent: null,
       gameOver: false,
       nodeActionsThisTurn: 0,
+      boatFishingRemaining: 0,
     });
   },
 
@@ -128,6 +130,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         players: newPlayers,
         turnPhase: 'node_action',
         nodeActionsThisTurn: 0,
+        boatFishingRemaining: 0,
       });
     } else {
       set({
@@ -148,7 +151,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const newPlayers = [...players];
     newPlayers[currentPlayerIndex] = { ...player, currentNode: destination };
 
-    set({ players: newPlayers, turnPhase: 'node_action', nodeActionsThisTurn: 0 });
+    set({ players: newPlayers, turnPhase: 'node_action', nodeActionsThisTurn: 0, boatFishingRemaining: 0 });
   },
 
   executeNodeAction: () => {
@@ -249,14 +252,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   startBoatFishing: () => {
-    const { players, currentPlayerIndex } = get();
+    const { players, currentPlayerIndex, boatFishingRemaining } = get();
     const player = players[currentPlayerIndex];
+
+    if (boatFishingRemaining > 0) {
+      // 既に船釣り中（無料で続行）
+      set({ boatFishingRemaining: boatFishingRemaining - 1 });
+      get().startFishing(true);
+      return;
+    }
+
+    // 初回: お金を差し引き、残り2回をセット
     if (player.money < BOAT_FISHING_COST) return;
-    // お金を差し引き
     const newPlayers = [...players];
     newPlayers[currentPlayerIndex] = { ...player, money: player.money - BOAT_FISHING_COST };
-    set({ players: newPlayers });
-    // 船釣りフラグ付きで釣り開始
+    set({ players: newPlayers, boatFishingRemaining: 2 });
     get().startFishing(true);
   },
 
@@ -438,11 +448,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const maxTurnsReached = settings.maxTurns > 0 && state.turn >= settings.maxTurns;
 
     if (allFinished || maxTurnsReached) {
-      // 紐付けユーザーの装備・所持金をFirestoreに保存
-      for (const p of players) {
-        if (p.uid) {
-          saveUserEquipment(p.uid, p.equipment).catch(() => {});
-          saveUserMoney(p.uid, p.money).catch(() => {});
+      // 引き継ぎモード時のみFirestoreに保存（引き継がないモードでは保存データを上書きしない）
+      if (settings.carryOver !== false) {
+        for (const p of players) {
+          if (p.uid) {
+            saveUserEquipment(p.uid, p.equipment).catch(() => {});
+            saveUserMoney(p.uid, p.money).catch(() => {});
+          }
         }
       }
       set({ gameOver: true, screen: 'result', turnPhase: 'idle' });
@@ -472,6 +484,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         reachableNodes: [],
         currentEvent: null,
         nodeActionsThisTurn: 0,
+        boatFishingRemaining: 0,
       });
       saveGameState(get());
       return;
@@ -518,6 +531,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       reachableNodes: [],
       currentEvent: null,
       nodeActionsThisTurn: 0,
+      boatFishingRemaining: 0,
     });
 
     saveGameState(get());

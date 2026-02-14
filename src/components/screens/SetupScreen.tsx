@@ -56,17 +56,19 @@ export default function SetupScreen() {
             playerNames: names.slice(0, playerCount),
             playerUids: uids.map(u => u?.uid ?? null),
             maxTurns,
+            carryOver: true,
           },
           savedEquipments,
           savedMoneys,
         );
       } else {
-        // 引き継ぎなし: 全員初期装備・初期所持金
+        // 引き継ぎなし: 全員初期装備・初期所持金（Firestoreのデータは保護）
         startGame({
           playerCount,
           playerNames: names.slice(0, playerCount),
           playerUids: uids.map(u => u?.uid ?? null),
           maxTurns,
+          carryOver: false,
         });
       }
     } catch {
@@ -76,6 +78,7 @@ export default function SetupScreen() {
         playerNames: names.slice(0, playerCount),
         playerUids: linkedUsers.slice(0, playerCount).map(u => u?.uid ?? null),
         maxTurns,
+        carryOver: false,
       });
     } finally {
       setStarting(false);
