@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { PLAYER_DEFAULT_NAMES, PLAYER_COLORS, DEFAULT_MAX_TURNS } from '../../game/constants';
-import { lookupUserByUsername, loadUserEquipment, loadUserMoney } from '../../lib/firestore';
+import { lookupUserByUsername, loadUserEquipment, loadUserMoney, loadUserEncyclopedia } from '../../lib/firestore';
 import type { PlayerEquipment } from '../../game/types';
 import Button from '../shared/Button';
 
@@ -33,6 +33,17 @@ export default function SetupScreen() {
     try {
       const uids = linkedUsers.slice(0, playerCount);
 
+      // 全プレイヤーの図鑑をFirestoreからロード（引き継ぎモードに関係なく常にロード）
+      const savedEncyclopedias: (Record<string, boolean> | null)[] = [];
+      for (const u of uids) {
+        if (u) {
+          const enc = await loadUserEncyclopedia(u.uid).catch(() => null);
+          savedEncyclopedias.push(enc);
+        } else {
+          savedEncyclopedias.push(null);
+        }
+      }
+
       if (carryOver && hasLinkedUser) {
         // 引き継ぎモード: Firestoreから装備とお金を読み込み
         const savedEquipments: (PlayerEquipment | null)[] = [];
@@ -60,16 +71,22 @@ export default function SetupScreen() {
           },
           savedEquipments,
           savedMoneys,
+          savedEncyclopedias,
         );
       } else {
         // 引き継ぎなし: 全員初期装備・初期所持金（Firestoreのデータは保護）
-        startGame({
-          playerCount,
-          playerNames: names.slice(0, playerCount),
-          playerUids: uids.map(u => u?.uid ?? null),
-          maxTurns,
-          carryOver: false,
-        });
+        startGame(
+          {
+            playerCount,
+            playerNames: names.slice(0, playerCount),
+            playerUids: uids.map(u => u?.uid ?? null),
+            maxTurns,
+            carryOver: false,
+          },
+          undefined,
+          undefined,
+          savedEncyclopedias,
+        );
       }
     } catch {
       // 失敗してもデフォルト値で開始

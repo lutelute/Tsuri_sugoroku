@@ -92,15 +92,6 @@ export function loadEncyclopedia(): Record<string, boolean> {
   }
 }
 
-// 特定ユーザーの図鑑に魚を追加（マルチプレイ用）
-export function saveEncyclopediaForPlayer(uid: string, fishId: string): void {
-  // Firestoreからそのユーザーの図鑑を取得し、マージして保存
-  loadUserEncyclopedia(uid).then(existing => {
-    const updated = { ...existing, [fishId]: true };
-    saveUserEncyclopedia(uid, updated).catch(() => {});
-  }).catch(() => {});
-}
-
 export async function loadEncyclopediaAsync(): Promise<Record<string, boolean>> {
   const uid = getUid();
   if (uid) {

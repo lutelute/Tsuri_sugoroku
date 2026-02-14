@@ -1,29 +1,34 @@
 import { useMemo, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { useAuthStore } from '../../store/useAuthStore';
 import { calculateScore } from '../../game/scoring';
 import { saveEncyclopedia } from '../../utils/storage';
+import { saveUserEncyclopedia } from '../../lib/firestore';
 import Button from '../shared/Button';
 
 export default function ResultScreen() {
-  const { players, encyclopedia, resetGame } = useGameStore();
-  const user = useAuthStore(s => s.user);
+  const { players, encyclopedias, resetGame } = useGameStore();
 
   const results = useMemo(() => {
     return players
-      .map(player => ({
+      .map((player, i) => ({
         player,
-        score: calculateScore(player, encyclopedia),
+        score: calculateScore(player, encyclopedias[i] ?? {}),
       }))
       .sort((a, b) => b.score.total - a.score.total);
-  }, [players, encyclopedia]);
+  }, [players, encyclopedias]);
 
-  // ゲーム終了時に図鑑をクラウドに確実に保存
+  // ゲーム終了時に図鑑をクラウドに確実に保存（各プレイヤー分）
   useEffect(() => {
-    if (user) {
-      saveEncyclopedia(encyclopedia);
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      const enc = encyclopedias[i];
+      if (p.uid && enc) {
+        saveUserEncyclopedia(p.uid, enc).catch(() => {});
+      } else if (!p.uid && enc) {
+        saveEncyclopedia(enc);
+      }
     }
-  }, [user, encyclopedia]);
+  }, [players, encyclopedias]);
 
   const RANK_ICONS = ['🥇', '🥈', '🥉', '4️⃣'];
 

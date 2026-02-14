@@ -203,7 +203,7 @@ export interface GameState {
   fishingState: FishingState | null;
   currentEvent: EventCard | null;
   gameOver: boolean;
-  encyclopedia: Record<string, boolean>;
+  encyclopedias: Record<string, boolean>[]; // プレイヤーごとの図鑑
   nodeActionsThisTurn: number;
   boatFishingRemaining: number; // 船釣り残り回数（0=通常モード）
 }

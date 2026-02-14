@@ -10,16 +10,16 @@ import { getRandomEventCard } from '../data/eventCards';
 import { applyEvent } from '../game/events';
 import { selectFish } from '../game/fishing';
 import { FISH_DATABASE } from '../data/fishDatabase';
-import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState, loadGameStateAsync, loadEncyclopediaAsync, saveEncyclopediaForPlayer } from '../utils/storage';
+import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState, loadGameStateAsync, loadEncyclopediaAsync } from '../utils/storage';
 import { createInitialEquipment, createEquipmentItem, applyDurabilityLoss, repairItem, isBroken } from '../game/equipment';
-import { saveUserEquipment, saveUserMoney } from '../lib/firestore';
+import { saveUserEquipment, saveUserMoney, saveUserEncyclopedia, loadUserEncyclopedia } from '../lib/firestore';
 import type { PlayerEquipment } from '../game/types';
 
 const MAX_FISHING_PER_TURN = 3;
 
 interface GameActions {
   setScreen: (screen: GameScreen) => void;
-  startGame: (settings: GameSettings, savedEquipments?: (PlayerEquipment | null)[], savedMoneys?: (number | null)[]) => void;
+  startGame: (settings: GameSettings, savedEquipments?: (PlayerEquipment | null)[], savedMoneys?: (number | null)[], savedEncyclopedias?: (Record<string, boolean> | null)[]) => void;
   rollDice: (result: number) => void;
   selectPath: (pathIndex: number) => void;
   executeNodeAction: () => void;
@@ -84,7 +84,7 @@ const initialState: GameState = {
   fishingState: null,
   currentEvent: null,
   gameOver: false,
-  encyclopedia: loadEncyclopedia(),
+  encyclopedias: [loadEncyclopedia()],
   nodeActionsThisTurn: 0,
   boatFishingRemaining: 0,
 };
@@ -94,8 +94,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setScreen: (screen) => set({ screen }),
 
-  startGame: (settings, savedEquipments, savedMoneys) => {
+  startGame: (settings, savedEquipments, savedMoneys, savedEncyclopedias) => {
     const players = createInitialPlayers(settings, savedEquipments, savedMoneys);
+    // プレイヤーごとの図鑑を初期化
+    const encyclopedias = players.map((p, i) => {
+      if (savedEncyclopedias?.[i]) return savedEncyclopedias[i]!;
+      // ログインユーザー自身の図鑑をlocalStorageから読み込む
+      return p.uid ? {} : loadEncyclopedia();
+    });
     set({
       screen: 'game',
       settings,
@@ -108,6 +114,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       fishingState: null,
       currentEvent: null,
       gameOver: false,
+      encyclopedias,
       nodeActionsThisTurn: 0,
       boatFishingRemaining: 0,
     });
@@ -277,24 +284,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   catchFish: (caught, bonusFish) => {
-    const { players, currentPlayerIndex, encyclopedia, nodeActionsThisTurn } = get();
+    const { players, currentPlayerIndex, encyclopedias, nodeActionsThisTurn } = get();
     const player = players[currentPlayerIndex];
 
     // メイン + ボーナス魚を全てまとめる
     const allCaught = [caught, ...(bonusFish ?? [])];
     const allWithBonus = allCaught.map(c => ({ ...c, bonusMultiplier: player.fishBonusMultiplier }));
 
-    // 売却金合計
+    // 売却金合計 & 図鑑更新（現在のプレイヤーのみ）
     let totalSellPrice = 0;
-    let newEncyclopedia = { ...encyclopedia };
+    const newEncyclopedia = { ...encyclopedias[currentPlayerIndex] };
     for (const c of allCaught) {
       const fishData = FISH_DATABASE.find(f => f.id === c.fishId);
       totalSellPrice += fishData ? Math.round((FISH_SELL_PRICE[fishData.rarity] ?? 200) * c.size) : 200;
       newEncyclopedia[c.fishId] = true;
-      if (player.uid) {
-        saveEncyclopediaForPlayer(player.uid, c.fishId);
-      }
     }
+
+    const newEncyclopedias = [...encyclopedias];
+    newEncyclopedias[currentPlayerIndex] = newEncyclopedia;
 
     const newPlayers = [...players];
     newPlayers[currentPlayerIndex] = {
@@ -303,11 +310,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       money: player.money + totalSellPrice,
     };
 
-    saveEncyclopedia(newEncyclopedia);
+    // 永続化（uidがあればFirestore、なければlocalStorage）
+    if (player.uid) {
+      saveUserEncyclopedia(player.uid, newEncyclopedia).catch(() => {});
+    } else {
+      saveEncyclopedia(newEncyclopedia);
+    }
 
     set({
       players: newPlayers,
-      encyclopedia: newEncyclopedia,
+      encyclopedias: newEncyclopedias,
       nodeActionsThisTurn: nodeActionsThisTurn + 1,
       fishingState: get().fishingState
         ? { ...get().fishingState!, phase: 'result', escaped: false, tairyouCount: bonusFish?.length ?? 0 }
@@ -448,13 +460,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const maxTurnsReached = settings.maxTurns > 0 && state.turn >= settings.maxTurns;
 
     if (allFinished || maxTurnsReached) {
-      // 引き継ぎモード時のみFirestoreに保存（引き継がないモードでは保存データを上書きしない）
-      if (settings.carryOver !== false) {
-        for (const p of players) {
-          if (p.uid) {
+      const { encyclopedias } = state;
+      // 各プレイヤーの図鑑を保存（図鑑は常に保存。装備・所持金は引き継ぎモード時のみ）
+      for (let i = 0; i < players.length; i++) {
+        const p = players[i];
+        if (p.uid) {
+          saveUserEncyclopedia(p.uid, encyclopedias[i]).catch(() => {});
+          if (settings.carryOver !== false) {
             saveUserEquipment(p.uid, p.equipment).catch(() => {});
             saveUserMoney(p.uid, p.money).catch(() => {});
           }
+        } else {
+          // ゲストプレイヤーはlocalStorageに保存
+          saveEncyclopedia(encyclopedias[i]);
         }
       }
       set({ gameOver: true, screen: 'result', turnPhase: 'idle' });
@@ -539,11 +557,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setTurnPhase: (phase) => set({ turnPhase: phase }),
 
-  resetGame: () => set({ ...initialState, encyclopedia: loadEncyclopedia() }),
+  resetGame: () => set({ ...initialState, encyclopedias: [loadEncyclopedia()] }),
 
   resumeGame: () => {
     const saved = loadGameState() as GameState | null;
     if (!saved) return;
+    // 旧フォーマット互換: encyclopediaフィールドがある場合は変換
+    const legacySaved = saved as GameState & { encyclopedia?: Record<string, boolean> };
+    const encyclopedias = saved.encyclopedias
+      ?? (legacySaved.encyclopedia
+        ? saved.players.map(() => legacySaved.encyclopedia!)
+        : saved.players.map(() => loadEncyclopedia()));
     set({
       screen: 'game',
       settings: saved.settings,
@@ -556,7 +580,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       fishingState: null,
       currentEvent: null,
       gameOver: saved.gameOver,
-      encyclopedia: loadEncyclopedia(),
+      encyclopedias,
       nodeActionsThisTurn: saved.nodeActionsThisTurn,
     });
   },
@@ -566,8 +590,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       loadEncyclopediaAsync(),
       loadGameStateAsync(),
     ]);
-    // クラウドのデータで上書き（ユーザー固有データが正）
-    set({ encyclopedia });
+    // クラウドのデータで上書き（ログインユーザーの図鑑をindex=0に反映）
+    const { encyclopedias } = get();
+    const newEncyclopedias = [...encyclopedias];
+    if (newEncyclopedias.length > 0) newEncyclopedias[0] = encyclopedia;
+    else newEncyclopedias.push(encyclopedia);
+    set({ encyclopedias: newEncyclopedias });
     saveEncyclopedia(encyclopedia);
     if (savedGame) {
       saveGameState(savedGame);
@@ -575,7 +603,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   clearUserData: () => {
-    set({ encyclopedia: {}, players: [], gameOver: false });
+    set({ encyclopedias: [{}], players: [], gameOver: false });
     clearGameState();
   },
 }));
