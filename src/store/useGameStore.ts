@@ -12,7 +12,7 @@ import { selectFish } from '../game/fishing';
 import { FISH_DATABASE } from '../data/fishDatabase';
 import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState, loadGameStateAsync, loadEncyclopediaAsync } from '../utils/storage';
 import { createInitialEquipment, createEquipmentItem, applyDurabilityLoss, repairItem, isBroken } from '../game/equipment';
-import { saveUserEquipment, saveUserMoney, saveUserEncyclopedia, loadUserEncyclopedia } from '../lib/firestore';
+import { saveUserEquipment, saveUserMoney, saveUserEncyclopedia } from '../lib/firestore';
 import type { PlayerEquipment } from '../game/types';
 
 const MAX_FISHING_PER_TURN = 3;
