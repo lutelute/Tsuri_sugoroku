@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { PLAYER_DEFAULT_NAMES, PLAYER_COLORS, DEFAULT_MAX_TURNS } from '../../game/constants';
@@ -24,6 +24,19 @@ export default function SetupScreen() {
 
   const [starting, setStarting] = useState(false);
   const [carryOver, setCarryOver] = useState(true); // 引き継ぎモード
+
+  // ログイン中ならプレイヤー1に自動紐付け
+  useEffect(() => {
+    if (currentUser && !linkedUsers[0]) {
+      const newLinked = [...linkedUsers];
+      newLinked[0] = { uid: currentUser.uid, displayName: currentUser.displayName ?? 'ユーザー' };
+      setLinkedUsers(newLinked);
+      const newNames = [...names];
+      newNames[0] = currentUser.displayName ?? 'ユーザー';
+      setNames(newNames);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   // 紐付けユーザーが1人でもいるか
   const hasLinkedUser = linkedUsers.slice(0, playerCount).some(u => u !== null);
