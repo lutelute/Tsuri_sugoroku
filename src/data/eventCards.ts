@@ -1,7 +1,7 @@
 import type { EventCard } from '../game/types';
 
 export const EVENT_CARDS: EventCard[] = [
-  // ===== Good Events (15枚) =====
+  // ===== Good Events (30枚) =====
   { id: 'bonus_catch', name: '大漁祈願成就', type: 'good', description: '地元の漁師が釣りのコツを教えてくれた！次の3ターン、釣りポイント1.5倍！', effect: { kind: 'fish_bonus', multiplier: 1.5, duration: 3 } },
   { id: 'treasure', name: '宝箱発見', type: 'good', description: '海辺で宝箱を見つけた！¥2,000獲得！', effect: { kind: 'money', amount: 2000 } },
   { id: 'lucky_fish', name: '幸運の魚', type: 'good', description: '珍しい魚が飛び跳ねてきた！', effect: { kind: 'random_fish', rarity: 'rare' } },
@@ -17,8 +17,24 @@ export const EVENT_CARDS: EventCard[] = [
   { id: 'local_guide', name: '地元ガイド', type: 'good', description: 'ベテラン漁師がポイントまで案内してくれた！3マス進む！', effect: { kind: 'move_steps', steps: 3 } },
   { id: 'bounty_fish', name: '懸賞金の魚', type: 'good', description: 'タグ付きの調査対象魚を発見！懸賞金¥2,500獲得！', effect: { kind: 'money', amount: 2500 } },
   { id: 'ancient_rod', name: '名匠の竿', type: 'good', description: '蔵から名匠が作った竿が見つかった！', effect: { kind: 'free_upgrade', equipmentType: 'rod' } },
+  // 大漁イベント（Good）
+  { id: 'sardine_school', name: 'イワシの大群', type: 'good', description: '目の前にイワシの大群が！網ですくって大漁だ！', effect: { kind: 'multi_fish', count: 10, rarity: 'common' } },
+  { id: 'fishing_net_haul', name: '地引網体験', type: 'good', description: '地元の地引網に参加！大量の魚を分けてもらった！', effect: { kind: 'multi_fish', count: 8, rarity: 'common' } },
+  { id: 'tidal_pool_treasure', name: '潮だまりの宝庫', type: 'good', description: '干潮で巨大な潮だまりが出現！魚がたくさん取り残されていた！', effect: { kind: 'multi_fish', count: 7, rarity: 'common' } },
+  { id: 'fish_rain', name: '魚の雨', type: 'good', description: '竜巻で巻き上げられた魚が空から降ってきた！信じられない！', effect: { kind: 'multi_fish', count: 10, rarity: 'uncommon' } },
+  { id: 'golden_hour', name: 'ゴールデンタイム', type: 'good', description: '夕マズメの爆釣タイム突入！入れ食い状態だ！', effect: { kind: 'multi_fish', count: 6, rarity: 'uncommon' } },
+  { id: 'underwater_cave', name: '海底洞窟発見', type: 'good', description: '海底洞窟に珍しい魚がたくさん！', effect: { kind: 'multi_fish', count: 5, rarity: 'rare' } },
+  { id: 'miracle_catch', name: '奇跡の大漁', type: 'good', description: '一生に一度の大漁日！次々と竿が曲がる！', effect: { kind: 'multi_fish', count: 10, rarity: 'rare' } },
+  { id: 'legend_spot', name: '伝説のポイント', type: 'good', description: '地図にない秘密の漁場を発見！レジェンダリー級が群れている！', effect: { kind: 'multi_fish', count: 3, rarity: 'legendary' } },
+  { id: 'dragon_palace', name: '竜宮城の恵み', type: 'good', description: '乙姫様のお導きで幻の魚たちが姿を現した！', effect: { kind: 'multi_fish', count: 5, rarity: 'legendary' } },
+  { id: 'fishing_god', name: '釣りの神降臨', type: 'good', description: 'エビス様が降臨！ミシカル級の魚が次々と...！', effect: { kind: 'multi_fish', count: 3, rarity: 'mythical' } },
+  { id: 'tournament_win', name: '釣り大会優勝', type: 'good', description: '飛び入り参加した大会で優勝！賞金¥5,000と大漁旗を獲得！', effect: { kind: 'money', amount: 5000 } },
+  { id: 'whale_shark', name: 'ジンベイザメの背中', type: 'good', description: 'ジンベイザメの周りに魚が大集合！一気に釣り上げた！', effect: { kind: 'multi_fish', count: 8, rarity: 'uncommon' } },
+  { id: 'morning_glory', name: '朝マズメ爆釣', type: 'good', description: '夜明けとともに入れ食い開始！手が止まらない！', effect: { kind: 'multi_fish', count: 7, rarity: 'common' } },
+  { id: 'full_moon_tide', name: '満月の大潮', type: 'good', description: '満月の大潮で魚の活性が最高潮！次の4ターン、釣りポイント2倍！', effect: { kind: 'fish_bonus', multiplier: 2, duration: 4 } },
+  { id: 'fisherman_network', name: '漁師ネットワーク', type: 'good', description: '地元漁師の情報網で最高のポイントへ！5マス進む！', effect: { kind: 'move_steps', steps: 5 } },
 
-  // ===== Bad Events (18枚) =====
+  // ===== Bad Events (25枚) =====
   { id: 'storm', name: '嵐', type: 'bad', description: '激しい嵐が来た！次のターンは休み...', effect: { kind: 'skip_turn' } },
   { id: 'broken_line', name: '糸切れ', type: 'bad', description: 'ラインが切れて修理代が...¥1,000失った', effect: { kind: 'money', amount: -1000 } },
   { id: 'theft', name: 'カラスの盗み', type: 'bad', description: 'カラスに釣った魚を盗まれた！', effect: { kind: 'steal_fish' } },
@@ -37,8 +53,15 @@ export const EVENT_CARDS: EventCard[] = [
   { id: 'boat_trouble', name: 'ボート故障', type: 'bad', description: 'エンジントラブルで修理費¥1,200...', effect: { kind: 'money', amount: -1200 } },
   { id: 'seagull_attack', name: 'カモメの襲撃', type: 'bad', description: 'カモメに餌を奪われてルアーも傷ついた！', effect: { kind: 'equipment_damage', equipmentType: 'lure', amount: 35 } },
   { id: 'slippery_rocks', name: '滑る岩場', type: 'bad', description: '岩場で滑って竿をぶつけた！', effect: { kind: 'equipment_damage', equipmentType: 'rod', amount: 30 } },
+  { id: 'red_tide', name: '赤潮発生', type: 'bad', description: '赤潮で魚が全滅...次のターンは釣りにならない', effect: { kind: 'skip_turn' } },
+  { id: 'lost_tackle_box', name: 'タックルボックス紛失', type: 'bad', description: 'タックルボックスを川に落とした！¥2,500の損害...', effect: { kind: 'money', amount: -2500 } },
+  { id: 'heatstroke', name: '熱中症', type: 'bad', description: '水分補給を怠って熱中症に...¥1,000の医療費と次ターン休み', effect: { kind: 'skip_turn' } },
+  { id: 'tangled_line', name: 'ライン絡まり', type: 'bad', description: '風でラインがぐちゃぐちゃに...ルアーごと切断するハメに', effect: { kind: 'equipment_damage', equipmentType: 'lure', amount: 70 } },
+  { id: 'wave_splash', name: '高波被弾', type: 'bad', description: '予想外の高波をかぶった！リールが塩水まみれ...', effect: { kind: 'equipment_damage', equipmentType: 'reel', amount: 55 } },
+  { id: 'fishing_ban', name: '釣り禁止エリア', type: 'bad', description: '知らずに釣り禁止区域に入ってしまった...罰金¥3,000', effect: { kind: 'money', amount: -3000 } },
+  { id: 'crow_flock', name: 'カラスの群れ', type: 'bad', description: 'カラスの大群に囲まれて荷物を漁られた！¥1,500の被害...', effect: { kind: 'money', amount: -1500 } },
 
-  // ===== Random Events (27枚) =====
+  // ===== Random Events (45枚) =====
   { id: 'lottery', name: '福引き', type: 'random', description: '地元の商店街で福引きを引いた！何が当たるかな...', effect: { kind: 'money', amount: 2500 } },
   { id: 'shortcut', name: '地元民の案内', type: 'random', description: '地元の漁師が近道を教えてくれた！3マス進む！', effect: { kind: 'move_steps', steps: 3 } },
   { id: 'mysterious_lure', name: '謎のルアー', type: 'random', description: '浜辺で光るルアーを拾った！', effect: { kind: 'free_upgrade', equipmentType: 'lure' } },
@@ -66,6 +89,25 @@ export const EVENT_CARDS: EventCard[] = [
   { id: 'treasure_map', name: '宝の地図', type: 'random', description: '瓶に入った宝の地図を拾った！指示通りに進むと¥1,800発見！', effect: { kind: 'money', amount: 1800 } },
   { id: 'wild_boar', name: 'イノシシ出没', type: 'random', description: 'イノシシに追いかけられて道具を落とした！リールが傷ついた...', effect: { kind: 'equipment_damage', equipmentType: 'reel', amount: 40 } },
   { id: 'rainbow', name: '虹が出た', type: 'random', description: '雨上がりの虹が出た！幸運の兆し...レジェンダリー級の魚が出現！', effect: { kind: 'random_fish', rarity: 'legendary' } },
+  // 大漁系ランダムイベント
+  { id: 'ayu_run', name: '鮎の遡上', type: 'random', description: '鮎が大量に遡上してきた！手づかみで取り放題！', effect: { kind: 'multi_fish', count: 8, rarity: 'common' } },
+  { id: 'squid_swarm', name: 'イカの群れ', type: 'random', description: '港にイカの大群が押し寄せた！エギングで入れ食い！', effect: { kind: 'multi_fish', count: 6, rarity: 'common' } },
+  { id: 'sabiki_festival', name: 'サビキ祭り', type: 'random', description: 'サビキ仕掛けに鈴なりの魚！針全部にヒット！', effect: { kind: 'multi_fish', count: 10, rarity: 'common' } },
+  { id: 'night_fishing_boom', name: '夜釣りで爆釣', type: 'random', description: '常夜灯の下に魚が大集合！投げれば釣れる状態！', effect: { kind: 'multi_fish', count: 5, rarity: 'uncommon' } },
+  { id: 'coral_reef_paradise', name: 'サンゴ礁の楽園', type: 'random', description: '手つかずのサンゴ礁を発見！色とりどりの魚が！', effect: { kind: 'multi_fish', count: 7, rarity: 'uncommon' } },
+  { id: 'deep_sea_jackpot', name: '深海の大当たり', type: 'random', description: '深海釣りで次々とレアな魚が！止まらない！', effect: { kind: 'multi_fish', count: 4, rarity: 'rare' } },
+  { id: 'whirlpool_gift', name: '渦潮の贈り物', type: 'random', description: '渦潮に巻き込まれた魚たちが水面に浮上！', effect: { kind: 'multi_fish', count: 6, rarity: 'common' } },
+  { id: 'ancient_fishing_spot', name: '古の漁場', type: 'random', description: '江戸時代から伝わる秘密の漁場を発見！珍しい魚がうようよ', effect: { kind: 'multi_fish', count: 4, rarity: 'rare' } },
+  { id: 'tsunami_retreat', name: '引き潮の奇跡', type: 'random', description: '異常な引き潮で海底が露出！取り残された魚を大量ゲット！', effect: { kind: 'multi_fish', count: 10, rarity: 'common' } },
+  { id: 'pirate_treasure', name: '海賊の隠し財宝', type: 'random', description: '海底で沈没船を発見！¥4,000相当のお宝！', effect: { kind: 'money', amount: 4000 } },
+  { id: 'bioluminescence', name: '夜光虫の海', type: 'random', description: '夜光虫で海が光り輝く...幻想的な光に集まった魚を大漁！', effect: { kind: 'multi_fish', count: 5, rarity: 'uncommon' } },
+  { id: 'fishing_master', name: '釣りの達人', type: 'random', description: '伝説の釣り師に弟子入り！秘技を伝授してもらった！', effect: { kind: 'fish_bonus', multiplier: 2.5, duration: 2 } },
+  { id: 'spawning_season', name: '産卵シーズン', type: 'random', description: '産卵のため浅瀬に集まった魚を大量確保！', effect: { kind: 'multi_fish', count: 8, rarity: 'common' } },
+  { id: 'kelp_forest', name: '昆布の森', type: 'random', description: '巨大な昆布の森で魚が大量に隠れていた！', effect: { kind: 'multi_fish', count: 5, rarity: 'uncommon' } },
+  { id: 'drift_ice_fishing', name: '流氷下の大漁', type: 'random', description: '流氷の下に魚が密集！穴釣りで次々ヒット！', effect: { kind: 'multi_fish', count: 7, rarity: 'common' } },
+  { id: 'volcanic_spring', name: '海底温泉の恵み', type: 'random', description: '海底温泉の周りに珍しい深海魚が集結！', effect: { kind: 'multi_fish', count: 3, rarity: 'rare' } },
+  { id: 'migratory_fish', name: '回遊魚の大群', type: 'random', description: 'マグロの群れに遭遇！巨大な回遊魚が次々とヒット！', effect: { kind: 'multi_fish', count: 3, rarity: 'legendary' } },
+  { id: 'fishing_boat_ride', name: '漁船に便乗', type: 'random', description: '地元の漁船に乗せてもらった！プロの漁場は魚影が濃い！', effect: { kind: 'multi_fish', count: 6, rarity: 'uncommon' } },
 ];
 
 export function getRandomEventCard(type?: string): EventCard {

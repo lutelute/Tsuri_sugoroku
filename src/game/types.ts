@@ -125,6 +125,7 @@ export type EventEffect =
   | { kind: 'fish_bonus'; multiplier: number; duration: number }
   | { kind: 'steal_fish' }
   | { kind: 'random_fish'; rarity: FishRarity }
+  | { kind: 'multi_fish'; count: number; rarity: FishRarity }
   | { kind: 'equipment_damage'; equipmentType: EquipmentType; amount: number };
 
 // ===== プレイヤー =====

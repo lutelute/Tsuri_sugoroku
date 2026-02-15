@@ -73,6 +73,20 @@ export function applyEvent(player: Player, event: EventCard, turn: number): Even
       return { player: p, message: '残念、何も起こらなかった...' };
     }
 
+    case 'multi_fish': {
+      const pool = FISH_DATABASE.filter(f => f.rarity === effect.rarity);
+      if (pool.length > 0) {
+        const newFish: CaughtFish[] = [];
+        for (let i = 0; i < effect.count; i++) {
+          const fish = pool[Math.floor(Math.random() * pool.length)];
+          newFish.push(createCaughtFish(fish.id, p.currentNode, turn));
+        }
+        p.caughtFish = [...p.caughtFish, ...newFish];
+        return { player: p, message: `大漁！${effect.count}匹の魚を手に入れた！` };
+      }
+      return { player: p, message: '残念、何も起こらなかった...' };
+    }
+
     case 'move':
       p.currentNode = effect.nodeId;
       return { player: p, message: `${effect.nodeId}に移動した！` };

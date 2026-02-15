@@ -421,7 +421,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   applyEventCard: () => {
-    const { players, currentPlayerIndex, currentEvent, turn } = get();
+    const { players, currentPlayerIndex, currentEvent, turn, encyclopedias } = get();
     if (!currentEvent) return;
 
     const player = players[currentPlayerIndex];
@@ -429,7 +429,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const newPlayers = [...players];
     newPlayers[currentPlayerIndex] = result.player;
 
-    set({ players: newPlayers });
+    // イベントで魚を獲得した場合は図鑑も更新
+    const oldFishIds = new Set(player.caughtFish.map(f => f.fishId));
+    const newFish = result.player.caughtFish.filter(f => !oldFishIds.has(f.fishId));
+    if (newFish.length > 0) {
+      const newEncyclopedia = { ...encyclopedias[currentPlayerIndex] };
+      for (const f of newFish) {
+        newEncyclopedia[f.fishId] = true;
+      }
+      const newEncyclopedias = [...encyclopedias];
+      newEncyclopedias[currentPlayerIndex] = newEncyclopedia;
+      set({ players: newPlayers, encyclopedias: newEncyclopedias });
+    } else {
+      set({ players: newPlayers });
+    }
   },
 
   doActionAgain: () => {
