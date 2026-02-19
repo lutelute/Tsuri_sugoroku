@@ -8,7 +8,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
-  const { signUp, signIn, loading, error, clearError } = useAuthStore();
+  const { signUp, signIn, signInGuest, loading, error, clearError } = useAuthStore();
   const setScreen = useGameStore(s => s.setScreen);
 
   const handleSubmit = async () => {
@@ -102,12 +102,16 @@ export default function LoginScreen() {
           </div>
 
           <Button
-            onClick={() => setScreen('title')}
+            onClick={async () => {
+              await signInGuest();
+              if (useAuthStore.getState().user) setScreen('title');
+            }}
             variant="secondary"
             size="md"
+            disabled={loading}
             className="w-full text-center"
           >
-            ゲストで遊ぶ
+            {loading ? '処理中...' : 'ゲストで遊ぶ'}
           </Button>
         </div>
       </div>

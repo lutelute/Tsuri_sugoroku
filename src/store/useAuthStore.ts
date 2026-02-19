@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInAnonymously,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   updateProfile,
@@ -21,6 +22,7 @@ interface AuthState {
   initialized: boolean;
   signUp: (username: string, password: string) => Promise<void>;
   signIn: (username: string, password: string) => Promise<void>;
+  signInGuest: () => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
   init: () => () => void;
@@ -63,6 +65,20 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (msg.includes('user-not-found') || msg.includes('invalid-credential')) displayMsg = 'ユーザー名またはパスワードが正しくありません';
       if (msg.includes('wrong-password')) displayMsg = 'パスワードが正しくありません';
       set({ loading: false, error: displayMsg });
+    }
+  },
+
+  signInGuest: async () => {
+    set({ loading: true, error: null });
+    try {
+      const cred = await signInAnonymously(auth);
+      const guestName = `ゲスト${cred.user.uid.slice(0, 4)}`;
+      await updateProfile(cred.user, { displayName: guestName });
+      await saveUserProfile(cred.user.uid, guestName);
+      set({ user: cred.user, loading: false });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'ゲストログインに失敗しました';
+      set({ loading: false, error: msg });
     }
   },
 
