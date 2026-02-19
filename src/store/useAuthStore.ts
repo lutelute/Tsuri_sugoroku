@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInAnonymously,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   updateProfile,
@@ -73,18 +72,28 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signInGuest: async () => {
     set({ loading: true, error: null });
+    const guestEmail = 'guest@tsuri.local';
+    const guestPassword = 'guest123456';
+    const guestName = 'ゲスト';
     try {
-      const cred = await signInAnonymously(auth);
-      const guestName = `ゲスト${cred.user.uid.slice(0, 4)}`;
-      await updateProfile(cred.user, { displayName: guestName });
+      // まずログインを試みる
+      const cred = await signInWithEmailAndPassword(auth, guestEmail, guestPassword);
       await saveUserProfile(cred.user.uid, guestName);
       set({ user: cred.user, loading: false });
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'ゲストログインに失敗しました';
-      let displayMsg = msg;
-      if (msg.includes('operation-not-allowed')) displayMsg = 'ゲストログインは現在利用できません。\n「アカウントを作成する」から登録してお遊びください。';
-      else if (msg.includes('network')) displayMsg = 'ネットワークに接続できません。\n接続を確認してもう一度お試しください。';
-      set({ loading: false, error: displayMsg });
+    } catch {
+      // ログイン失敗 → アカウント未作成なので新規作成
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, guestEmail, guestPassword);
+        await updateProfile(cred.user, { displayName: guestName });
+        await saveUserProfile(cred.user.uid, guestName);
+        await registerUsername(cred.user.uid, guestName);
+        set({ user: cred.user, loading: false });
+      } catch (e2: unknown) {
+        const msg = e2 instanceof Error ? e2.message : 'ゲストログインに失敗しました';
+        let displayMsg = msg;
+        if (msg.includes('network')) displayMsg = 'ネットワークに接続できません。\n接続を確認してもう一度お試しください。';
+        set({ loading: false, error: displayMsg });
+      }
     }
   },
 
