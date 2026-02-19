@@ -221,3 +221,24 @@ export interface ScoreBreakdown {
   moneyBonus: number;
   total: number;
 }
+
+// ===== ランキング =====
+
+export interface RankingEntry {
+  id?: string;
+  uid: string;
+  displayName: string;
+  score: number;
+  fishCount: number;
+  encyclopediaRate: number;
+  date: string;
+  breakdown: ScoreBreakdown;
+}
+
+// ===== ユーザー情報 =====
+
+export interface UserInfo {
+  uid: string;
+  displayName: string;
+  lastLoginAt?: string;
+}

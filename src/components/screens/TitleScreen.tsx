@@ -1,6 +1,12 @@
+import { useState, useCallback } from 'react';
 import { useGameStore, hasSavedGame } from '../../store/useGameStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { loadUserEncyclopedia, resetUserEncyclopedia } from '../../lib/firestore';
+import { loadEncyclopedia, saveEncyclopedia } from '../../utils/storage';
 import Button from '../shared/Button';
+import RankingOverlay from '../ranking/RankingOverlay';
+import EncyclopediaOverlay from '../encyclopedia/EncyclopediaOverlay';
+import UserListOverlay from '../users/UserListOverlay';
 
 export default function TitleScreen() {
   const setScreen = useGameStore(s => s.setScreen);
@@ -9,6 +15,37 @@ export default function TitleScreen() {
 
   const user = useAuthStore(s => s.user);
   const signOut = useAuthStore(s => s.signOut);
+
+  const [showRanking, setShowRanking] = useState(false);
+  const [showEncyclopedia, setShowEncyclopedia] = useState(false);
+  const [showUsers, setShowUsers] = useState(false);
+  const [titleEncyclopedia, setTitleEncyclopedia] = useState<Record<string, boolean>>({});
+
+  const handleShowEncyclopedia = useCallback(async () => {
+    if (user) {
+      try {
+        const enc = await loadUserEncyclopedia(user.uid);
+        setTitleEncyclopedia(enc);
+      } catch {
+        setTitleEncyclopedia({});
+      }
+    } else {
+      setTitleEncyclopedia(loadEncyclopedia());
+    }
+    setShowEncyclopedia(true);
+  }, [user]);
+
+  const handleResetEncyclopedia = useCallback(async () => {
+    if (user) {
+      await resetUserEncyclopedia(user.uid).catch(() => {});
+    } else {
+      saveEncyclopedia({});
+    }
+  }, [user]);
+
+  if (showRanking) return <RankingOverlay onClose={() => setShowRanking(false)} />;
+  if (showEncyclopedia) return <EncyclopediaOverlay onClose={() => setShowEncyclopedia(false)} standaloneEncyclopedia={titleEncyclopedia} onReset={handleResetEncyclopedia} />;
+  if (showUsers) return <UserListOverlay onClose={() => setShowUsers(false)} />;
 
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 select-none">
@@ -71,7 +108,7 @@ export default function TitleScreen() {
         </svg>
       </div>
 
-      {/* ボタン */}
+      {/* メインボタン */}
       <div className="flex flex-col gap-4 w-full max-w-xs">
         <Button
           onClick={() => setScreen('setup')}
@@ -91,6 +128,28 @@ export default function TitleScreen() {
             つづきから
           </Button>
         )}
+      </div>
+
+      {/* サブボタン（ランキング・図鑑・ユーザー一覧） */}
+      <div className="flex gap-3 mt-6 w-full max-w-xs">
+        <button
+          onClick={() => setShowRanking(true)}
+          className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition cursor-pointer"
+        >
+          🏆 ランキング
+        </button>
+        <button
+          onClick={handleShowEncyclopedia}
+          className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition cursor-pointer"
+        >
+          📖 図鑑
+        </button>
+        <button
+          onClick={() => setShowUsers(true)}
+          className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition cursor-pointer"
+        >
+          👥 ユーザー
+        </button>
       </div>
 
       {/* フッター */}

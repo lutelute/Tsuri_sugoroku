@@ -140,9 +140,9 @@ export default function SetupScreen() {
         setSearchErrors([...newErrors]);
       } else {
         // 既に他のスロットで紐付け済みか確認
-        const alreadyLinked = linkedUsers.some((u, i) => i !== index && u?.uid === result.uid);
-        if (alreadyLinked) {
-          newErrors[index] = '既に他のプレイヤーに紐付けされています';
+        const alreadyLinkedIndex = linkedUsers.findIndex((u, i) => i !== index && u?.uid === result.uid);
+        if (alreadyLinkedIndex !== -1) {
+          newErrors[index] = `既にプレイヤー${alreadyLinkedIndex + 1}に紐付け済みです`;
           setSearchErrors([...newErrors]);
         } else {
           const newLinked = [...linkedUsers];

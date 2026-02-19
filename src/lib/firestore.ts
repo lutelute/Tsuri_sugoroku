@@ -1,5 +1,6 @@
-import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, orderBy, limit as firestoreLimit, addDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import type { RankingEntry, ScoreBreakdown, UserInfo } from '../game/types';
 
 // ===== ユーザー名ルックアップ =====
 
@@ -97,5 +98,60 @@ export async function saveUserProfile(uid: string, displayName: string): Promise
     uid,
     displayName,
     displayNameLower: displayName.toLowerCase(),
+    lastLoginAt: new Date().toISOString(),
   }, { merge: true }).catch(() => {});
+}
+
+// ===== ランキング =====
+
+export async function saveUserScore(entry: Omit<RankingEntry, 'id'>): Promise<void> {
+  await addDoc(collection(db, 'rankings'), entry);
+}
+
+export async function loadScoreRankings(max: number = 50): Promise<RankingEntry[]> {
+  const q = query(
+    collection(db, 'rankings'),
+    orderBy('score', 'desc'),
+    firestoreLimit(max),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as RankingEntry);
+}
+
+export async function loadEncyclopediaRankings(max: number = 50): Promise<RankingEntry[]> {
+  const q = query(
+    collection(db, 'rankings'),
+    orderBy('encyclopediaRate', 'desc'),
+    firestoreLimit(max),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as RankingEntry);
+}
+
+// ===== ユーザー一覧 =====
+
+export async function loadAllUsers(): Promise<UserInfo[]> {
+  const snap = await getDocs(collection(db, 'profiles'));
+  return snap.docs.map(d => {
+    const data = d.data() as { uid: string; displayName: string; lastLoginAt?: string };
+    return {
+      uid: data.uid,
+      displayName: data.displayName,
+      lastLoginAt: data.lastLoginAt,
+    };
+  });
+}
+
+// ===== 図鑑リセット =====
+
+export async function resetUserEncyclopedia(uid: string): Promise<void> {
+  await setDoc(doc(db, 'users', uid, 'data', 'encyclopedia'), {});
+}
+
+// ===== ユーザーごとの図鑑コンプ率取得 =====
+
+export async function loadUserEncyclopediaRate(uid: string): Promise<number> {
+  const enc = await loadUserEncyclopedia(uid);
+  const count = Object.keys(enc).filter(k => enc[k]).length;
+  return count;
 }

@@ -10,9 +10,9 @@ import { getRandomEventCard } from '../data/eventCards';
 import { applyEvent } from '../game/events';
 import { selectFish } from '../game/fishing';
 import { FISH_DATABASE } from '../data/fishDatabase';
-import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState, loadGameStateAsync, loadEncyclopediaAsync } from '../utils/storage';
+import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState, loadGameStateAsync } from '../utils/storage';
 import { createInitialEquipment, createEquipmentItem, applyDurabilityLoss, repairItem, isBroken } from '../game/equipment';
-import { saveUserEquipment, saveUserMoney, saveUserEncyclopedia } from '../lib/firestore';
+import { saveUserEquipment, saveUserMoney, saveUserEncyclopedia, loadUserEncyclopedia } from '../lib/firestore';
 import type { PlayerEquipment } from '../game/types';
 
 const MAX_FISHING_PER_TURN = 3;
@@ -98,8 +98,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const players = createInitialPlayers(settings, savedEquipments, savedMoneys);
     // プレイヤーごとの図鑑を初期化
     const encyclopedias = players.map((p, i) => {
-      if (savedEncyclopedias?.[i]) return savedEncyclopedias[i]!;
-      // ログインユーザー自身の図鑑をlocalStorageから読み込む
+      if (savedEncyclopedias?.[i] != null) return savedEncyclopedias[i]!;
+      // ゲストプレイヤーはlocalStorageから読み込み、登録ユーザーは空で開始（Firestoreからロード済みのはず）
       return p.uid ? {} : loadEncyclopedia();
     });
     set({
@@ -599,17 +599,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   syncFromCloud: async () => {
-    const [encyclopedia, savedGame] = await Promise.all([
-      loadEncyclopediaAsync(),
-      loadGameStateAsync(),
-    ]);
-    // クラウドのデータで上書き（ログインユーザーの図鑑をindex=0に反映）
-    const { encyclopedias } = get();
+    const savedGame = await loadGameStateAsync();
+    // ゲーム中の場合、各プレイヤーのUIDに基づいてFirestoreから図鑑を同期
+    const { encyclopedias, players } = get();
     const newEncyclopedias = [...encyclopedias];
-    if (newEncyclopedias.length > 0) newEncyclopedias[0] = encyclopedia;
-    else newEncyclopedias.push(encyclopedia);
+    for (let i = 0; i < players.length; i++) {
+      const uid = players[i]?.uid;
+      if (uid) {
+        try {
+          const remote = await loadUserEncyclopedia(uid);
+          if (remote) newEncyclopedias[i] = remote;
+        } catch {
+          // Firestore失敗時は既存データを維持
+        }
+      }
+    }
     set({ encyclopedias: newEncyclopedias });
-    saveEncyclopedia(encyclopedia);
     if (savedGame) {
       saveGameState(savedGame);
     }

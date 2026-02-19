@@ -3,8 +3,6 @@ import {
   saveUserGameState,
   loadUserGameState,
   clearUserGameState,
-  saveUserEncyclopedia,
-  loadUserEncyclopedia,
 } from '../lib/firestore';
 
 const SAVE_KEY_BASE = 'tsuri_sugoroku_save';
@@ -18,11 +16,6 @@ function getUid(): string | null {
 function saveKey(): string {
   const uid = getUid();
   return uid ? `${SAVE_KEY_BASE}_${uid}` : SAVE_KEY_BASE;
-}
-
-function encyclopediaKey(): string {
-  const uid = getUid();
-  return uid ? `${ENCYCLOPEDIA_KEY_BASE}_${uid}` : ENCYCLOPEDIA_KEY_BASE;
 }
 
 // ===== ゲームセーブ =====
@@ -69,38 +62,21 @@ export function clearGameState(): void {
   }
 }
 
-// ===== 図鑑 =====
+// ===== 図鑑（ゲスト用: localStorageのみ、Firestoreには書き込まない） =====
 
 export function saveEncyclopedia(encyclopedia: Record<string, boolean>): void {
   try {
-    localStorage.setItem(encyclopediaKey(), JSON.stringify(encyclopedia));
+    localStorage.setItem(ENCYCLOPEDIA_KEY_BASE, JSON.stringify(encyclopedia));
   } catch {
     // ignore
-  }
-  const uid = getUid();
-  if (uid) {
-    saveUserEncyclopedia(uid, encyclopedia).catch(() => {});
   }
 }
 
 export function loadEncyclopedia(): Record<string, boolean> {
   try {
-    const data = localStorage.getItem(encyclopediaKey());
+    const data = localStorage.getItem(ENCYCLOPEDIA_KEY_BASE);
     return data ? JSON.parse(data) : {};
   } catch {
     return {};
   }
-}
-
-export async function loadEncyclopediaAsync(): Promise<Record<string, boolean>> {
-  const uid = getUid();
-  if (uid) {
-    try {
-      const remote = await loadUserEncyclopedia(uid);
-      if (remote) return remote;
-    } catch {
-      // Firestore失敗時はlocalStorageにフォールバック
-    }
-  }
-  return loadEncyclopedia();
 }

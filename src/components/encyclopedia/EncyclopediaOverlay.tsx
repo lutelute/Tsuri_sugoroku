@@ -17,22 +17,81 @@ const RARITY_NAMES: Record<FishRarity, string> = {
 
 interface EncyclopediaOverlayProps {
   onClose: () => void;
+  standaloneEncyclopedia?: Record<string, boolean>; // タイトル画面からの表示用
+  onReset?: () => void; // リセット後のコールバック
 }
 
-export default function EncyclopediaOverlay({ onClose }: EncyclopediaOverlayProps) {
+export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, onReset }: EncyclopediaOverlayProps) {
   const encyclopedias = useGameStore(s => s.encyclopedias);
   const players = useGameStore(s => s.players);
   const currentPlayerIndex = useGameStore(s => s.currentPlayerIndex);
   const [viewingPlayerIndex, setViewingPlayerIndex] = useState(currentPlayerIndex);
   const [selectedFish, setSelectedFish] = useState<Fish | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetInput, setResetInput] = useState('');
+  const [resetting, setResetting] = useState(false);
 
-  const encyclopedia = encyclopedias[viewingPlayerIndex] ?? {};
+  const isStandalone = standaloneEncyclopedia != null;
+  const encyclopedia = isStandalone ? standaloneEncyclopedia : (encyclopedias[viewingPlayerIndex] ?? {});
   const caughtCount = FISH_DATABASE.filter(f => encyclopedia[f.id]).length;
   const totalCount = FISH_DATABASE.length;
   const percent = Math.round((caughtCount / totalCount) * 100);
 
+  const handleReset = async () => {
+    if (resetInput !== 'リセット') return;
+    setResetting(true);
+    try {
+      if (onReset) onReset();
+    } finally {
+      setResetting(false);
+      setShowResetConfirm(false);
+      setResetInput('');
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 overflow-y-auto">
+      {/* リセット確認ダイアログ */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowResetConfirm(false)} />
+          <div className="relative bg-gradient-to-b from-red-950 to-slate-900 rounded-2xl border border-red-500/30 shadow-2xl p-6 w-[85%] max-w-sm">
+            <h3 className="text-lg font-bold text-red-400 mb-2">図鑑データをリセット</h3>
+            <p className="text-sm text-white/60 mb-1">
+              全ての図鑑データが削除されます。この操作は取り消せません。
+            </p>
+            <p className="text-sm text-white/80 mb-4">
+              続行するには「<span className="text-red-400 font-bold">リセット</span>」と入力してください。
+            </p>
+            <input
+              type="text"
+              value={resetInput}
+              onChange={(e) => setResetInput(e.target.value)}
+              placeholder="リセット"
+              className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/20 outline-none focus:border-red-400 transition mb-4"
+            />
+            <div className="flex gap-3">
+              <Button
+                onClick={() => { setShowResetConfirm(false); setResetInput(''); }}
+                variant="secondary"
+                className="flex-1"
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={handleReset}
+                variant="danger"
+                className="flex-1"
+                disabled={resetInput !== 'リセット' || resetting}
+              >
+                {resetting ? '処理中...' : '実行'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ヘッダー */}
       <div className="sticky top-0 bg-black/50 backdrop-blur-sm px-4 py-3 z-10">
         <div className="flex items-center justify-between">
@@ -41,12 +100,15 @@ export default function EncyclopediaOverlay({ onClose }: EncyclopediaOverlayProp
             <span className="text-sm text-white/60">
               {caughtCount}/{totalCount} ({percent}%)
             </span>
+            {isStandalone && onReset && (
+              <Button onClick={() => setShowResetConfirm(true)} variant="danger" size="sm">リセット</Button>
+            )}
             <Button onClick={onClose} variant="secondary" size="sm">閉じる</Button>
           </div>
         </div>
 
-        {/* プレイヤー切替タブ */}
-        {players.length > 1 && (
+        {/* プレイヤー切替タブ（ゲーム中のみ表示） */}
+        {!isStandalone && players.length > 1 && (
           <div className="flex gap-1.5 mt-2">
             {players.map((p, i) => (
               <button

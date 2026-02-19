@@ -1,12 +1,14 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { calculateScore } from '../../game/scoring';
 import { saveEncyclopedia } from '../../utils/storage';
-import { saveUserEncyclopedia } from '../../lib/firestore';
+import { saveUserEncyclopedia, saveUserScore } from '../../lib/firestore';
+import { FISH_DATABASE } from '../../data/fishDatabase';
 import Button from '../shared/Button';
 
 export default function ResultScreen() {
   const { players, encyclopedias, resetGame } = useGameStore();
+  const savedRef = useRef(false);
 
   const results = useMemo(() => {
     return players
@@ -17,8 +19,11 @@ export default function ResultScreen() {
       .sort((a, b) => b.score.total - a.score.total);
   }, [players, encyclopedias]);
 
-  // ゲーム終了時に図鑑をクラウドに確実に保存（各プレイヤー分）
+  // ゲーム終了時に図鑑をクラウドに確実に保存 + ランキングにスコア保存
   useEffect(() => {
+    if (savedRef.current) return;
+    savedRef.current = true;
+
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
       const enc = encyclopedias[i];
@@ -27,6 +32,26 @@ export default function ResultScreen() {
       } else if (!p.uid && enc) {
         saveEncyclopedia(enc);
       }
+    }
+
+    // ランキング保存（ログインユーザーのみ）
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      const enc = encyclopedias[i] ?? {};
+      if (!p.uid) continue;
+      const score = calculateScore(p, enc);
+      const totalFish = FISH_DATABASE.length;
+      const caughtCount = Object.keys(enc).filter(k => enc[k]).length;
+      const encyclopediaRate = Math.round((caughtCount / totalFish) * 100);
+      saveUserScore({
+        uid: p.uid,
+        displayName: p.name,
+        score: score.total,
+        fishCount: p.caughtFish.length,
+        encyclopediaRate,
+        date: new Date().toISOString(),
+        breakdown: score,
+      }).catch(() => {});
     }
   }, [players, encyclopedias]);
 
