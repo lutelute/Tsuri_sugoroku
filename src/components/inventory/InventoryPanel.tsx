@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import type { EquipmentType, EquipmentItem } from '../../game/types';
 import { getEquipment } from '../../data/equipmentData';
+import { findMergePartner } from '../../game/equipment';
+import { MERGE_DURABILITY_BONUS, MERGE_MAX_DURABILITY } from '../../game/constants';
 import Button from '../shared/Button';
 
 const TYPE_ICONS: Record<EquipmentType, string> = {
@@ -21,9 +23,10 @@ interface InventoryPanelProps {
 }
 
 export default function InventoryPanel({ onClose }: InventoryPanelProps) {
-  const { players, currentPlayerIndex, equipItem, unequipItem } = useGameStore();
+  const { players, currentPlayerIndex, equipItem, unequipItem, mergeEquipment } = useGameStore();
   const player = players[currentPlayerIndex];
   const [filterType, setFilterType] = useState<EquipmentType | 'all'>('all');
+  const [mergeTarget, setMergeTarget] = useState<string | null>(null);
 
   const types: EquipmentType[] = ['rod', 'reel', 'lure'];
   const inventory = player.equipment.inventory;
@@ -90,49 +93,83 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
           {sorted.map(item => {
             const eqData = getEquipment(item.type, item.level);
             const active = isEquipped(item);
+            const partner = findMergePartner(inventory, item);
+            const isMergeTarget = mergeTarget === item.id;
             return (
-              <button
-                key={item.id}
-                onClick={() => handleToggle(item)}
-                className={`w-full text-left rounded-xl p-3 border transition-all cursor-pointer ${
-                  active
-                    ? 'bg-blue-900/30 border-blue-400/40 shadow-md shadow-blue-500/10'
-                    : 'bg-white/5 border-white/10 hover:bg-white/10'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{TYPE_ICONS[item.type]}</span>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-sm">{eqData?.name || '???'}</span>
-                        <span className="text-xs text-white/40">Lv.{item.level}</span>
-                        {active && (
-                          <span className="text-[10px] bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded-full">
-                            装着中
-                          </span>
-                        )}
+              <div key={item.id} className="space-y-1">
+                <button
+                  onClick={() => handleToggle(item)}
+                  className={`w-full text-left rounded-xl p-3 border transition-all cursor-pointer ${
+                    active
+                      ? 'bg-blue-900/30 border-blue-400/40 shadow-md shadow-blue-500/10'
+                      : 'bg-white/5 border-white/10 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{TYPE_ICONS[item.type]}</span>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-sm">{eqData?.name || '???'}</span>
+                          <span className="text-xs text-white/40">Lv.{item.level}</span>
+                          {active && (
+                            <span className="text-[10px] bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded-full">
+                              装着中
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-white/40 mt-0.5">
+                          {TYPE_LABELS[item.type]} | {eqData?.effect || ''}
+                        </p>
                       </div>
-                      <p className="text-[11px] text-white/40 mt-0.5">
-                        {TYPE_LABELS[item.type]} | {eqData?.effect || ''}
-                      </p>
+                    </div>
+                    {/* 耐久度バー */}
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            item.durability > 50 ? 'bg-green-400' :
+                            item.durability > 20 ? 'bg-amber-400' : 'bg-red-400'
+                          }`}
+                          style={{ width: `${item.durability}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-white/30">{item.durability}%</span>
                     </div>
                   </div>
-                  {/* 耐久度バー */}
-                  <div className="flex flex-col items-end gap-1">
-                    <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          item.durability > 50 ? 'bg-green-400' :
-                          item.durability > 20 ? 'bg-amber-400' : 'bg-red-400'
-                        }`}
-                        style={{ width: `${item.durability}%` }}
-                      />
-                    </div>
-                    <span className="text-[10px] text-white/30">{item.durability}%</span>
+                </button>
+                {/* 合体ボタン */}
+                {partner && (
+                  <div className="px-2">
+                    {!isMergeTarget ? (
+                      <button
+                        onClick={() => setMergeTarget(item.id)}
+                        className="w-full text-center py-1.5 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-400/30 hover:bg-amber-500/30 transition-all cursor-pointer"
+                      >
+                        🔧 同じ装備と合体 (→ 最大{Math.min(MERGE_MAX_DURABILITY, item.durability + partner.durability + MERGE_DURABILITY_BONUS)}%)
+                      </button>
+                    ) : (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => {
+                            mergeEquipment(item.id, partner.id);
+                            setMergeTarget(null);
+                          }}
+                          className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-amber-500/40 text-amber-200 border border-amber-400/50 hover:bg-amber-500/60 transition-all cursor-pointer"
+                        >
+                          合体する
+                        </button>
+                        <button
+                          onClick={() => setMergeTarget(null)}
+                          className="px-3 py-1.5 rounded-lg text-xs text-white/40 bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                          やめる
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </button>
+                )}
+              </div>
             );
           })}
         </div>

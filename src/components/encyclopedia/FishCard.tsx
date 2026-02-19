@@ -12,19 +12,25 @@ const RARITY_COLORS: Record<string, string> = {
 interface FishCardProps {
   fish: Fish;
   caught: boolean;
+  isNew?: boolean;
   onClick: () => void;
 }
 
-export default function FishCard({ fish, caught, onClick }: FishCardProps) {
+export default function FishCard({ fish, caught, isNew, onClick }: FishCardProps) {
   return (
     <button
       onClick={onClick}
-      className={`rounded-lg p-2 border text-center transition-all cursor-pointer hover:scale-105 ${
+      className={`relative rounded-lg p-2 border text-center transition-all cursor-pointer hover:scale-105 ${
         caught
           ? RARITY_COLORS[fish.rarity]
           : 'border-white/5 bg-white/5'
       }`}
     >
+      {caught && isNew && (
+        <span className="absolute -top-1.5 -right-1.5 text-[10px] bg-pink-500/90 text-white px-1.5 py-0.5 rounded-full leading-none font-bold z-10">
+          NEW
+        </span>
+      )}
       <div className="mb-1 flex justify-center">
         {caught ? (
           <FishIllustration fishId={fish.id} width={48} height={32} />

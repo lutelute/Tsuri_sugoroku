@@ -13,15 +13,10 @@ export default function LoginScreen() {
 
   const handleSubmit = async () => {
     if (!username.trim() || !password.trim()) return;
-    if (mode === 'register') {
-      await signUp(username.trim(), password);
-    } else {
-      await signIn(username.trim(), password);
-    }
-    // ログイン成功後、authStoreのuserが更新されるのでApp側でtitleに遷移
-    if (useAuthStore.getState().user) {
-      setScreen('title');
-    }
+    const success = mode === 'register'
+      ? await signUp(username.trim(), password)
+      : await signIn(username.trim(), password);
+    if (success) setScreen('title');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -103,8 +98,8 @@ export default function LoginScreen() {
 
           <Button
             onClick={async () => {
-              await signInGuest();
-              if (useAuthStore.getState().user) setScreen('title');
+              const ok = await signInGuest();
+              if (ok) setScreen('title');
             }}
             variant="secondary"
             size="md"

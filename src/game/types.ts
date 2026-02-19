@@ -152,8 +152,11 @@ export interface Player {
 
 export type FishingPhase = 'cast' | 'waiting' | 'strike' | 'reeling' | 'result';
 
+export type FishingMiniGame = 'reeling' | 'target' | 'reaction' | 'rhythm';
+
 export interface FishingState {
   phase: FishingPhase;
+  miniGame: FishingMiniGame;
   targetFish: Fish | null;
   biteTimer: number;
   hasBite: boolean;
@@ -205,6 +208,7 @@ export interface GameState {
   currentEvent: EventCard | null;
   gameOver: boolean;
   encyclopedias: Record<string, boolean>[]; // プレイヤーごとの図鑑
+  initialEncyclopedias: Record<string, boolean>[]; // ゲーム開始時の図鑑スナップショット（NEW判定用）
   nodeActionsThisTurn: number;
   boatFishingRemaining: number; // 船釣り残り回数（0=通常モード）
 }

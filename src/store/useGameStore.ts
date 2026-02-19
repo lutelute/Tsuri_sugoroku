@@ -11,7 +11,7 @@ import { applyEvent } from '../game/events';
 import { selectFish } from '../game/fishing';
 import { FISH_DATABASE } from '../data/fishDatabase';
 import { loadEncyclopedia, saveEncyclopedia, saveGameState, loadGameState, clearGameState, loadGameStateAsync } from '../utils/storage';
-import { createInitialEquipment, createEquipmentItem, applyDurabilityLoss, repairItem, isBroken } from '../game/equipment';
+import { createInitialEquipment, createEquipmentItem, applyDurabilityLoss, repairItem, isBroken, mergeEquipmentItems } from '../game/equipment';
 import { saveUserEquipment, saveUserMoney, saveUserEncyclopedia, loadUserEncyclopedia } from '../lib/firestore';
 import type { PlayerEquipment } from '../game/types';
 
@@ -34,6 +34,7 @@ interface GameActions {
   unequipItem: (type: EquipmentType) => void;
   degradeEquipment: () => void;
   repairEquipment: (itemId: string, cost: number) => void;
+  mergeEquipment: (itemId1: string, itemId2: string) => void;
   skipShop: () => void;
   applyEventCard: () => void;
   doActionAgain: () => void;
@@ -85,6 +86,7 @@ const initialState: GameState = {
   currentEvent: null,
   gameOver: false,
   encyclopedias: [loadEncyclopedia()],
+  initialEncyclopedias: [],
   nodeActionsThisTurn: 0,
   boatFishingRemaining: 0,
 };
@@ -102,6 +104,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // ゲストプレイヤーはlocalStorageから読み込み、登録ユーザーは空で開始（Firestoreからロード済みのはず）
       return p.uid ? {} : loadEncyclopedia();
     });
+    // ゲーム開始時の図鑑をスナップショット（NEW判定用）
+    const initialEncyclopedias = encyclopedias.map(enc => ({ ...enc }));
     set({
       screen: 'game',
       settings,
@@ -115,6 +119,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       currentEvent: null,
       gameOver: false,
       encyclopedias,
+      initialEncyclopedias,
       nodeActionsThisTurn: 0,
       boatFishingRemaining: 0,
     });
@@ -243,6 +248,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       fishingState: {
         phase: 'cast',
+        miniGame: 'reeling',
         targetFish: fish,
         biteTimer: 0,
         hasBite: false,
@@ -415,6 +421,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ players: newPlayers });
   },
 
+  mergeEquipment: (itemId1, itemId2) => {
+    const { players, currentPlayerIndex } = get();
+    const player = players[currentPlayerIndex];
+    const newEquipment = mergeEquipmentItems(player.equipment, itemId1, itemId2);
+    const newPlayers = [...players];
+    newPlayers[currentPlayerIndex] = { ...player, equipment: newEquipment };
+    set({ players: newPlayers });
+  },
+
   skipShop: () => {
     // ショップ後も action_choice へ
     set({ turnPhase: 'action_choice' });
@@ -570,7 +585,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setTurnPhase: (phase) => set({ turnPhase: phase }),
 
-  resetGame: () => set({ ...initialState, encyclopedias: [loadEncyclopedia()] }),
+  resetGame: () => set({ ...initialState, encyclopedias: [loadEncyclopedia()], initialEncyclopedias: [] }),
 
   resumeGame: () => {
     const saved = loadGameState() as GameState | null;
@@ -581,6 +596,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       ?? (legacySaved.encyclopedia
         ? saved.players.map(() => legacySaved.encyclopedia!)
         : saved.players.map(() => loadEncyclopedia()));
+    // 再開時は現在の図鑑を初期スナップショットとする（NEW表示は新ゲームのみ）
+    const initialEncyclopedias = encyclopedias.map(enc => ({ ...enc }));
     set({
       screen: 'game',
       settings: saved.settings,
@@ -594,6 +611,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       currentEvent: null,
       gameOver: saved.gameOver,
       encyclopedias,
+      initialEncyclopedias,
       nodeActionsThisTurn: saved.nodeActionsThisTurn,
     });
   },

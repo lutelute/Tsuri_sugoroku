@@ -5,18 +5,25 @@ import { getEffectiveLevel } from '../../game/fishing';
 import WaitingPhase from './WaitingPhase';
 import StrikingPhase from './StrikingPhase';
 import ReelingPhase from './ReelingPhase';
+import TargetPhase from './TargetPhase';
+import ReactionPhase from './ReactionPhase';
+import RhythmPhase from './RhythmPhase';
 import FishCaughtModal from './FishCaughtModal';
 
 export default function FishingOverlay() {
-  const { players, currentPlayerIndex, endFishing } = useGameStore();
+  const { players, currentPlayerIndex, endFishing, initialEncyclopedias } = useGameStore();
   const player = players[currentPlayerIndex];
-  const { fishingState, begin, handleStrike, handleReelTap, handleMiss, reelingStartRef, tensionLimitRef, timeLimitRef } = useFishing();
+  const { fishingState, begin, handleStrike, handleReelTap, handleMiss, handleMiniGameSuccess, handleMiniGameFail, reelingStartRef, tensionLimitRef, timeLimitRef } = useFishing();
 
   useEffect(() => {
     begin();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!fishingState) return null;
+
+  const isNew = fishingState.targetFish
+    ? !initialEncyclopedias[currentPlayerIndex]?.[fishingState.targetFish.id]
+    : false;
 
   return (
     <div className="fixed inset-0 z-40 bg-gradient-to-b from-blue-900 to-blue-950">
@@ -54,7 +61,7 @@ export default function FishingOverlay() {
           <StrikingPhase success={fishingState.strikeSuccess} />
         )}
 
-        {fishingState.phase === 'reeling' && (
+        {fishingState.phase === 'reeling' && fishingState.miniGame === 'reeling' && (
           <ReelingPhase
             progress={fishingState.reelingProgress}
             tension={fishingState.tension}
@@ -65,12 +72,40 @@ export default function FishingOverlay() {
           />
         )}
 
+        {fishingState.phase === 'reeling' && fishingState.miniGame === 'target' && fishingState.targetFish && (
+          <TargetPhase
+            fish={fishingState.targetFish}
+            equipment={player.equipment}
+            onSuccess={handleMiniGameSuccess}
+            onFail={handleMiniGameFail}
+          />
+        )}
+
+        {fishingState.phase === 'reeling' && fishingState.miniGame === 'reaction' && fishingState.targetFish && (
+          <ReactionPhase
+            fish={fishingState.targetFish}
+            equipment={player.equipment}
+            onSuccess={handleMiniGameSuccess}
+            onFail={handleMiniGameFail}
+          />
+        )}
+
+        {fishingState.phase === 'reeling' && fishingState.miniGame === 'rhythm' && fishingState.targetFish && (
+          <RhythmPhase
+            fish={fishingState.targetFish}
+            equipment={player.equipment}
+            onSuccess={handleMiniGameSuccess}
+            onFail={handleMiniGameFail}
+          />
+        )}
+
         {fishingState.phase === 'result' && (
           <FishCaughtModal
             fish={fishingState.targetFish}
             size={fishingState.caughtSize}
             escaped={fishingState.escaped}
             tairyouCount={fishingState.tairyouCount}
+            isNew={isNew && !fishingState.escaped}
             onClose={endFishing}
           />
         )}

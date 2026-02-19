@@ -24,10 +24,11 @@ interface FishCaughtModalProps {
   size: number;
   escaped: boolean;
   tairyouCount: number;
+  isNew?: boolean;
   onClose: () => void;
 }
 
-export default function FishCaughtModal({ fish, size, escaped, tairyouCount, onClose }: FishCaughtModalProps) {
+export default function FishCaughtModal({ fish, size, escaped, tairyouCount, isNew, onClose }: FishCaughtModalProps) {
   if (!fish) return null;
 
   const rarity = RARITY_LABELS[fish.rarity];
@@ -52,7 +53,12 @@ export default function FishCaughtModal({ fish, size, escaped, tairyouCount, onC
             <div className="mb-4 animate-bounce-in flex justify-center" style={{ animationDelay: '0.15s' }}>
               <FishIllustration fishId={fish.id} width={120} height={80} />
             </div>
-            <h3 className="text-2xl font-bold mb-1">{fish.name}</h3>
+            <h3 className="text-2xl font-bold mb-1">
+              {fish.name}
+              {isNew && (
+                <span className="text-xs bg-pink-500/80 text-white px-2 py-0.5 rounded-full animate-bounce ml-2 inline-block">NEW!</span>
+              )}
+            </h3>
             <p className={`text-sm font-bold mb-3 ${rarity.color}`}>{rarity.label}</p>
             <p className="text-sm text-white/60 mb-2">{fish.description}</p>
             <div className="flex flex-wrap justify-center gap-1.5 mb-4">

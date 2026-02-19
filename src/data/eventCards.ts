@@ -25,9 +25,9 @@ export const EVENT_CARDS: EventCard[] = [
   { id: 'golden_hour', name: 'ゴールデンタイム', type: 'good', description: '夕マズメの爆釣タイム突入！入れ食い状態だ！', effect: { kind: 'multi_fish', count: 6, rarity: 'uncommon' } },
   { id: 'underwater_cave', name: '海底洞窟発見', type: 'good', description: '海底洞窟に珍しい魚がたくさん！', effect: { kind: 'multi_fish', count: 5, rarity: 'rare' } },
   { id: 'miracle_catch', name: '奇跡の大漁', type: 'good', description: '一生に一度の大漁日！次々と竿が曲がる！', effect: { kind: 'multi_fish', count: 10, rarity: 'rare' } },
-  { id: 'legend_spot', name: '伝説のポイント', type: 'good', description: '地図にない秘密の漁場を発見！レジェンダリー級が群れている！', effect: { kind: 'multi_fish', count: 3, rarity: 'legendary' } },
-  { id: 'dragon_palace', name: '竜宮城の恵み', type: 'good', description: '乙姫様のお導きで幻の魚たちが姿を現した！', effect: { kind: 'multi_fish', count: 5, rarity: 'legendary' } },
-  { id: 'fishing_god', name: '釣りの神降臨', type: 'good', description: 'エビス様が降臨！ミシカル級の魚が次々と...！', effect: { kind: 'multi_fish', count: 3, rarity: 'mythical' } },
+  { id: 'legend_spot', name: '伝説のポイント', type: 'good', description: '地図にない秘密の漁場を発見！珍しい魚の宝庫だ！', effect: { kind: 'multi_fish', count: 5, rarity: 'rare' } },
+  { id: 'dragon_palace', name: '竜宮城の恵み', type: 'good', description: '乙姫様のお導きで珍しい魚たちが姿を現した！', effect: { kind: 'multi_fish', count: 4, rarity: 'rare' } },
+  { id: 'fishing_god', name: '釣りの神降臨', type: 'good', description: 'エビス様の御利益で大漁！入れ食い状態だ！', effect: { kind: 'multi_fish', count: 8, rarity: 'uncommon' } },
   { id: 'tournament_win', name: '釣り大会優勝', type: 'good', description: '飛び入り参加した大会で優勝！賞金¥5,000と大漁旗を獲得！', effect: { kind: 'money', amount: 5000 } },
   { id: 'whale_shark', name: 'ジンベイザメの背中', type: 'good', description: 'ジンベイザメの周りに魚が大集合！一気に釣り上げた！', effect: { kind: 'multi_fish', count: 8, rarity: 'uncommon' } },
   { id: 'morning_glory', name: '朝マズメ爆釣', type: 'good', description: '夜明けとともに入れ食い開始！手が止まらない！', effect: { kind: 'multi_fish', count: 7, rarity: 'common' } },
@@ -106,7 +106,8 @@ export const EVENT_CARDS: EventCard[] = [
   { id: 'kelp_forest', name: '昆布の森', type: 'random', description: '巨大な昆布の森で魚が大量に隠れていた！', effect: { kind: 'multi_fish', count: 5, rarity: 'uncommon' } },
   { id: 'drift_ice_fishing', name: '流氷下の大漁', type: 'random', description: '流氷の下に魚が密集！穴釣りで次々ヒット！', effect: { kind: 'multi_fish', count: 7, rarity: 'common' } },
   { id: 'volcanic_spring', name: '海底温泉の恵み', type: 'random', description: '海底温泉の周りに珍しい深海魚が集結！', effect: { kind: 'multi_fish', count: 3, rarity: 'rare' } },
-  { id: 'migratory_fish', name: '回遊魚の大群', type: 'random', description: 'マグロの群れに遭遇！巨大な回遊魚が次々とヒット！', effect: { kind: 'multi_fish', count: 3, rarity: 'legendary' } },
+  { id: 'migratory_fish', name: '回遊魚の大物', type: 'random', description: '巨大な回遊魚の影が...！一匹だけだが、とてつもない大物だ！', effect: { kind: 'random_fish', rarity: 'legendary' } },
+  { id: 'divine_encounter', name: '神魚の気配', type: 'random', description: '水面が神秘的な光を放ち、伝説の魚が一瞬だけ姿を見せた...！', effect: { kind: 'random_fish', rarity: 'mythical' } },
   { id: 'fishing_boat_ride', name: '漁船に便乗', type: 'random', description: '地元の漁船に乗せてもらった！プロの漁場は魚影が濃い！', effect: { kind: 'multi_fish', count: 6, rarity: 'uncommon' } },
 ];
 

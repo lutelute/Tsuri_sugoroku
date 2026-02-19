@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { getBiteDelay, createCaughtFish, generateFishSize, getEffectiveLevel, checkTairyou, selectFish, interpolateBonus } from '../game/fishing';
 import { NODE_MAP } from '../data/boardNodes';
-import type { FishRarity } from '../game/types';
+import type { FishRarity, FishingMiniGame } from '../game/types';
 import {
   FISHING_REELING_TAP_BASE,
   FISHING_REELING_TAP_PER_REEL_LEVEL,
@@ -85,9 +85,11 @@ export function useFishing() {
     const success = normalizedAngle >= greenStart && normalizedAngle <= greenEnd;
 
     if (success) {
+      const miniGames: FishingMiniGame[] = ['reeling', 'target', 'reaction', 'rhythm'];
+      const selectedMiniGame = miniGames[Math.floor(Math.random() * miniGames.length)];
       updateFishingState({ phase: 'strike', strikeSuccess: true });
       setTimeout(() => {
-        updateFishingState({ phase: 'reeling' });
+        updateFishingState({ phase: 'reeling', miniGame: selectedMiniGame });
         tensionRef.current = 0;
         progressRef.current = 0;
       }, 800);
@@ -210,6 +212,36 @@ export function useFishing() {
     });
   }, [fishingState, player.equipment, player.currentNode, turn, updateFishingState, failFishing, catchFish]);
 
+  // 新ミニゲーム共通: 成功コールバック
+  const handleMiniGameSuccess = useCallback(() => {
+    if (!fishingState || !fishingState.targetFish) return;
+    const size = generateFishSize(player.equipment);
+    const caught = createCaughtFish(fishingState.targetFish.id, player.currentNode, turn);
+    caught.size = size;
+
+    const node = NODE_MAP.get(player.currentNode);
+    const isSpecial = node?.type === 'fishing_special';
+    const bonusCount = checkTairyou(player.equipment, isSpecial);
+    const bonusFish: typeof caught[] = [];
+    if (bonusCount > 0 && node) {
+      for (let i = 0; i < bonusCount; i++) {
+        const extraFish = selectFish(node.id, node.region, player.equipment, isSpecial, fishingState.boatFishing);
+        const extraSize = generateFishSize(player.equipment);
+        const extra = createCaughtFish(extraFish.id, player.currentNode, turn);
+        extra.size = extraSize;
+        bonusFish.push(extra);
+      }
+    }
+
+    updateFishingState({ caughtSize: size });
+    catchFish(caught, bonusFish);
+  }, [fishingState, player.equipment, player.currentNode, turn, updateFishingState, catchFish]);
+
+  // 新ミニゲーム共通: 失敗コールバック
+  const handleMiniGameFail = useCallback(() => {
+    failFishing();
+  }, [failFishing]);
+
   // タイムアウト（バイトを逃す）
   const handleMiss = useCallback(() => {
     if (biteTimer) clearTimeout(biteTimer);
@@ -222,6 +254,8 @@ export function useFishing() {
     handleStrike,
     handleReelTap,
     handleMiss,
+    handleMiniGameSuccess,
+    handleMiniGameFail,
     reelingStartRef,
     tensionLimitRef,
     timeLimitRef,

@@ -36,9 +36,9 @@ interface AuthState {
   loading: boolean;
   error: string | null;
   initialized: boolean;
-  signUp: (username: string, password: string) => Promise<void>;
-  signIn: (username: string, password: string) => Promise<void>;
-  signInGuest: () => Promise<void>;
+  signUp: (username: string, password: string) => Promise<boolean>;
+  signIn: (username: string, password: string) => Promise<boolean>;
+  signInGuest: () => Promise<boolean>;
   signOut: () => Promise<void>;
   clearError: () => void;
   init: () => () => void;
@@ -59,6 +59,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       saveUserProfile(cred.user.uid, username).catch(() => {});
       registerUsername(cred.user.uid, username).catch(() => {});
       set({ user: cred.user, loading: false });
+      return true;
     } catch (e: unknown) {
       clearSession(); // 認証失敗時はセッション取り消し
       const msg = e instanceof Error ? e.message : '登録に失敗しました';
@@ -67,6 +68,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       else if (msg.includes('weak-password')) displayMsg = 'パスワードは6文字以上で設定してください。';
       else if (msg.includes('network')) displayMsg = 'ネットワークに接続できません。\n接続を確認してもう一度お試しください。';
       set({ loading: false, error: displayMsg });
+      return false;
     }
   },
 
@@ -78,6 +80,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       saveUserProfile(cred.user.uid, username).catch(() => {});
       registerUsername(cred.user.uid, username).catch(() => {});
       set({ user: cred.user, loading: false });
+      return true;
     } catch (e: unknown) {
       clearSession(); // 認証失敗時はセッション取り消し
       const msg = e instanceof Error ? e.message : 'ログインに失敗しました';
@@ -87,6 +90,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       else if (msg.includes('too-many-requests')) displayMsg = 'ログイン試行回数が上限を超えました。\nしばらく待ってから再度お試しください。';
       else if (msg.includes('network')) displayMsg = 'ネットワークに接続できません。\n接続を確認してもう一度お試しください。';
       set({ loading: false, error: displayMsg });
+      return false;
     }
   },
 
@@ -101,6 +105,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const cred = await signInWithEmailAndPassword(auth, guestEmail, guestPassword);
       saveUserProfile(cred.user.uid, guestName).catch(() => {});
       set({ user: cred.user, loading: false });
+      return true;
     } catch {
       // ログイン失敗 → アカウント未作成なので新規作成
       try {
@@ -110,11 +115,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         saveUserProfile(cred.user.uid, guestName).catch(() => {});
         registerUsername(cred.user.uid, guestName).catch(() => {});
         set({ user: cred.user, loading: false });
+        return true;
       } catch (e2: unknown) {
         const msg = e2 instanceof Error ? e2.message : 'ゲストログインに失敗しました';
         let displayMsg = msg;
         if (msg.includes('network')) displayMsg = 'ネットワークに接続できません。\n接続を確認してもう一度お試しください。';
         set({ loading: false, error: displayMsg });
+        return false;
       }
     }
   },

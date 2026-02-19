@@ -1,6 +1,6 @@
 import type { PlayerEquipment, EquipmentType, EquipmentItem } from './types';
 import { EQUIPMENT_DATA, getEquipment } from '../data/equipmentData';
-import { MAX_EQUIPMENT_LEVEL, SHOP_TIER_MAX_LEVEL, DURABILITY_LOSS_BASE, DURABILITY_LOSS_PER_LEVEL, DURABILITY_BROKEN_THRESHOLD, REPAIR_COST_PER_POINT } from './constants';
+import { MAX_EQUIPMENT_LEVEL, SHOP_TIER_MAX_LEVEL, DURABILITY_LOSS_BASE, DURABILITY_LOSS_PER_LEVEL, DURABILITY_BROKEN_THRESHOLD, REPAIR_COST_PER_POINT, MERGE_DURABILITY_BONUS, MERGE_MAX_DURABILITY } from './constants';
 
 // インベントリから装着中のアイテムのレベルを取得（未装着なら0）
 export function getEquippedLevel(equipment: PlayerEquipment, type: EquipmentType): number {
@@ -182,4 +182,35 @@ export function repairItem(equipment: PlayerEquipment, itemId: string): PlayerEq
     return item;
   });
   return { ...equipment, inventory: newInventory };
+}
+
+// 合体可能なパートナーを探す（同じ種類・同じレベル）
+export function findMergePartner(inventory: EquipmentItem[], item: EquipmentItem): EquipmentItem | null {
+  return inventory.find(i =>
+    i.id !== item.id &&
+    i.type === item.type &&
+    i.level === item.level
+  ) ?? null;
+}
+
+// 装備を合体する（2つの同種・同レベルアイテム → 1つに統合）
+export function mergeEquipmentItems(equipment: PlayerEquipment, itemId1: string, itemId2: string): PlayerEquipment {
+  const item1 = equipment.inventory.find(i => i.id === itemId1);
+  const item2 = equipment.inventory.find(i => i.id === itemId2);
+  if (!item1 || !item2 || item1.type !== item2.type || item1.level !== item2.level) return equipment;
+
+  const newDurability = Math.min(MERGE_MAX_DURABILITY, item1.durability + item2.durability + MERGE_DURABILITY_BONUS);
+
+  // item2を削除、item1の耐久度を更新
+  const newInventory = equipment.inventory
+    .filter(i => i.id !== itemId2)
+    .map(i => i.id === itemId1 ? { ...i, durability: newDurability } : i);
+
+  const newEquipped = { ...equipment.equipped };
+  // item2が装着中だった場合、合体先に移行
+  if (newEquipped[item1.type] === itemId2) {
+    newEquipped[item1.type] = newDurability > DURABILITY_BROKEN_THRESHOLD ? itemId1 : null;
+  }
+
+  return { equipped: newEquipped, inventory: newInventory };
 }

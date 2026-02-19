@@ -1,3 +1,5 @@
+export const APP_VERSION = '1.0.0';
+
 export const ROULETTE_MIN = 1;
 export const ROULETTE_MAX = 6;
 
@@ -95,6 +97,10 @@ export const DURABILITY_LOSS_BASE = 8;       // 釣り1回あたりの基本消�
 export const DURABILITY_LOSS_PER_LEVEL = -1; // レベルが高いほど消耗が少ない（Lv5で-4）
 export const DURABILITY_BROKEN_THRESHOLD = 0; // この値以下で壊れた扱い
 export const REPAIR_COST_PER_POINT = 15;     // 耐久度1あたりの修理コスト
+
+// 装備合体
+export const MERGE_DURABILITY_BONUS = 15;    // 合体時のボーナス耐久度
+export const MERGE_MAX_DURABILITY = 60;      // 合体後の最大耐久度
 
 // 船釣り
 export const BOAT_FISHING_COST = 10000;

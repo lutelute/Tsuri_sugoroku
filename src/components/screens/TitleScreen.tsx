@@ -3,6 +3,7 @@ import { useGameStore, hasSavedGame } from '../../store/useGameStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { loadUserEncyclopedia, resetUserEncyclopedia } from '../../lib/firestore';
 import { loadEncyclopedia, saveEncyclopedia } from '../../utils/storage';
+import { APP_VERSION } from '../../game/constants';
 import Button from '../shared/Button';
 import RankingOverlay from '../ranking/RankingOverlay';
 import EncyclopediaOverlay from '../encyclopedia/EncyclopediaOverlay';
@@ -82,6 +83,7 @@ export default function TitleScreen() {
         <p className="text-lg text-blue-200/70 font-medium">
           日本列島 釣り旅
         </p>
+        <p className="text-xs text-white/30 mt-1">v{APP_VERSION}</p>
       </div>
 
       {/* 波のアニメーション */}

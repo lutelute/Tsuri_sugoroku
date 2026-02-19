@@ -23,6 +23,7 @@ interface EncyclopediaOverlayProps {
 
 export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, onReset }: EncyclopediaOverlayProps) {
   const encyclopedias = useGameStore(s => s.encyclopedias);
+  const initialEncyclopedias = useGameStore(s => s.initialEncyclopedias);
   const players = useGameStore(s => s.players);
   const currentPlayerIndex = useGameStore(s => s.currentPlayerIndex);
   const [viewingPlayerIndex, setViewingPlayerIndex] = useState(currentPlayerIndex);
@@ -33,6 +34,7 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
 
   const isStandalone = standaloneEncyclopedia != null;
   const encyclopedia = isStandalone ? standaloneEncyclopedia : (encyclopedias[viewingPlayerIndex] ?? {});
+  const initEnc = isStandalone ? null : (initialEncyclopedias[viewingPlayerIndex] ?? null);
   const caughtCount = FISH_DATABASE.filter(f => encyclopedia[f.id]).length;
   const totalCount = FISH_DATABASE.length;
   const percent = Math.round((caughtCount / totalCount) * 100);
@@ -146,6 +148,7 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
                     key={fish.id}
                     fish={fish}
                     caught={!!encyclopedia[fish.id]}
+                    isNew={initEnc ? (!!encyclopedia[fish.id] && !initEnc[fish.id]) : false}
                     onClick={() => setSelectedFish(fish)}
                   />
                 ))}
