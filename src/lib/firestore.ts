@@ -1,6 +1,6 @@
 import { doc, setDoc, getDoc, collection, query, where, getDocs, orderBy, limit as firestoreLimit, addDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import type { RankingEntry, ScoreBreakdown, UserInfo } from '../game/types';
+import type { RankingEntry, UserInfo } from '../game/types';
 
 // ===== ユーザー名ルックアップ =====
 
