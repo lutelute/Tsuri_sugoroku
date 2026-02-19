@@ -14,3 +14,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// パスワード検証専用の副インスタンス（メインのログイン状態に影響しない）
+const verifyApp = initializeApp(firebaseConfig, 'verify');
+export const verifyAuth = getAuth(verifyApp);

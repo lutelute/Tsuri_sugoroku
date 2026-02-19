@@ -10,8 +10,25 @@ import type { User } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { saveUserProfile, registerUsername } from '../lib/firestore';
 
+const SESSION_KEY = 'tsuri_session_at';
+const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24時間
+
 function toEmail(username: string): string {
   return `${username.toLowerCase()}@tsuri.local`;
+}
+
+function markSession(): void {
+  localStorage.setItem(SESSION_KEY, Date.now().toString());
+}
+
+function isSessionExpired(): boolean {
+  const ts = localStorage.getItem(SESSION_KEY);
+  if (!ts) return true;
+  return Date.now() - Number(ts) > SESSION_DURATION_MS;
+}
+
+function clearSession(): void {
+  localStorage.removeItem(SESSION_KEY);
 }
 
 interface AuthState {
@@ -40,6 +57,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await updateProfile(cred.user, { displayName: username });
       await saveUserProfile(cred.user.uid, username);
       await registerUsername(cred.user.uid, username);
+      markSession();
       set({ user: cred.user, loading: false });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '登録に失敗しました';
@@ -58,6 +76,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await saveUserProfile(cred.user.uid, username);
       // 既存ユーザーでもusernamesコレクションに登録（検索用）
       await registerUsername(cred.user.uid, username).catch(() => {});
+      markSession();
       set({ user: cred.user, loading: false });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'ログインに失敗しました';
@@ -79,6 +98,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // まずログインを試みる
       const cred = await signInWithEmailAndPassword(auth, guestEmail, guestPassword);
       await saveUserProfile(cred.user.uid, guestName);
+      markSession();
       set({ user: cred.user, loading: false });
     } catch {
       // ログイン失敗 → アカウント未作成なので新規作成
@@ -87,6 +107,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         await updateProfile(cred.user, { displayName: guestName });
         await saveUserProfile(cred.user.uid, guestName);
         await registerUsername(cred.user.uid, guestName);
+        markSession();
         set({ user: cred.user, loading: false });
       } catch (e2: unknown) {
         const msg = e2 instanceof Error ? e2.message : 'ゲストログインに失敗しました';
@@ -98,6 +119,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signOut: async () => {
+    clearSession();
     await firebaseSignOut(auth);
     set({ user: null });
   },
@@ -106,6 +128,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   init: () => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      // セッション期限チェック: 24時間超過なら自動ログアウト
+      if (user && isSessionExpired()) {
+        clearSession();
+        firebaseSignOut(auth).catch(() => {});
+        set({ user: null, initialized: true });
+        return;
+      }
       set({ user, initialized: true });
       // 既存ユーザーでもusernamesコレクションに自動登録（検索可能にする）
       if (user?.displayName) {

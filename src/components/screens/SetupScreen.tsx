@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { useGameStore } from '../../store/useGameStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { PLAYER_DEFAULT_NAMES, PLAYER_COLORS, DEFAULT_MAX_TURNS } from '../../game/constants';
 import { lookupUserByUsername, loadUserEquipment, loadUserMoney, loadUserEncyclopedia } from '../../lib/firestore';
+import { verifyAuth } from '../../lib/firebase';
 import type { PlayerEquipment } from '../../game/types';
 import Button from '../shared/Button';
 
@@ -19,6 +21,7 @@ export default function SetupScreen() {
   const [maxTurns, setMaxTurns] = useState(DEFAULT_MAX_TURNS);
   const [linkedUsers, setLinkedUsers] = useState<(LinkedUser | null)[]>([null, null, null, null]);
   const [searchInputs, setSearchInputs] = useState<string[]>(['', '', '', '']);
+  const [passwordInputs, setPasswordInputs] = useState<string[]>(['', '', '', '']);
   const [searchErrors, setSearchErrors] = useState<(string | null)[]>([null, null, null, null]);
   const [searching, setSearching] = useState<boolean[]>([false, false, false, false]);
 
@@ -123,7 +126,8 @@ export default function SetupScreen() {
 
   const handleSearch = async (index: number) => {
     const username = searchInputs[index].trim();
-    if (!username) return;
+    const password = passwordInputs[index];
+    if (!username || !password) return;
 
     const newSearching = [...searching];
     newSearching[index] = true;
@@ -134,6 +138,7 @@ export default function SetupScreen() {
     setSearchErrors(newErrors);
 
     try {
+      // まずユーザー名で検索
       const result = await lookupUserByUsername(username);
       if (!result) {
         newErrors[index] = 'ユーザーが見つかりません';
@@ -145,13 +150,28 @@ export default function SetupScreen() {
           newErrors[index] = `既にプレイヤー${alreadyLinkedIndex + 1}に紐付け済みです`;
           setSearchErrors([...newErrors]);
         } else {
-          const newLinked = [...linkedUsers];
-          newLinked[index] = result;
-          setLinkedUsers(newLinked);
-          // 名前も自動設定
-          const newNames = [...names];
-          newNames[index] = result.displayName;
-          setNames(newNames);
+          // パスワード認証（副インスタンスで検証、メインセッションに影響なし）
+          try {
+            const email = `${username.toLowerCase()}@tsuri.local`;
+            const cred = await signInWithEmailAndPassword(verifyAuth, email, password);
+            // 認証成功 → 副インスタンスからログアウト
+            await firebaseSignOut(verifyAuth).catch(() => {});
+            // UIDが一致するか確認
+            if (cred.user.uid !== result.uid) {
+              newErrors[index] = 'ユーザー情報が一致しません';
+              setSearchErrors([...newErrors]);
+            } else {
+              const newLinked = [...linkedUsers];
+              newLinked[index] = result;
+              setLinkedUsers(newLinked);
+              const newNames = [...names];
+              newNames[index] = result.displayName;
+              setNames(newNames);
+            }
+          } catch {
+            newErrors[index] = 'パスワードが正しくありません';
+            setSearchErrors([...newErrors]);
+          }
         }
       }
     } catch {
@@ -257,16 +277,30 @@ export default function SetupScreen() {
                         newErrors[i] = null;
                         setSearchErrors(newErrors);
                       }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(i); }}
-                      placeholder="登録ユーザー名で検索"
+                      placeholder="ユーザー名"
                       className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white placeholder-white/20 outline-none focus:border-cyan-400 transition"
+                    />
+                    <input
+                      type="password"
+                      value={passwordInputs[i]}
+                      onChange={(e) => {
+                        const newPw = [...passwordInputs];
+                        newPw[i] = e.target.value;
+                        setPasswordInputs(newPw);
+                        const newErrors = [...searchErrors];
+                        newErrors[i] = null;
+                        setSearchErrors(newErrors);
+                      }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(i); }}
+                      placeholder="パスワード"
+                      className="w-24 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white placeholder-white/20 outline-none focus:border-cyan-400 transition"
                     />
                     <button
                       onClick={() => handleSearch(i)}
-                      disabled={searching[i] || !searchInputs[i].trim()}
+                      disabled={searching[i] || !searchInputs[i].trim() || !passwordInputs[i]}
                       className="text-xs bg-cyan-600/50 hover:bg-cyan-600/80 disabled:opacity-30 px-3 py-1.5 rounded-lg transition cursor-pointer disabled:cursor-default"
                     >
-                      {searching[i] ? '...' : '検索'}
+                      {searching[i] ? '...' : '紐付'}
                     </button>
                   </div>
                   {currentUser && !linkedUsers.some(u => u?.uid === currentUser.uid) && (
