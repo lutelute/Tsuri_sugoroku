@@ -53,14 +53,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   signUp: async (username, password) => {
     set({ loading: true, error: null });
     try {
+      markSession(); // onAuthStateChangedより先にセッション記録
       const cred = await createUserWithEmailAndPassword(auth, toEmail(username), password);
       await updateProfile(cred.user, { displayName: username });
-      // Firestore書き込みはバックグラウンド（ログイン速度優先）
       saveUserProfile(cred.user.uid, username).catch(() => {});
       registerUsername(cred.user.uid, username).catch(() => {});
-      markSession();
       set({ user: cred.user, loading: false });
     } catch (e: unknown) {
+      clearSession(); // 認証失敗時はセッション取り消し
       const msg = e instanceof Error ? e.message : '登録に失敗しました';
       let displayMsg = msg;
       if (msg.includes('email-already-in-use')) displayMsg = 'このユーザー名は既に使われています。\n「ログインに戻る」から既存アカウントでログインしてください。';
@@ -73,13 +73,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   signIn: async (username, password) => {
     set({ loading: true, error: null });
     try {
+      markSession(); // onAuthStateChangedより先にセッション記録
       const cred = await signInWithEmailAndPassword(auth, toEmail(username), password);
-      // Firestore書き込みはバックグラウンド（ログイン速度優先）
       saveUserProfile(cred.user.uid, username).catch(() => {});
       registerUsername(cred.user.uid, username).catch(() => {});
-      markSession();
       set({ user: cred.user, loading: false });
     } catch (e: unknown) {
+      clearSession(); // 認証失敗時はセッション取り消し
       const msg = e instanceof Error ? e.message : 'ログインに失敗しました';
       let displayMsg = msg;
       if (msg.includes('user-not-found') || msg.includes('invalid-credential')) displayMsg = 'ユーザー名またはパスワードが正しくありません。\n初めての方は「アカウントを作成する」から登録してください。';
@@ -96,19 +96,19 @@ export const useAuthStore = create<AuthState>((set) => ({
     const guestPassword = 'guest123456';
     const guestName = 'ゲスト';
     try {
+      markSession(); // onAuthStateChangedより先にセッション記録
       // まずログインを試みる
       const cred = await signInWithEmailAndPassword(auth, guestEmail, guestPassword);
       saveUserProfile(cred.user.uid, guestName).catch(() => {});
-      markSession();
       set({ user: cred.user, loading: false });
     } catch {
       // ログイン失敗 → アカウント未作成なので新規作成
       try {
+        markSession();
         const cred = await createUserWithEmailAndPassword(auth, guestEmail, guestPassword);
         await updateProfile(cred.user, { displayName: guestName });
         saveUserProfile(cred.user.uid, guestName).catch(() => {});
         registerUsername(cred.user.uid, guestName).catch(() => {});
-        markSession();
         set({ user: cred.user, loading: false });
       } catch (e2: unknown) {
         const msg = e2 instanceof Error ? e2.message : 'ゲストログインに失敗しました';
