@@ -4,17 +4,17 @@ import { getEffectiveLevel } from '../../game/fishing';
 import ProgressBar from '../shared/ProgressBar';
 
 const MARKER_COUNT: Record<string, number> = {
-  common: 8,
-  uncommon: 9,
-  rare: 11,
-  legendary: 13,
-  mythical: 15,
+  common: 7,
+  uncommon: 8,
+  rare: 9,
+  legendary: 11,
+  mythical: 13,
 };
 
 const LANE_HEIGHT = 400;
 const JUDGMENT_Y = 350; // 判定ラインのY座標
-const BASE_SPEED = 120; // px/sec
-const MARKER_INTERVAL = 900; // ms between markers
+const BASE_SPEED = 105; // px/sec
+const MARKER_INTERVAL = 950; // ms between markers
 
 interface Marker {
   id: number;
@@ -38,8 +38,8 @@ export default function RhythmPhase({ fish, equipment, onSuccess, onFail }: Rhyt
   const reelLevel = getEffectiveLevel(equipment, 'reeling');
   const lureLevel = getEffectiveLevel(equipment, 'biteSpeed');
 
-  const perfectWindow = 50 + (rodLevel - 1) * 15; // ms 竿: 判定緩和
-  const goodWindow = 150 + (rodLevel - 1) * 20;
+  const perfectWindow = 65 + (rodLevel - 1) * 15; // ms 竿: 判定緩和
+  const goodWindow = 180 + (rodLevel - 1) * 20;
   const speed = Math.max(60, BASE_SPEED - (reelLevel - 1) * 10); // リール: 速度低下
   const perfectBonus = 1 + (lureLevel - 1) * 0.15; // ルアー: Perfectボーナス
 
@@ -60,7 +60,7 @@ export default function RhythmPhase({ fish, equipment, onSuccess, onFail }: Rhyt
   // 1マーカーあたりの目標進捗（Perfect全取りで約110%になるように）
   const progressPerPerfect = Math.round((110 / totalMarkers) * perfectBonus);
   const progressPerGood = Math.round(progressPerPerfect * 0.5);
-  const progressPerMiss = -5;
+  const progressPerMiss = -3;
 
   // ゲーム開始
   useEffect(() => {

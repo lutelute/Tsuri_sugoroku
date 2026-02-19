@@ -4,16 +4,16 @@ import { getEffectiveLevel } from '../../game/fishing';
 import ProgressBar from '../shared/ProgressBar';
 
 const ROUNDS_REQUIRED: Record<string, number> = {
-  common: 5,
-  uncommon: 5,
-  rare: 6,
-  legendary: 7,
-  mythical: 8,
+  common: 4,
+  uncommon: 4,
+  rare: 5,
+  legendary: 6,
+  mythical: 7,
 };
 
 // 反応時間の閾値（ms）— この時間内にタップすれば最大進捗
-const BASE_REACTION_THRESHOLD = 500;
-const PROGRESS_PER_ROUND_BASE = 22; // 1ラウンドあたりの基本進捗
+const BASE_REACTION_THRESHOLD = 600;
+const PROGRESS_PER_ROUND_BASE = 26; // 1ラウンドあたりの基本進捗
 
 interface ReactionPhaseProps {
   fish: Fish;
@@ -76,12 +76,13 @@ export default function ReactionPhase({ fish, equipment, onSuccess, onFail }: Re
     if (doneRef.current) return;
 
     if (roundState === 'waiting') {
-      // お手つき！
+      // お手つき！（半減ペナルティ）
       if (timerRef.current) clearTimeout(timerRef.current);
       setRoundState('foul');
-      setMessage('お手つき！進捗リセット！');
-      progressRef.current = 0;
-      setProgress(0);
+      const halved = Math.floor(progressRef.current * 0.5);
+      setMessage(`お手つき！進捗${halved}%に半減...`);
+      progressRef.current = halved;
+      setProgress(halved);
 
       setTimeout(() => {
         if (!doneRef.current) {
