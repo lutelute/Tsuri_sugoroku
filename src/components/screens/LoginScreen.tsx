@@ -41,7 +41,7 @@ export default function LoginScreen() {
         </p>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-900/30 border border-red-500/30 text-red-300 text-sm text-center">
+          <div className="mb-4 p-3 rounded-xl bg-red-900/30 border border-red-500/30 text-red-300 text-sm text-center whitespace-pre-line">
             {error}
           </div>
         )}

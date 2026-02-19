@@ -45,8 +45,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '登録に失敗しました';
       let displayMsg = msg;
-      if (msg.includes('email-already-in-use')) displayMsg = 'このユーザー名は既に使われています';
-      if (msg.includes('weak-password')) displayMsg = 'パスワードは6文字以上にしてください';
+      if (msg.includes('email-already-in-use')) displayMsg = 'このユーザー名は既に使われています。\n「ログインに戻る」から既存アカウントでログインしてください。';
+      else if (msg.includes('weak-password')) displayMsg = 'パスワードは6文字以上で設定してください。';
+      else if (msg.includes('network')) displayMsg = 'ネットワークに接続できません。\n接続を確認してもう一度お試しください。';
       set({ loading: false, error: displayMsg });
     }
   },
@@ -62,8 +63,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'ログインに失敗しました';
       let displayMsg = msg;
-      if (msg.includes('user-not-found') || msg.includes('invalid-credential')) displayMsg = 'ユーザー名またはパスワードが正しくありません';
-      if (msg.includes('wrong-password')) displayMsg = 'パスワードが正しくありません';
+      if (msg.includes('user-not-found') || msg.includes('invalid-credential')) displayMsg = 'ユーザー名またはパスワードが正しくありません。\n初めての方は「アカウントを作成する」から登録してください。';
+      else if (msg.includes('wrong-password')) displayMsg = 'パスワードが正しくありません。\nもう一度確認して入力してください。';
+      else if (msg.includes('too-many-requests')) displayMsg = 'ログイン試行回数が上限を超えました。\nしばらく待ってから再度お試しください。';
+      else if (msg.includes('network')) displayMsg = 'ネットワークに接続できません。\n接続を確認してもう一度お試しください。';
       set({ loading: false, error: displayMsg });
     }
   },
@@ -78,7 +81,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: cred.user, loading: false });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'ゲストログインに失敗しました';
-      set({ loading: false, error: msg });
+      let displayMsg = msg;
+      if (msg.includes('operation-not-allowed')) displayMsg = 'ゲストログインは現在利用できません。\n「アカウントを作成する」から登録してお遊びください。';
+      else if (msg.includes('network')) displayMsg = 'ネットワークに接続できません。\n接続を確認してもう一度お試しください。';
+      set({ loading: false, error: displayMsg });
     }
   },
 
