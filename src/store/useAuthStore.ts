@@ -55,8 +55,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const cred = await createUserWithEmailAndPassword(auth, toEmail(username), password);
       await updateProfile(cred.user, { displayName: username });
-      await saveUserProfile(cred.user.uid, username);
-      await registerUsername(cred.user.uid, username);
+      // Firestore書き込みはバックグラウンド（ログイン速度優先）
+      saveUserProfile(cred.user.uid, username).catch(() => {});
+      registerUsername(cred.user.uid, username).catch(() => {});
       markSession();
       set({ user: cred.user, loading: false });
     } catch (e: unknown) {
@@ -73,9 +74,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true, error: null });
     try {
       const cred = await signInWithEmailAndPassword(auth, toEmail(username), password);
-      await saveUserProfile(cred.user.uid, username);
-      // 既存ユーザーでもusernamesコレクションに登録（検索用）
-      await registerUsername(cred.user.uid, username).catch(() => {});
+      // Firestore書き込みはバックグラウンド（ログイン速度優先）
+      saveUserProfile(cred.user.uid, username).catch(() => {});
+      registerUsername(cred.user.uid, username).catch(() => {});
       markSession();
       set({ user: cred.user, loading: false });
     } catch (e: unknown) {
@@ -97,7 +98,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       // まずログインを試みる
       const cred = await signInWithEmailAndPassword(auth, guestEmail, guestPassword);
-      await saveUserProfile(cred.user.uid, guestName);
+      saveUserProfile(cred.user.uid, guestName).catch(() => {});
       markSession();
       set({ user: cred.user, loading: false });
     } catch {
@@ -105,8 +106,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       try {
         const cred = await createUserWithEmailAndPassword(auth, guestEmail, guestPassword);
         await updateProfile(cred.user, { displayName: guestName });
-        await saveUserProfile(cred.user.uid, guestName);
-        await registerUsername(cred.user.uid, guestName);
+        saveUserProfile(cred.user.uid, guestName).catch(() => {});
+        registerUsername(cred.user.uid, guestName).catch(() => {});
         markSession();
         set({ user: cred.user, loading: false });
       } catch (e2: unknown) {
