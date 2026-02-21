@@ -13,8 +13,8 @@ const HITS_REQUIRED: Record<string, number> = {
   mythical: 6,
 };
 
-const BASE_TIME = 22000;
-const BASE_SPEED = 2.2; // px per frame at 60fps
+const BASE_TIME = 25000;
+const BASE_SPEED = 1.8; // px per frame at 60fps
 
 interface TargetPhaseProps {
   fish: Fish;
@@ -34,7 +34,7 @@ export default function TargetPhase({ fish, equipment, onSuccess, onFail }: Targ
   const rodLevel = getEffectiveLevel(equipment, 'strike');
   const reelLevel = getEffectiveLevel(equipment, 'tensionTolerance');
   const lureLevel = getEffectiveLevel(equipment, 'biteSpeed');
-  const hitRadius = 36 + (rodLevel - 1) * 5; // 竿: ヒット判定範囲拡大
+  const hitRadius = 44 + (rodLevel - 1) * 5; // 竿: ヒット判定範囲拡大
   const timeBonus = interpolateBonus(REEL_TIME_EXTENSION, reelLevel);
   const totalTime = BASE_TIME + timeBonus;
   const speedMul = Math.max(0.4, 1 - (lureLevel - 1) * 0.1); // ルアー: 速度低下

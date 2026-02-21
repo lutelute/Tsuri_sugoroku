@@ -57,10 +57,10 @@ export default function RhythmPhase({ fish, equipment, onSuccess, onFail }: Rhyt
   const nextMarkerIdRef = useRef(0);
   const spawnedCountRef = useRef(0);
 
-  // 1マーカーあたりの目標進捗（Perfect全取りで約110%になるように）
-  const progressPerPerfect = Math.round((110 / totalMarkers) * perfectBonus);
-  const progressPerGood = Math.round(progressPerPerfect * 0.5);
-  const progressPerMiss = -3;
+  // 1マーカーあたりの目標進捗（Perfect全取りで約130%になるように余裕を持たせる）
+  const progressPerPerfect = Math.round((130 / totalMarkers) * perfectBonus);
+  const progressPerGood = Math.round(progressPerPerfect * 0.6);
+  const progressPerMiss = -2;
 
   // ゲーム開始
   useEffect(() => {
