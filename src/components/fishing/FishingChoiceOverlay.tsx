@@ -1,11 +1,14 @@
 import { useGameStore } from '../../store/useGameStore';
 import { BOAT_FISHING_COST } from '../../game/constants';
 import { getEquippedItem } from '../../game/equipment';
+import { NODE_MAP } from '../../data/boardNodes';
 import Button from '../shared/Button';
 
 export default function FishingChoiceOverlay() {
   const { players, currentPlayerIndex, startFishing, startBoatFishing, setTurnPhase, boatFishingRemaining } = useGameStore();
   const player = players[currentPlayerIndex];
+  const node = NODE_MAP.get(player.currentNode);
+  const isSpecialSpot = node?.type === 'fishing_special';
   const canAffordBoat = player.money >= BOAT_FISHING_COST;
 
   const rodItem = getEquippedItem(player.equipment, 'rod');
@@ -26,6 +29,14 @@ export default function FishingChoiceOverlay() {
         <p className="text-sm text-white/50 text-center">
           所持金: ¥{player.money.toLocaleString()}
         </p>
+
+        {/* 特別スポット表示 */}
+        {isSpecialSpot && (
+          <div className="bg-purple-900/50 border border-purple-400/30 rounded-lg p-3 text-center">
+            <p className="text-purple-200 font-bold text-sm">🌟 特別な釣りスポット！</p>
+            <p className="text-purple-300/70 text-xs mt-1">レア魚が出やすく、大漁のチャンスも UP！</p>
+          </div>
+        )}
 
         {/* 装備なし警告 */}
         {!hasRod && (
