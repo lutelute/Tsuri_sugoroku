@@ -17,6 +17,7 @@ export default function SetupScreen() {
   const { setScreen, startGame } = useGameStore();
   const currentUser = useAuthStore(s => s.user);
   const isGuest = useAuthStore(s => s.isGuest);
+  const signInGuest = useAuthStore(s => s.signInGuest);
   const [playerCount, setPlayerCount] = useState(1);
   const [names, setNames] = useState<string[]>([...PLAYER_DEFAULT_NAMES]);
   const [maxTurns, setMaxTurns] = useState(DEFAULT_MAX_TURNS);
@@ -48,6 +49,13 @@ export default function SetupScreen() {
   const handleStart = async () => {
     setStarting(true);
     try {
+      // 紐付けユーザーのデータ(users/{uid})はFirestoreルール上「認証必須」で読み書きする。
+      // 未ログインのままだと紐付け相手の図鑑/装備が読み込めず保存もできないため、
+      // ここでゲスト認証セッションだけ確保する（プレイヤー枠には紐付けない＝各枠は紐付けアカウントのまま）。
+      if (!currentUser) {
+        await signInGuest().catch(() => {});
+      }
+
       const uids = linkedUsers.slice(0, playerCount);
 
       // 全プレイヤーの図鑑をFirestoreからロード（引き継ぎモードに関係なく常にロード）
