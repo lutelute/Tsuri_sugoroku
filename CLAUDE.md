@@ -197,3 +197,27 @@ idle → roulette → path_selection(分岐あり) or node_action →
 - **ボーナス補間**: `interpolateBonus(values[], level)` でレベル別配列から連続値を補間
 - **ノードアクション制限**: 釣りは1ターン最大3回まで (`MAX_FISHING_PER_TURN = 3`)
 - **ゲーム保存**: ターン終了時にlocalStorageへ自動保存、ゲーム終了時にFirestoreへ装備・お金を保存
+
+## v2.0.0 リニューアル記録（2026-05-30）
+
+「Opus 4.8 ならどう作るか」を起点にした和モダン全面刷新＋機能改修。詳細は `CHANGELOG.md` 参照。
+
+### デザイン（和モダン・浮世絵）
+- テーマ: 藍×朱×金×和紙トークン（`index.css @theme`）、青海波背景、和フォント（毛筆/明朝/ゴシック、`index.html` で読込）
+- 魚イラスト(`FishIllustration.tsx`)を有機的な造形に再設計（背びれ/二又尾びれ/胸びれ/陰影グラデ/うろこ/レア度オーラ）
+- 地図(`JapanMap`/`MapNode`/`MapEdge`/`PlayerToken` + 新規 `map/landmass.ts`): 日本列島の陸地シルエット・金の海路・方位・地方名・漢字記号のマス・地図ピン型の駒
+- 統一SVGアイコン集（新規 `shared/Icon.tsx`）で絵文字を置換。共通UI＋全オーバーレイを統一
+
+### 重要な運用上の前提
+- **Firestore セキュリティルールは `firestore.rules` をデプロイ済み前提**（usernames/profiles 公開読み取り、users/* は認証必須、rankings 検証）。未デプロイ/ロックだと検索・番付・引き継ぎ・図鑑同期が permission-denied で全滅する。`firebase.json` 同梱。
+- **ゲストは認証セッション専用＋ローカル保存**（`storage.getUid()` が isGuest 時 null）。新規ゲストは usernames/profiles に載せない。
+- **未ログインでも紐付けプレイ可**: `SetupScreen.handleStart` が未ログイン時に `signInGuest()` で認証セッションを確保（users/* の読み書きに必須なため）。
+- **マルチプレイ引き継ぎ**: 1セッションから複数uidの users/* に書き込むため、ルールの users 書き込みは所有者限定にできない（`signedIn`）。
+
+### テスト
+- Vitest + `src/**/*.test.ts`（純粋ロジックのみ、tsconfig.app から除外）。`npm test` / `npm run typecheck`。
+- 乱数は `utils/random.ts` の `setRandomSource`/`mulberry32` で決定論化可能。
+- CI(`.github/workflows/deploy.yml`)は check(typecheck/lint/test)→build→deploy。lint は既存 react-hooks 警告のため当面 `continue-on-error`。
+
+### ロールバック
+旧本番は commit `d718428`（タグ `pre-wamodern-renovation`）。`git reset --hard d718428 && git push --force-with-lease origin main`。
