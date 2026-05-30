@@ -18,13 +18,12 @@ export const SHOP_TIER_MAX_LEVEL: Record<number, number> = {
 // 釣り定数
 export const FISHING_BITE_MIN_MS = 1500;
 export const FISHING_BITE_MAX_MS = 5000;
-export const FISHING_STRIKE_DURATION_MS = 2000;
-export const FISHING_STRIKE_GREEN_ZONE_BASE = 0.2;
+// ストライク緑ゾーン: 実効strikeレベル1で27%、レベルごとに+5%（WaitingPhaseの視覚表現とuseFishingの判定で共有する単一の真実）
+export const FISHING_STRIKE_GREEN_ZONE_BASE = 0.27;
 export const FISHING_STRIKE_GREEN_ZONE_PER_ROD_LEVEL = 0.05;
 export const FISHING_REELING_TARGET = 100;
 export const FISHING_REELING_TAP_BASE = 7;
 export const FISHING_REELING_TAP_PER_REEL_LEVEL = 2;
-export const FISHING_TENSION_MAX = 100;
 export const FISHING_TENSION_RISE_PER_TAP = 10;
 export const FISHING_TENSION_DECAY_RATE = 0.3;
 export const FISHING_TENSION_BREAK_THRESHOLD = 100;
@@ -100,7 +99,7 @@ export const REPAIR_COST_PER_POINT = 15;     // 耐久度1あたりの修理コ�
 
 // 装備合体
 export const MERGE_DURABILITY_BONUS = 15;    // 合体時のボーナス耐久度
-export const MERGE_MAX_DURABILITY = 60;      // 合体後の最大耐久度
+export const MERGE_MAX_DURABILITY = 100;     // 合体後の最大耐久度（通常の耐久度上限100に統一）
 
 // 船釣り
 export const BOAT_FISHING_COST = 10000;

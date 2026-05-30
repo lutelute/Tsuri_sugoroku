@@ -15,8 +15,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # 品質ゲート: 型チェック・Lint・テストが通らなければデプロイしない
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      # Lint は既存の react-hooks 系の警告が残るため当面は非ブロッキング（可視化のみ）。
+      # 解消後に continue-on-error を外して必須ゲートに昇格させる。
+      - run: npm run lint
+        continue-on-error: true
+      - run: npm test
+
   build:
     runs-on: ubuntu-latest
+    needs: check
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

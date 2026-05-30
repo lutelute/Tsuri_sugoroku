@@ -15,6 +15,7 @@ import CreelOverlay from '../creel/CreelOverlay';
 import InventoryPanel from '../inventory/InventoryPanel';
 import RestOverlay from '../rest/RestOverlay';
 import Button from '../shared/Button';
+import Icon from '../shared/Icon';
 
 export default function GameScreen() {
   const {
@@ -95,9 +96,9 @@ export default function GameScreen() {
               onClick={() => setTurnPhase('roulette')}
               variant="gold"
               size="lg"
-              className="w-full shadow-2xl"
+              className="w-full shadow-2xl font-mincho tracking-widest"
             >
-              🎲 サイコロを振る
+              <span className="inline-flex items-center justify-center gap-2"><Icon name="dice" size={20} /> サイコロを振る</span>
             </Button>
           </div>
         )}
@@ -132,31 +133,38 @@ export default function GameScreen() {
         {/* 左上: タイトルに戻る */}
         <button
           onClick={() => setScreen('title')}
-          className="absolute left-3 top-2 bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer z-20"
+          className="absolute left-3 top-2 bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-10 h-10 flex items-center justify-center text-washi transition cursor-pointer z-20"
           title="タイトルに戻る"
+          aria-label="タイトルに戻る"
         >
-          🏠
+          <Icon name="home" size={19} />
         </button>
 
         {/* 右サイドボタン群 */}
         <div className="absolute right-3 bottom-4 flex flex-col gap-2 z-20">
           <button
             onClick={() => setShowInventory(true)}
-            className="bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-10 h-10 flex items-center justify-center text-washi transition cursor-pointer"
+            title="道具箱"
+            aria-label="道具箱を開く"
           >
-            🧰
+            <Icon name="tacklebox" size={20} />
           </button>
           <button
             onClick={() => setShowCreel(true)}
-            className="bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-10 h-10 flex items-center justify-center text-washi transition cursor-pointer"
+            title="魚籠"
+            aria-label="魚籠を開く"
           >
-            🎒
+            <Icon name="creel" size={20} />
           </button>
           <button
             onClick={() => setShowEncyclopedia(true)}
-            className="bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 rounded-full w-10 h-10 flex items-center justify-center text-lg transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-10 h-10 flex items-center justify-center text-washi transition cursor-pointer"
+            title="図鑑"
+            aria-label="魚図鑑を開く"
           >
-            📖
+            <Icon name="book" size={20} />
           </button>
         </div>
       </div>

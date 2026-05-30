@@ -16,6 +16,7 @@ interface LinkedUser {
 export default function SetupScreen() {
   const { setScreen, startGame } = useGameStore();
   const currentUser = useAuthStore(s => s.user);
+  const isGuest = useAuthStore(s => s.isGuest);
   const [playerCount, setPlayerCount] = useState(1);
   const [names, setNames] = useState<string[]>([...PLAYER_DEFAULT_NAMES]);
   const [maxTurns, setMaxTurns] = useState(DEFAULT_MAX_TURNS);
@@ -28,9 +29,9 @@ export default function SetupScreen() {
   const [starting, setStarting] = useState(false);
   const [carryOver, setCarryOver] = useState(true); // 引き継ぎモード
 
-  // ログイン中ならプレイヤー1に自動紐付け
+  // ログイン中ならプレイヤー1に自動紐付け（ゲストは共有アカウントのため紐付けしない）
   useEffect(() => {
-    if (currentUser && !linkedUsers[0]) {
+    if (currentUser && !isGuest && !linkedUsers[0]) {
       const newLinked = [...linkedUsers];
       newLinked[0] = { uid: currentUser.uid, displayName: currentUser.displayName ?? 'ユーザー' };
       setLinkedUsers(newLinked);
@@ -194,7 +195,7 @@ export default function SetupScreen() {
 
   // ログイン中ユーザーをプレイヤー1に自動紐付け
   const linkCurrentUser = (index: number) => {
-    if (!currentUser) return;
+    if (!currentUser || isGuest) return;
     const alreadyLinked = linkedUsers.some((u, i) => i !== index && u?.uid === currentUser.uid);
     if (alreadyLinked) return;
     const newLinked = [...linkedUsers];
@@ -207,8 +208,8 @@ export default function SetupScreen() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 overflow-y-auto py-6">
-      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 sm:p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-6">ゲーム設定</h2>
+      <div className="panel-ai rounded-2xl p-6 sm:p-8 w-full max-w-md">
+        <h2 className="font-mincho text-2xl font-bold text-center mb-7 text-kin-300 ink-underline">ゲーム設定</h2>
 
         {/* プレイヤー人数 */}
         <div className="mb-6">
@@ -220,7 +221,7 @@ export default function SetupScreen() {
                 onClick={() => setPlayerCount(n)}
                 className={`flex-1 py-2 rounded-lg text-lg font-bold transition-all cursor-pointer
                   ${playerCount === n
-                    ? 'bg-blue-600 text-white shadow-lg'
+                    ? 'bg-ai-500 text-washi shadow-lg'
                     : 'bg-white/10 text-white/60 hover:bg-white/20'
                   }`}
               >
@@ -303,7 +304,7 @@ export default function SetupScreen() {
                       {searching[i] ? '...' : '紐付'}
                     </button>
                   </div>
-                  {currentUser && !linkedUsers.some(u => u?.uid === currentUser.uid) && (
+                  {currentUser && !isGuest && !linkedUsers.some(u => u?.uid === currentUser.uid) && (
                     <button
                       onClick={() => linkCurrentUser(i)}
                       className="text-xs text-cyan-300/60 hover:text-cyan-300 mt-1.5 transition cursor-pointer"
@@ -365,7 +366,7 @@ export default function SetupScreen() {
                 onClick={() => setMaxTurns(n)}
                 className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer
                   ${maxTurns === n
-                    ? 'bg-blue-600 text-white shadow-lg'
+                    ? 'bg-ai-500 text-washi shadow-lg'
                     : 'bg-white/10 text-white/60 hover:bg-white/20'
                   }`}
               >

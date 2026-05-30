@@ -61,7 +61,7 @@ export const EVENT_CARDS: EventCard[] = [
   { id: 'fishing_ban', name: '釣り禁止エリア', type: 'bad', description: '知らずに釣り禁止区域に入ってしまった...罰金¥3,000', effect: { kind: 'money', amount: -3000 } },
   { id: 'crow_flock', name: 'カラスの群れ', type: 'bad', description: 'カラスの大群に囲まれて荷物を漁られた！¥1,500の被害...', effect: { kind: 'money', amount: -1500 } },
 
-  // ===== Random Events (45枚) =====
+  // ===== Random Events (46枚) =====
   { id: 'lottery', name: '福引き', type: 'random', description: '地元の商店街で福引きを引いた！何が当たるかな...', effect: { kind: 'money', amount: 2500 } },
   { id: 'shortcut', name: '地元民の案内', type: 'random', description: '地元の漁師が近道を教えてくれた！3マス進む！', effect: { kind: 'move_steps', steps: 3 } },
   { id: 'mysterious_lure', name: '謎のルアー', type: 'random', description: '浜辺で光るルアーを拾った！', effect: { kind: 'free_upgrade', equipmentType: 'lure' } },

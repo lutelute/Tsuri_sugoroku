@@ -18,10 +18,10 @@ export default function Modal({ children, onClose, title, className = '' }: Moda
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative bg-gradient-to-b from-slate-800 to-slate-900 rounded-2xl border border-white/10 shadow-2xl p-6 max-w-lg w-[90%] max-h-[85vh] overflow-y-auto ${className}`}>
+      <div className="absolute inset-0 bg-ai-950/70 backdrop-blur-sm" onClick={onClose} />
+      <div className={`panel-ai relative rounded-2xl p-6 max-w-lg w-[90%] max-h-[85vh] overflow-y-auto animate-bounce-in ${className}`}>
         {title && (
-          <h2 className="text-xl font-bold mb-4 text-center">{title}</h2>
+          <h2 className="font-mincho text-xl font-bold mb-5 text-center text-kin-300 ink-underline">{title}</h2>
         )}
         {children}
       </div>

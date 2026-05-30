@@ -39,59 +39,62 @@ export default function FishCaughtModal({ fish, size, escaped, tairyouCount, isN
   const weight = (fish.weight.min + (fish.weight.max - fish.weight.min) * size).toFixed(1);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className={`animate-bounce-in bg-gradient-to-b from-slate-800 to-slate-900 rounded-2xl border border-white/10 p-8 max-w-sm w-[90%] text-center shadow-2xl ${glowClass}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ai-950/70 backdrop-blur-sm">
+      <div className={`panel-ai animate-bounce-in rounded-2xl p-8 max-w-sm w-[90%] text-center ${glowClass}`}>
         {escaped ? (
           <>
             <div className="text-6xl mb-4">💨</div>
-            <h3 className="text-2xl font-bold text-red-400 mb-2">逃げられた...</h3>
-            <p className="text-white/60 mb-2">{fish.name}に逃げられてしまった</p>
-            <p className="text-sm text-white/40 mb-6">{fish.description}</p>
+            <h3 className="font-mincho text-2xl font-bold text-shu-400 mb-2">逃げられた…</h3>
+            <p className="text-washi/65 mb-2">{fish.name}に逃げられてしまった</p>
+            <p className="text-sm text-washi/45 mb-6">{fish.description}</p>
           </>
         ) : (
           <>
-            <div className="mb-4 animate-bounce-in flex justify-center" style={{ animationDelay: '0.15s' }}>
-              <FishIllustration fishId={fish.id} width={120} height={80} />
-            </div>
-            <h3 className="text-2xl font-bold mb-1">
-              {fish.name}
+            {/* 和紙のメダルに魚を載せる（浮世絵の一枚絵） */}
+            <div className="relative mb-4 flex justify-center">
+              <div className="washi-card rounded-2xl px-3 py-2 animate-bounce-in" style={{ animationDelay: '0.15s' }}>
+                <FishIllustration fishId={fish.id} width={140} height={94} />
+              </div>
               {isNew && (
-                <span className="text-xs bg-pink-500/80 text-white px-2 py-0.5 rounded-full animate-bounce ml-2 inline-block">NEW!</span>
+                <span className="seal animate-seal-stamp absolute -top-2 -right-1 w-11 h-11 rounded-md font-mincho text-[11px] font-bold" style={{ animationDelay: '0.4s' }}>
+                  初物
+                </span>
               )}
-            </h3>
+            </div>
+            <h3 className="font-mincho text-2xl font-bold mb-1 text-washi">{fish.name}</h3>
             <p className={`text-sm font-bold mb-3 ${rarity.color}`}>{rarity.label}</p>
-            <p className="text-sm text-white/60 mb-2">{fish.description}</p>
+            <p className="text-sm text-washi/65 mb-3">{fish.description}</p>
             <div className="flex flex-wrap justify-center gap-1.5 mb-4">
-              <span className="text-xs bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full">{fish.habitat}</span>
-              <span className="text-xs bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded-full">{fish.season}</span>
+              <span className="text-xs bg-ai-500/30 text-ai-200 px-2 py-0.5 rounded-full border border-ai-300/20">{fish.habitat}</span>
+              <span className="text-xs bg-kin-500/20 text-kin-300 px-2 py-0.5 rounded-full border border-kin-500/25">{fish.season}</span>
             </div>
 
             <div className="grid grid-cols-4 gap-2 mb-6 text-sm">
-              <div className="bg-white/5 rounded-lg p-2">
-                <div className="text-white/40 text-xs">重量</div>
-                <div className="font-bold">{weight}kg</div>
+              <div className="bg-ai-950/45 rounded-lg p-2 border border-kin-500/12">
+                <div className="text-washi/45 text-xs">重量</div>
+                <div className="font-bold text-washi">{weight}kg</div>
               </div>
-              <div className="bg-white/5 rounded-lg p-2">
-                <div className="text-white/40 text-xs">サイズ</div>
-                <div className="font-bold">{(size * 100).toFixed(0)}%<span className="text-xs ml-0.5">({sizeLabel})</span></div>
+              <div className="bg-ai-950/45 rounded-lg p-2 border border-kin-500/12">
+                <div className="text-washi/45 text-xs">サイズ</div>
+                <div className="font-bold text-washi">{(size * 100).toFixed(0)}%<span className="text-xs ml-0.5">({sizeLabel})</span></div>
               </div>
-              <div className="bg-white/5 rounded-lg p-2">
-                <div className="text-white/40 text-xs">ポイント</div>
-                <div className="font-bold text-amber-400">{points.toLocaleString()}pt</div>
+              <div className="bg-ai-950/45 rounded-lg p-2 border border-kin-500/12">
+                <div className="text-washi/45 text-xs">ポイント</div>
+                <div className="font-bold text-kin-300">{points.toLocaleString()}pt</div>
               </div>
-              <div className="bg-white/5 rounded-lg p-2">
-                <div className="text-white/40 text-xs">売却</div>
-                <div className="font-bold text-emerald-400">¥{sellPrice.toLocaleString()}</div>
+              <div className="bg-ai-950/45 rounded-lg p-2 border border-kin-500/12">
+                <div className="text-washi/45 text-xs">売却</div>
+                <div className="font-bold text-emerald-300">¥{sellPrice.toLocaleString()}</div>
               </div>
             </div>
 
             {size >= 1.5 && (
-              <div className="text-amber-400 text-sm mb-2 animate-pulse">
+              <div className="text-kin-300 text-sm mb-2 animate-pulse">
                 🌟 巨大魚ボーナス +200pt！
               </div>
             )}
             {tairyouCount > 0 && (
-              <div className="text-cyan-300 text-sm mb-4 animate-bounce font-bold">
+              <div className="text-shu-400 text-sm mb-4 animate-bounce font-bold">
                 🐟 大漁！ +{tairyouCount}匹ボーナス！
               </div>
             )}

@@ -33,28 +33,28 @@ export default function TurnIndicator() {
       }}
     >
       <div className="flex items-center gap-3">
-        <span className="text-white/50 transition-opacity duration-300">
-          Turn {turn}{settings.maxTurns > 0 ? `/${settings.maxTurns}` : ''}
+        <span className="font-mincho text-washi/55 transition-opacity duration-300">
+          {turn}{settings.maxTurns > 0 ? `/${settings.maxTurns}` : ''} 巡目
         </span>
-        <span className="text-white/30">|</span>
+        <span className="text-kin-500/40">｜</span>
         <span
-          className="font-bold transition-all duration-500 ease-in-out"
+          className="font-bold font-mincho transition-all duration-500 ease-in-out"
           style={{ color: player?.color }}
         >
           {player?.name}
         </span>
       </div>
 
-      <div className="flex items-center gap-2 text-white/60 transition-opacity duration-300">
+      <div className="flex items-center gap-2 text-washi/65 transition-opacity duration-300">
         {player && player.fishBonusMultiplier > 1 && (
-          <span className="bg-amber-500/20 text-amber-300 text-xs font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
+          <span className="bg-kin-500/20 text-kin-300 text-xs font-bold px-2 py-0.5 rounded-full border border-kin-500/35">
             x{player.fishBonusMultiplier} ({player.fishBonusTurnsLeft}T)
           </span>
         )}
-        {node && <span className="mr-2">{node.name}</span>}
+        {node && <span className="mr-2 font-mincho">{node.name}</span>}
         {remainingDist !== undefined && remainingDist > 0 && (
-          <span className="text-cyan-300/80 text-xs">
-            ゴールまであと {remainingDist} マス
+          <span className="text-kin-300/75 text-xs">
+            ゴールまで {remainingDist} マス
           </span>
         )}
         <span>{phaseLabels[turnPhase] || ''}</span>

@@ -5,6 +5,7 @@ import type { Fish, FishRarity } from '../../game/types';
 import FishCard from './FishCard';
 import FishDetail from './FishDetail';
 import Button from '../shared/Button';
+import Icon from '../shared/Icon';
 
 const RARITY_ORDER: FishRarity[] = ['common', 'uncommon', 'rare', 'legendary', 'mythical'];
 const RARITY_NAMES: Record<FishRarity, string> = {
@@ -13,6 +14,14 @@ const RARITY_NAMES: Record<FishRarity, string> = {
   rare: 'レア',
   legendary: 'レジェンダリー',
   mythical: 'ミシカル',
+};
+// レア度色（セマンティクスを保ちつつ和モダンに調和）
+const RARITY_COLORS: Record<FishRarity, string> = {
+  common: 'text-washi/55',
+  uncommon: 'text-emerald-300',
+  rare: 'text-ai-300',
+  legendary: 'text-kin-300',
+  mythical: 'text-shu-400',
 };
 
 interface EncyclopediaOverlayProps {
@@ -53,25 +62,25 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-ai-900 to-ai-950 overflow-y-auto">
       {/* リセット確認ダイアログ */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowResetConfirm(false)} />
-          <div className="relative bg-gradient-to-b from-red-950 to-slate-900 rounded-2xl border border-red-500/30 shadow-2xl p-6 w-[85%] max-w-sm">
-            <h3 className="text-lg font-bold text-red-400 mb-2">図鑑データをリセット</h3>
-            <p className="text-sm text-white/60 mb-1">
+          <div className="panel-ai relative rounded-2xl border-shu-500/40 shadow-2xl p-6 w-[85%] max-w-sm">
+            <h3 className="font-mincho text-lg font-bold text-shu-400 mb-2">図鑑データをリセット</h3>
+            <p className="text-sm text-washi/60 mb-1">
               全ての図鑑データが削除されます。この操作は取り消せません。
             </p>
-            <p className="text-sm text-white/80 mb-4">
-              続行するには「<span className="text-red-400 font-bold">リセット</span>」と入力してください。
+            <p className="text-sm text-washi/80 mb-4">
+              続行するには「<span className="text-shu-400 font-bold">リセット</span>」と入力してください。
             </p>
             <input
               type="text"
               value={resetInput}
               onChange={(e) => setResetInput(e.target.value)}
               placeholder="リセット"
-              className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/20 outline-none focus:border-red-400 transition mb-4"
+              className="w-full bg-ai-800/60 border border-kin-500/20 rounded-lg px-3 py-2 text-washi placeholder-washi/20 outline-none focus:border-shu-400 transition mb-4"
             />
             <div className="flex gap-3">
               <Button
@@ -95,17 +104,26 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
       )}
 
       {/* ヘッダー */}
-      <div className="sticky top-0 bg-black/50 backdrop-blur-sm px-4 py-3 z-10">
+      <div className="sticky top-0 bg-ai-900/70 backdrop-blur-sm border-b border-kin-500/20 px-4 py-3 z-10">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">📖 図鑑</h2>
+          <h2 className="flex items-center gap-2 font-mincho text-lg font-bold text-kin-300">
+            <Icon name="book" size={22} className="text-kin-400" />
+            図鑑
+          </h2>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-white/60">
+            <span className="text-sm text-washi/60 tabular-nums">
               {caughtCount}/{totalCount} ({percent}%)
             </span>
             {isStandalone && onReset && (
               <Button onClick={() => setShowResetConfirm(true)} variant="danger" size="sm">リセット</Button>
             )}
-            <Button onClick={onClose} variant="secondary" size="sm">閉じる</Button>
+            <button
+              onClick={onClose}
+              aria-label="閉じる"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-ai-800/60 border border-kin-500/30 text-washi/80 hover:text-washi hover:border-kin-500/50 transition cursor-pointer"
+            >
+              <Icon name="close" size={18} />
+            </button>
           </div>
         </div>
 
@@ -118,8 +136,8 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
                 onClick={() => setViewingPlayerIndex(i)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer
                   ${viewingPlayerIndex === i
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white/10 text-white/50 hover:bg-white/20'
+                    ? 'bg-ai-600 text-washi border border-kin-500/40'
+                    : 'bg-ai-800/50 text-washi/50 border border-transparent hover:bg-ai-700/60'
                   }`}
               >
                 <span
@@ -139,8 +157,11 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
           const fishOfRarity = FISH_DATABASE.filter(f => f.rarity === rarity);
           return (
             <div key={rarity}>
-              <h3 className="text-sm font-bold text-white/50 mb-2">
-                {RARITY_NAMES[rarity]} ({fishOfRarity.filter(f => encyclopedia[f.id]).length}/{fishOfRarity.length})
+              <h3 className={`ink-underline inline-flex items-baseline gap-1.5 font-mincho text-sm font-bold mb-3 ${RARITY_COLORS[rarity]}`}>
+                {RARITY_NAMES[rarity]}
+                <span className="text-xs text-washi/45 tabular-nums">
+                  ({fishOfRarity.filter(f => encyclopedia[f.id]).length}/{fishOfRarity.length})
+                </span>
               </h3>
               <div className="grid grid-cols-5 gap-2">
                 {fishOfRarity.map(fish => (

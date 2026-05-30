@@ -15,24 +15,38 @@ export async function registerUsername(uid: string, username: string): Promise<v
 }
 
 export async function lookupUserByUsername(username: string): Promise<{ uid: string; displayName: string } | null> {
-  // 1. usernamesコレクションから検索（高速）
-  const snap = await getDoc(doc(db, 'usernames', username.toLowerCase()));
-  if (snap.exists()) return snap.data() as { uid: string; displayName: string };
+  const key = username.toLowerCase();
 
-  // 2. profilesコレクションからフォールバック検索
-  const q = query(
-    collection(db, 'profiles'),
-    where('displayNameLower', '==', username.toLowerCase()),
-  );
-  const querySnap = await getDocs(q);
-  if (!querySnap.empty) {
-    const data = querySnap.docs[0].data() as { uid: string; displayName: string };
-    // 次回以降のためにusernamesにも登録
-    registerUsername(data.uid, data.displayName).catch(() => {});
-    return { uid: data.uid, displayName: data.displayName };
+  // 1. usernamesコレクションから検索（高速・完全一致）。
+  //    ここが読めれば profiles に依存せず検索が成立する。
+  try {
+    const snap = await getDoc(doc(db, 'usernames', key));
+    if (snap.exists()) return snap.data() as { uid: string; displayName: string };
+  } catch (e) {
+    // usernames が読めない場合は profiles フォールバックに委ねる
+    console.warn('[lookupUserByUsername] usernames 読み取り失敗:', e);
   }
 
-  return null;
+  // 2. profilesコレクションからフォールバック検索（旧データ・表記ゆれ対策）
+  try {
+    const q = query(
+      collection(db, 'profiles'),
+      where('displayNameLower', '==', key),
+    );
+    const querySnap = await getDocs(q);
+    if (!querySnap.empty) {
+      const data = querySnap.docs[0].data() as { uid: string; displayName: string };
+      // 次回以降のためにusernamesにも登録
+      registerUsername(data.uid, data.displayName).catch(() => {});
+      return { uid: data.uid, displayName: data.displayName };
+    }
+    return null; // 本当に見つからない
+  } catch (e) {
+    // 両方とも読めない = Firestoreの権限/ネットワーク異常。
+    // （Firestoreルールで usernames / profiles を公開読み取りにする必要がある）
+    console.error('[lookupUserByUsername] profiles 読み取り失敗（Firestoreルールを確認）:', e);
+    throw e;
+  }
 }
 
 // ===== 図鑑 =====

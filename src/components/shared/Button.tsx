@@ -7,11 +7,16 @@ interface ButtonProps {
   className?: string;
 }
 
+// 和モダン: 藍を基調に、朱の差し色、金箔のアクセント
 const variants = {
-  primary: 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30',
-  secondary: 'bg-white/10 hover:bg-white/20 text-white border border-white/20',
-  danger: 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/30',
-  gold: 'bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-gray-900 font-bold shadow-lg shadow-amber-500/30',
+  primary:
+    'bg-gradient-to-b from-ai-400 to-ai-600 hover:from-ai-300 hover:to-ai-500 text-washi border border-kin-500/30 shadow-lg shadow-ai-900/50',
+  secondary:
+    'bg-ai-800/60 hover:bg-ai-700/70 text-washi border border-kin-500/35',
+  danger:
+    'bg-gradient-to-b from-shu-400 to-shu-600 hover:from-shu-400 hover:to-shu-500 text-washi border border-shu-700/50 shadow-lg shadow-shu-700/40',
+  gold:
+    'bg-gradient-to-b from-kin-300 to-kin-600 hover:from-kin-300 hover:to-kin-500 text-[#3a2a0e] font-bold border border-kin-300/60 shadow-lg shadow-kin-700/40',
 };
 
 const sizes = {
@@ -35,7 +40,7 @@ export default function Button({
       className={`
         ${variants[variant]}
         ${sizes[size]}
-        font-medium transition-all duration-200
+        font-medium tracking-wide transition-all duration-200
         active:scale-95
         disabled:opacity-40 disabled:pointer-events-none
         cursor-pointer

@@ -18,39 +18,37 @@ export default function PlayerToken({ player, index, totalPlayers }: PlayerToken
 
   return (
     <g
+      aria-hidden="true"
       style={{
         transform: `translate(${x}px, ${y}px)`,
         transition: 'transform 0.7s ease-in-out',
       }}
     >
-      {/* 影 */}
-      <ellipse
-        cx={0}
-        cy={3}
-        rx={2}
-        ry={0.7}
-        fill="rgba(0,0,0,0.3)"
-      />
+      {/* 接地影（マスの上） */}
+      <ellipse cx={0} cy={6} rx={2.1} ry={0.7} fill="rgba(6,18,31,0.45)" />
 
-      {/* プレイヤーマーカー */}
-      <circle
-        cx={0}
-        cy={0}
-        r={2.5}
+      {/* ピン本体（先端がマスを指す） */}
+      <path
+        d="M 0,6 L -2.2,0.6 A 2.9 2.9 0 1 1 2.2,0.6 Z"
         fill={player.color}
-        stroke="white"
-        strokeWidth="0.6"
+        stroke="#f1d893"
+        strokeWidth="0.55"
+        strokeLinejoin="round"
       />
+      {/* 上面の照り */}
+      <ellipse cx={-0.7} cy={-1.8} rx={1} ry={0.7} fill="#ffffff" opacity="0.35" />
 
-      {/* プレイヤー番号 */}
+      {/* 番号の白丸 */}
+      <circle cx={0} cy={-1} r={1.7} fill="#fbf6e8" />
       <text
         x={0}
-        y={0.7}
+        y={-0.95}
         textAnchor="middle"
         dominantBaseline="middle"
-        fontSize="2.2"
-        fill="white"
+        fontSize="2.3"
+        fill={player.color}
         fontWeight="bold"
+        fontFamily='"Shippori Mincho", serif'
         className="pointer-events-none select-none"
       >
         {player.id + 1}

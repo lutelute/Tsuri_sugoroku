@@ -3,6 +3,7 @@ import { BOAT_FISHING_COST } from '../../game/constants';
 import { getEquippedItem } from '../../game/equipment';
 import { NODE_MAP } from '../../data/boardNodes';
 import Button from '../shared/Button';
+import Icon from '../shared/Icon';
 
 export default function FishingChoiceOverlay() {
   const { players, currentPlayerIndex, startFishing, startBoatFishing, setTurnPhase, boatFishingRemaining } = useGameStore();
@@ -24,40 +25,54 @@ export default function FishingChoiceOverlay() {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-gradient-to-b from-blue-900/90 to-blue-950/90 rounded-2xl border border-blue-500/20 p-6 max-w-sm w-[90%] space-y-4">
-        <h3 className="text-xl font-bold text-center">釣り方を選ぼう</h3>
-        <p className="text-sm text-white/50 text-center">
-          所持金: ¥{player.money.toLocaleString()}
+      <div className="panel-ai rounded-2xl p-6 max-w-sm w-[90%] space-y-4 relative">
+        {/* 閉じる */}
+        <button
+          onClick={() => setTurnPhase('action_choice')}
+          aria-label="閉じる"
+          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-ai-800/60 border border-kin-500/30 rounded-full text-washi/70 hover:text-washi transition"
+        >
+          <Icon name="close" size={16} />
+        </button>
+
+        <h3 className="text-xl font-mincho text-kin-300 text-center ink-underline">釣り方を選ぼう</h3>
+        <p className="text-sm text-washi/60 text-center flex items-center justify-center gap-1">
+          <Icon name="coin" size={15} className="text-kin-300" />
+          所持金: <span className="tabular-nums text-kin-300">¥{player.money.toLocaleString()}</span>
         </p>
 
         {/* 特別スポット表示 */}
         {isSpecialSpot && (
-          <div className="bg-purple-900/50 border border-purple-400/30 rounded-lg p-3 text-center">
-            <p className="text-purple-200 font-bold text-sm">🌟 特別な釣りスポット！</p>
-            <p className="text-purple-300/70 text-xs mt-1">レア魚が出やすく、大漁のチャンスも UP！</p>
+          <div className="bg-shu-500/20 border border-shu-500/30 rounded-lg p-3 text-center">
+            <p className="text-shu-400 font-mincho font-bold text-sm">🌟 特別な釣りスポット！</p>
+            <p className="text-shu-400/70 text-xs mt-1">レア魚が出やすく、大漁のチャンスも UP！</p>
           </div>
         )}
 
         {/* 装備なし警告 */}
         {!hasRod && (
-          <div className="bg-red-900/60 border border-red-500/30 rounded-lg p-3 text-center">
-            <p className="text-red-300 font-bold text-sm">🚫 釣竿がありません！</p>
-            <p className="text-red-300/70 text-xs mt-1">竿がないと釣りはできません。ショップで購入しましょう。</p>
+          <div className="bg-shu-500/20 border border-shu-500/40 rounded-lg p-3 text-center">
+            <p className="text-shu-400 font-mincho font-bold text-sm flex items-center justify-center gap-1.5">
+              <Icon name="rod" size={16} />釣竿がありません！
+            </p>
+            <p className="text-shu-400/70 text-xs mt-1">竿がないと釣りはできません。ショップで購入しましょう。</p>
           </div>
         )}
 
         {hasRod && missingWarnings.length > 0 && (
-          <div className="bg-amber-900/40 border border-amber-500/20 rounded-lg p-2">
+          <div className="bg-kin-500/15 border border-kin-500/30 rounded-lg p-2">
             {missingWarnings.map((w, i) => (
-              <p key={i} className="text-amber-300/80 text-xs">⚠️ {w}</p>
+              <p key={i} className="text-kin-300/90 text-xs">⚠️ {w}</p>
             ))}
           </div>
         )}
 
         {/* 船釣り続行中 */}
         {boatFishingRemaining > 0 && (
-          <div className="bg-amber-900/40 border border-amber-400/30 rounded-lg p-3 text-center">
-            <p className="text-amber-300 font-bold text-sm">🚢 船釣り乗船中！ 残り{boatFishingRemaining}回</p>
+          <div className="bg-kin-500/15 border border-kin-500/30 rounded-lg p-3 text-center">
+            <p className="text-kin-300 font-mincho font-bold text-sm flex items-center justify-center gap-1.5">
+              <Icon name="boat" size={16} />船釣り乗船中！ 残り<span className="tabular-nums">{boatFishingRemaining}</span>回
+            </p>
           </div>
         )}
 
@@ -69,17 +84,17 @@ export default function FishingChoiceOverlay() {
               disabled={!hasRod}
               className={`w-full border rounded-xl p-4 text-left transition
                 ${hasRod
-                  ? 'bg-amber-600/60 hover:bg-amber-600/80 border-amber-400/30 cursor-pointer'
-                  : 'bg-white/5 border-white/10 opacity-40 cursor-not-allowed'
+                  ? 'bg-kin-500/20 hover:bg-kin-500/30 border-kin-500/40 cursor-pointer'
+                  : 'bg-ai-800/40 border-kin-500/15 opacity-40 cursor-not-allowed'
                 }`}
             >
               <div className="flex items-center gap-3">
-                <span className="text-3xl">🚢</span>
+                <Icon name="boat" size={30} className="text-kin-300 shrink-0" />
                 <div>
-                  <p className="font-bold">船釣りを続ける
+                  <p className="font-mincho font-bold text-washi">船釣りを続ける
                     <span className="text-emerald-300 ml-2 text-sm">無料</span>
                   </p>
-                  <p className="text-xs text-white/50">残り{boatFishingRemaining}回（レア以上の魚を狙う）</p>
+                  <p className="text-xs text-washi/60">残り<span className="tabular-nums">{boatFishingRemaining}</span>回（レア以上の魚を狙う）</p>
                 </div>
               </div>
             </button>
@@ -91,15 +106,15 @@ export default function FishingChoiceOverlay() {
             disabled={!hasRod}
             className={`w-full border rounded-xl p-4 text-left transition
               ${hasRod
-                ? 'bg-blue-600/60 hover:bg-blue-600/80 border-blue-400/30 cursor-pointer'
-                : 'bg-white/5 border-white/10 opacity-40 cursor-not-allowed'
+                ? 'bg-ai-700/50 hover:bg-ai-600/60 border-ai-500/40 cursor-pointer'
+                : 'bg-ai-800/40 border-kin-500/15 opacity-40 cursor-not-allowed'
               }`}
           >
             <div className="flex items-center gap-3">
-              <span className="text-3xl">🎣</span>
+              <Icon name="rod" size={30} className="text-ai-200 shrink-0" />
               <div>
-                <p className="font-bold">通常の釣り</p>
-                <p className="text-xs text-white/50">岸から釣る（無料）</p>
+                <p className="font-mincho font-bold text-washi">通常の釣り</p>
+                <p className="text-xs text-washi/60">岸から釣る（無料）</p>
               </div>
             </div>
           </button>
@@ -111,17 +126,17 @@ export default function FishingChoiceOverlay() {
               disabled={!hasRod || !canAffordBoat}
               className={`w-full border rounded-xl p-4 text-left transition
                 ${hasRod && canAffordBoat
-                  ? 'bg-amber-600/60 hover:bg-amber-600/80 border-amber-400/30 cursor-pointer'
-                  : 'bg-white/5 border-white/10 opacity-40 cursor-not-allowed'
+                  ? 'bg-kin-500/20 hover:bg-kin-500/30 border-kin-500/40 cursor-pointer'
+                  : 'bg-ai-800/40 border-kin-500/15 opacity-40 cursor-not-allowed'
                 }`}
             >
               <div className="flex items-center gap-3">
-                <span className="text-3xl">🚢</span>
+                <Icon name="boat" size={30} className="text-kin-300 shrink-0" />
                 <div>
-                  <p className="font-bold">船釣り
-                    <span className="text-amber-300 ml-2 text-sm">¥{BOAT_FISHING_COST.toLocaleString()}</span>
+                  <p className="font-mincho font-bold text-washi">船釣り
+                    <span className="text-kin-300 ml-2 text-sm tabular-nums">¥{BOAT_FISHING_COST.toLocaleString()}</span>
                   </p>
-                  <p className="text-xs text-white/50">沖に出て3回レア以上の魚を狙う</p>
+                  <p className="text-xs text-washi/60">沖に出て3回レア以上の魚を狙う</p>
                 </div>
               </div>
             </button>

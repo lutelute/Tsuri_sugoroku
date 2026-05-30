@@ -9,7 +9,10 @@ const SAVE_KEY_BASE = 'tsuri_sugoroku_save';
 const ENCYCLOPEDIA_KEY_BASE = 'tsuri_sugoroku_encyclopedia';
 
 function getUid(): string | null {
-  return useAuthStore.getState().user?.uid ?? null;
+  const state = useAuthStore.getState();
+  // ゲストは全員が共有する固定アカウントのため、Firestore へは書き込まずローカル専用とする
+  if (state.isGuest) return null;
+  return state.user?.uid ?? null;
 }
 
 // ユーザーごとにlocalStorageキーを分離

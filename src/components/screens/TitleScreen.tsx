@@ -5,6 +5,7 @@ import { loadUserEncyclopedia, resetUserEncyclopedia } from '../../lib/firestore
 import { loadEncyclopedia, saveEncyclopedia } from '../../utils/storage';
 import { APP_VERSION } from '../../game/constants';
 import Button from '../shared/Button';
+import Icon from '../shared/Icon';
 import RankingOverlay from '../ranking/RankingOverlay';
 import EncyclopediaOverlay from '../encyclopedia/EncyclopediaOverlay';
 import UserListOverlay from '../users/UserListOverlay';
@@ -49,15 +50,15 @@ export default function TitleScreen() {
   if (showUsers) return <UserListOverlay onClose={() => setShowUsers(false)} />;
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-4 select-none">
+    <div className="relative flex flex-col items-center justify-center h-full px-4 select-none">
       {/* ユーザー情報 */}
       <div className="absolute top-4 right-4 flex items-center gap-3">
         {user ? (
           <>
-            <span className="text-sm text-white/60">{user.displayName ?? 'ユーザー'}</span>
+            <span className="text-sm text-washi/65 font-mincho">{user.displayName ?? 'ユーザー'}</span>
             <button
               onClick={signOut}
-              className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer"
+              className="text-xs text-washi/40 hover:text-washi/75 transition-colors cursor-pointer"
             >
               ログアウト
             </button>
@@ -65,7 +66,7 @@ export default function TitleScreen() {
         ) : (
           <button
             onClick={() => setScreen('login')}
-            className="text-sm text-cyan-300/70 hover:text-cyan-300 transition-colors cursor-pointer"
+            className="text-sm text-kin-300/80 hover:text-kin-300 transition-colors cursor-pointer"
           >
             ログイン
           </button>
@@ -73,28 +74,38 @@ export default function TitleScreen() {
       </div>
 
       {/* タイトルロゴ */}
-      <div className="mb-8 text-center">
-        <div className="text-6xl mb-4 animate-bounce">🎣</div>
-        <h1 className="text-5xl font-extrabold tracking-tight mb-2">
-          <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
+      <div className="mb-9 text-center">
+        <div className="text-5xl mb-4 animate-float-y">🎣</div>
+        <div className="relative inline-block">
+          <h1
+            className="font-brush text-6xl sm:text-7xl text-washi leading-none animate-ink-rise"
+            style={{ textShadow: '0 6px 22px rgba(0,0,0,0.55)' }}
+          >
             釣りすごろく
+          </h1>
+          {/* 朱印 */}
+          <span
+            className="seal animate-seal-stamp font-mincho absolute -right-4 -bottom-4 w-12 h-12 rounded-md text-[10px] leading-[1.05] font-bold flex-col"
+            style={{ animationDelay: '0.55s' }}
+          >
+            <span>日本</span>
+            <span>一周</span>
           </span>
-        </h1>
-        <p className="text-lg text-blue-200/70 font-medium">
+        </div>
+        <p className="font-mincho text-base text-kin-300/90 mt-6 tracking-[0.32em] animate-ink-rise" style={{ animationDelay: '0.15s' }}>
           日本列島 釣り旅
         </p>
-        <p className="text-xs text-white/30 mt-1">v{APP_VERSION}</p>
+        <p className="text-xs text-washi/30 mt-1">v{APP_VERSION}</p>
       </div>
 
-      {/* 波のアニメーション */}
-      <div className="w-full max-w-md mb-12 opacity-30">
+      {/* 波のアニメーション（金の波文） */}
+      <div className="w-full max-w-md mb-12 opacity-40 text-kin-400">
         <svg viewBox="0 0 400 40" className="w-full">
           <path
             d="M0,20 Q50,0 100,20 Q150,40 200,20 Q250,0 300,20 Q350,40 400,20"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
-            className="text-cyan-300"
           >
             <animate
               attributeName="d"
@@ -116,7 +127,7 @@ export default function TitleScreen() {
           onClick={() => setScreen('setup')}
           variant="gold"
           size="lg"
-          className="w-full text-center"
+          className="w-full text-center font-mincho tracking-widest"
         >
           ゲームスタート
         </Button>
@@ -125,7 +136,7 @@ export default function TitleScreen() {
             onClick={resumeGame}
             variant="secondary"
             size="lg"
-            className="w-full text-center"
+            className="w-full text-center font-mincho tracking-widest"
           >
             つづきから
           </Button>
@@ -136,27 +147,27 @@ export default function TitleScreen() {
       <div className="flex gap-3 mt-6 w-full max-w-xs">
         <button
           onClick={() => setShowRanking(true)}
-          className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition cursor-pointer"
+          className="flex-1 py-2.5 rounded-xl bg-ai-800/50 border border-kin-500/25 text-sm text-washi/75 hover:bg-ai-700/60 hover:text-washi transition cursor-pointer flex flex-col items-center gap-1"
         >
-          🏆 ランキング
+          <Icon name="trophy" size={20} className="text-kin-300" /> 番付
         </button>
         <button
           onClick={handleShowEncyclopedia}
-          className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition cursor-pointer"
+          className="flex-1 py-2.5 rounded-xl bg-ai-800/50 border border-kin-500/25 text-sm text-washi/75 hover:bg-ai-700/60 hover:text-washi transition cursor-pointer flex flex-col items-center gap-1"
         >
-          📖 図鑑
+          <Icon name="book" size={20} className="text-kin-300" /> 図鑑
         </button>
         <button
           onClick={() => setShowUsers(true)}
-          className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition cursor-pointer"
+          className="flex-1 py-2.5 rounded-xl bg-ai-800/50 border border-kin-500/25 text-sm text-washi/75 hover:bg-ai-700/60 hover:text-washi transition cursor-pointer flex flex-col items-center gap-1"
         >
-          👥 ユーザー
+          <Icon name="users" size={20} className="text-kin-300" /> 釣り人
         </button>
       </div>
 
       {/* フッター */}
-      <p className="absolute bottom-4 text-xs text-white/30">
-        稚内から那覇まで、日本の魚を釣り尽くせ！
+      <p className="absolute bottom-4 text-xs text-washi/35 font-mincho tracking-wider">
+        稚内から那覇まで、日本の魚を釣り尽くせ
       </p>
     </div>
   );

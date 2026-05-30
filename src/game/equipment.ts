@@ -126,7 +126,7 @@ export function calculateRepairCost(item: EquipmentItem): number {
 // 装着中の装備に耐久度消耗を適用し、壊れた装備を自動解除する
 export function applyDurabilityLoss(equipment: PlayerEquipment): PlayerEquipment {
   const types: EquipmentType[] = ['rod', 'reel', 'lure'];
-  let newInventory = equipment.inventory.map(item => {
+  const newInventory = equipment.inventory.map(item => {
     // 装着中の装備のみ消耗
     if (equipment.equipped[item.type] === item.id) {
       const loss = calculateDurabilityLoss(item);
@@ -199,7 +199,11 @@ export function mergeEquipmentItems(equipment: PlayerEquipment, itemId1: string,
   const item2 = equipment.inventory.find(i => i.id === itemId2);
   if (!item1 || !item2 || item1.type !== item2.type || item1.level !== item2.level) return equipment;
 
-  const newDurability = Math.min(MERGE_MAX_DURABILITY, item1.durability + item2.durability + MERGE_DURABILITY_BONUS);
+  // 合体は耐久度を統合してスロットを1つ空ける行為。結果が両入力を下回らないことを保証する。
+  const newDurability = Math.min(
+    MERGE_MAX_DURABILITY,
+    Math.max(item1.durability, item2.durability, item1.durability + item2.durability + MERGE_DURABILITY_BONUS),
+  );
 
   // item2を削除、item1の耐久度を更新
   const newInventory = equipment.inventory

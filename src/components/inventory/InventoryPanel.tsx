@@ -5,11 +5,13 @@ import { getEquipment } from '../../data/equipmentData';
 import { findMergePartner } from '../../game/equipment';
 import { MERGE_DURABILITY_BONUS, MERGE_MAX_DURABILITY } from '../../game/constants';
 import Button from '../shared/Button';
+import Icon from '../shared/Icon';
+import type { IconName } from '../shared/Icon';
 
-const TYPE_ICONS: Record<EquipmentType, string> = {
-  rod: '🎣',
-  reel: '🔄',
-  lure: '🪱',
+const TYPE_ICONS: Record<EquipmentType, IconName> = {
+  rod: 'rod',
+  reel: 'reel',
+  lure: 'lure',
 };
 
 const TYPE_LABELS: Record<EquipmentType, string> = {
@@ -54,11 +56,21 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-2xl border border-white/10 p-5 max-w-md w-[90%] my-4 max-h-[85vh] flex flex-col shadow-2xl">
+      <div className="panel-ai relative rounded-2xl p-5 max-w-md w-[90%] my-4 max-h-[85vh] flex flex-col shadow-2xl">
+        <button
+          onClick={onClose}
+          aria-label="閉じる"
+          className="absolute top-3 right-3 flex items-center justify-center w-8 h-8 rounded-full bg-ai-800/60 border border-kin-500/30 text-washi/70 hover:text-washi hover:bg-ai-700/70 transition-all cursor-pointer"
+        >
+          <Icon name="close" size={16} />
+        </button>
         <div className="text-center mb-3">
-          <h2 className="text-lg font-bold">装備インベントリ</h2>
-          <p className="text-xs text-white/50 mt-1">
-            所持数: {inventory.length} | タップで装着/取り外し
+          <div className="flex items-center justify-center mb-1">
+            <Icon name="tacklebox" size={32} className="text-kin-300" />
+          </div>
+          <h2 className="font-mincho text-lg text-kin-300 ink-underline inline-block">装備インベントリ</h2>
+          <p className="text-xs text-washi/50 mt-2">
+            所持数: <span className="tabular-nums">{inventory.length}</span> | タップで装着/取り外し
           </p>
         </div>
 
@@ -67,20 +79,24 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
           <button
             onClick={() => setFilterType('all')}
             className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-              filterType === 'all' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'
+              filterType === 'all'
+                ? 'bg-kin-500/20 text-kin-300 border border-kin-500/30'
+                : 'bg-ai-800/50 text-washi/40 border border-transparent hover:bg-ai-700/60'
             }`}
           >
-            全て ({inventory.length})
+            全て (<span className="tabular-nums">{inventory.length}</span>)
           </button>
           {types.map(t => (
             <button
               key={t}
               onClick={() => setFilterType(t)}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                filterType === t ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                filterType === t
+                  ? 'bg-kin-500/20 text-kin-300 border border-kin-500/30'
+                  : 'bg-ai-800/50 text-washi/40 border border-transparent hover:bg-ai-700/60'
               }`}
             >
-              {TYPE_ICONS[t]} ({inventory.filter(i => i.type === t).length})
+              <Icon name={TYPE_ICONS[t]} size={16} /> (<span className="tabular-nums">{inventory.filter(i => i.type === t).length}</span>)
             </button>
           ))}
         </div>
@@ -88,7 +104,7 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
         {/* 装備リスト */}
         <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
           {sorted.length === 0 && (
-            <p className="text-center text-sm text-white/30 py-8">装備がありません</p>
+            <p className="text-center text-sm text-washi/30 py-8">装備がありません</p>
           )}
           {sorted.map(item => {
             const eqData = getEquipment(item.type, item.level);
@@ -101,40 +117,40 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
                   onClick={() => handleToggle(item)}
                   className={`w-full text-left rounded-xl p-3 border transition-all cursor-pointer ${
                     active
-                      ? 'bg-blue-900/30 border-blue-400/40 shadow-md shadow-blue-500/10'
-                      : 'bg-white/5 border-white/10 hover:bg-white/10'
+                      ? 'bg-kin-500/15 border-kin-500/40 shadow-md shadow-kin-700/20'
+                      : 'bg-ai-800/40 border-ai-700/40 hover:bg-ai-700/50'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">{TYPE_ICONS[item.type]}</span>
+                      <Icon name={TYPE_ICONS[item.type]} size={22} className={active ? 'text-kin-300' : 'text-ai-200'} />
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-sm">{eqData?.name || '???'}</span>
-                          <span className="text-xs text-white/40">Lv.{item.level}</span>
+                          <span className="font-mincho font-bold text-sm text-washi">{eqData?.name || '???'}</span>
+                          <span className="text-xs text-washi/40 tabular-nums">Lv.{item.level}</span>
                           {active && (
-                            <span className="text-[10px] bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded-full">
+                            <span className="seal text-[10px] px-1.5 py-0.5">
                               装着中
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-white/40 mt-0.5">
+                        <p className="text-[11px] text-washi/40 mt-0.5">
                           {TYPE_LABELS[item.type]} | {eqData?.effect || ''}
                         </p>
                       </div>
                     </div>
                     {/* 耐久度バー */}
                     <div className="flex flex-col items-end gap-1">
-                      <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="w-16 h-1.5 bg-ai-900/60 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all ${
-                            item.durability > 50 ? 'bg-green-400' :
-                            item.durability > 20 ? 'bg-amber-400' : 'bg-red-400'
+                            item.durability > 50 ? 'bg-emerald-400' :
+                            item.durability > 20 ? 'bg-kin-400' : 'bg-shu-400'
                           }`}
                           style={{ width: `${item.durability}%` }}
                         />
                       </div>
-                      <span className="text-[10px] text-white/30">{item.durability}%</span>
+                      <span className="text-[10px] text-washi/30 tabular-nums">{item.durability}%</span>
                     </div>
                   </div>
                 </button>
@@ -144,9 +160,9 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
                     {!isMergeTarget ? (
                       <button
                         onClick={() => setMergeTarget(item.id)}
-                        className="w-full text-center py-1.5 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-400/30 hover:bg-amber-500/30 transition-all cursor-pointer"
+                        className="w-full text-center py-1.5 rounded-lg text-xs font-medium bg-kin-500/20 text-kin-300 border border-kin-500/30 hover:bg-kin-500/30 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                       >
-                        🔧 同じ装備と合体 (→ 最大{Math.min(MERGE_MAX_DURABILITY, item.durability + partner.durability + MERGE_DURABILITY_BONUS)}%)
+                        <Icon name="merge" size={14} /> 同じ装備と合体 (→ 最大<span className="tabular-nums">{Math.min(MERGE_MAX_DURABILITY, item.durability + partner.durability + MERGE_DURABILITY_BONUS)}</span>%)
                       </button>
                     ) : (
                       <div className="flex gap-1">
@@ -155,13 +171,13 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
                             mergeEquipment(item.id, partner.id);
                             setMergeTarget(null);
                           }}
-                          className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-amber-500/40 text-amber-200 border border-amber-400/50 hover:bg-amber-500/60 transition-all cursor-pointer"
+                          className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-kin-500/40 text-kin-200 border border-kin-500/50 hover:bg-kin-500/60 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
-                          合体する
+                          <Icon name="merge" size={14} /> 合体する
                         </button>
                         <button
                           onClick={() => setMergeTarget(null)}
-                          className="px-3 py-1.5 rounded-lg text-xs text-white/40 bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg text-xs text-washi/40 bg-ai-800/50 border border-ai-700/40 hover:bg-ai-700/60 transition-all cursor-pointer"
                         >
                           やめる
                         </button>

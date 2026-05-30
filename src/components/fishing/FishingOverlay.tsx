@@ -15,9 +15,7 @@ export default function FishingOverlay() {
   const player = players[currentPlayerIndex];
   const { fishingState, begin, handleStrike, handleReelTap, handleMiss, handleMiniGameSuccess, handleMiniGameFail, reelingStartRef, tensionLimitRef, timeLimitRef } = useFishing();
 
-  useEffect(() => {
-    begin();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => begin(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!fishingState) return null;
 
@@ -26,15 +24,15 @@ export default function FishingOverlay() {
     : false;
 
   return (
-    <div className="fixed inset-0 z-40 bg-gradient-to-b from-blue-900 to-blue-950">
+    <div className="fixed inset-0 z-40 bg-gradient-to-b from-ai-700 via-ai-800 to-ai-950">
       {/* ヘッダー */}
-      <div className="absolute top-0 left-0 right-0 bg-black/30 px-4 py-2 flex justify-between items-center z-10">
-        <span className="text-sm text-white/60">
+      <div className="absolute top-0 left-0 right-0 bg-ai-950/40 px-4 py-2 flex justify-between items-center z-10 border-b border-kin-500/15">
+        <span className="text-sm text-washi/65 font-mincho">
           {fishingState.boatFishing ? '🚢' : '🎣'} {player.name} の{fishingState.boatFishing ? '船釣り' : '釣り'}
         </span>
         {fishingState.targetFish && fishingState.phase === 'reeling' && (
-          <span className="text-sm text-amber-400">
-            ??? がかかっている！
+          <span className="text-sm text-kin-300">
+            何かがかかっている！
           </span>
         )}
       </div>

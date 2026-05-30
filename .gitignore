@@ -25,3 +25,6 @@ dist-ssr
 
 # Claude handover
 .claude/handover/
+
+# 生成物（魚図鑑プレビュー）
+design-preview.html

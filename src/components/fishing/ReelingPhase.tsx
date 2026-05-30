@@ -28,8 +28,8 @@ export default function ReelingPhase({ progress, tension, tensionMax, timeLimit,
 
   return (
     <div
-      className="flex flex-col items-center justify-center h-full cursor-pointer select-none"
-      onClick={onTap}
+      className="flex flex-col items-center justify-center h-full cursor-pointer select-none touch-none"
+      onPointerDown={onTap}
     >
       <p className="text-lg font-bold mb-6 text-white/80">リズミカルにタップ！</p>
 

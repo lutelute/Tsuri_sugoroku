@@ -4,10 +4,17 @@ import {
   LURE_RARE_BONUS, LURE_BITE_SPEED_BONUS, EQUIPMENT_WEIGHTS,
   ROD_SIZE_BONUS, ROD_RARITY_BOOST, LURE_TAIRYOU_CHANCE,
   TAIRYOU_BONUS_MIN, TAIRYOU_BONUS_MAX,
+  FISHING_BITE_MIN_MS, FISHING_BITE_MAX_MS,
+  FISHING_STRIKE_GREEN_ZONE_BASE, FISHING_STRIKE_GREEN_ZONE_PER_ROD_LEVEL,
 } from './constants';
 import type { EquipmentAbility } from './constants';
 import { getEquipmentLevels, getEquippedItem } from './equipment';
-import { weightedRandom, randomFloat } from '../utils/random';
+import { weightedRandom, randomFloat, random } from '../utils/random';
+
+// ストライク緑ゾーンの幅（0-1）。WaitingPhaseの描画とuseFishingの当たり判定で共有する単一の真実。
+export function getStrikeGreenZone(strikeLevel: number): number {
+  return FISHING_STRIKE_GREEN_ZONE_BASE + FISHING_STRIKE_GREEN_ZONE_PER_ROD_LEVEL * (strikeLevel - 1);
+}
 
 const RARITY_BASE_WEIGHT: Record<FishRarity, number> = {
   common: 50,
@@ -67,7 +74,7 @@ export function selectFish(
   if (!getEquippedItem(equipment, 'lure')) {
     const commonOnly = available.filter(f => f.rarity === 'common');
     if (commonOnly.length > 0) {
-      return commonOnly[Math.floor(Math.random() * commonOnly.length)];
+      return commonOnly[Math.floor(random() * commonOnly.length)];
     }
     return FISH_DATABASE.find(f => f.rarity === 'common')!;
   }
@@ -115,8 +122,8 @@ export function selectFish(
 
 export function generateFishSize(equipment?: PlayerEquipment): number {
   // 正規分布風: 平均1.0, ほとんど0.5-1.5, まれに2.0
-  const u1 = Math.random();
-  const u2 = Math.random();
+  const u1 = random();
+  const u2 = random();
   const normal = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
   // 竿のサイズボーナス: 平均サイズが上がる + 上限も拡大
   const sizeLevel = equipment ? getEffectiveLevel(equipment, 'sizeBonus') : 0;
@@ -132,30 +139,29 @@ export function checkTairyou(equipment: PlayerEquipment, isSpecialSpot: boolean)
   const baseChance = interpolateBonus(LURE_TAIRYOU_CHANCE, tairyouLevel);
   const chance = baseChance + (isSpecialSpot ? 0.1 : 0);
 
-  if (Math.random() >= chance) return 0;
+  if (random() >= chance) return 0;
 
   // 大漁発動！ 1〜3匹追加
-  return TAIRYOU_BONUS_MIN + Math.floor(Math.random() * (TAIRYOU_BONUS_MAX - TAIRYOU_BONUS_MIN + 1));
+  return TAIRYOU_BONUS_MIN + Math.floor(random() * (TAIRYOU_BONUS_MAX - TAIRYOU_BONUS_MIN + 1));
 }
 
 export function calculateFishPoints(fish: Fish, size: number, bonusMultiplier: number): number {
   return Math.round(fish.points * size * bonusMultiplier);
 }
 
-export function createCaughtFish(fishId: string, nodeId: string, turn: number): CaughtFish {
+// 釣果を生成する。equipment を渡すと竿のサイズボーナスが反映される。
+export function createCaughtFish(fishId: string, nodeId: string, turn: number, equipment?: PlayerEquipment): CaughtFish {
   return {
     fishId,
     caughtAt: nodeId,
     turn,
-    size: generateFishSize(),
+    size: generateFishSize(equipment),
   };
 }
 
 export function getBiteDelay(equipment: PlayerEquipment): number {
-  const baseMin = 1500;
-  const baseMax = 5000;
   const biteLevel = getEffectiveLevel(equipment, 'biteSpeed');
   const speedBonus = interpolateBonus(LURE_BITE_SPEED_BONUS, biteLevel);
-  const adjustedMax = baseMax * (1 - speedBonus);
-  return randomFloat(baseMin, Math.max(baseMin, adjustedMax));
+  const adjustedMax = FISHING_BITE_MAX_MS * (1 - speedBonus);
+  return randomFloat(FISHING_BITE_MIN_MS, Math.max(FISHING_BITE_MIN_MS, adjustedMax));
 }

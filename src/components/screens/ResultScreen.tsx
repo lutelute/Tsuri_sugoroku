@@ -59,33 +59,36 @@ export default function ResultScreen() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 overflow-y-auto py-8">
-      <h1 className="text-3xl font-extrabold mb-2">
-        <span className="bg-gradient-to-r from-amber-300 to-yellow-500 bg-clip-text text-transparent">
-          結果発表
-        </span>
+      <h1 className="font-brush text-5xl mb-2 kinpaku kinpaku-shimmer animate-ink-rise">
+        釣果番付
       </h1>
-      <p className="text-white/50 mb-6">お疲れ様でした！</p>
+      <p className="text-washi/55 mb-6 font-mincho tracking-widest">お疲れ様でした</p>
 
       <div className="w-full max-w-lg space-y-4">
         {results.map((result, index) => (
           <div
             key={result.player.id}
-            className={`rounded-2xl p-5 border ${
+            className={`relative rounded-2xl p-5 ${
               index === 0
-                ? 'bg-gradient-to-r from-amber-900/30 to-yellow-900/20 border-amber-500/30'
-                : 'bg-white/5 border-white/10'
+                ? 'panel-ai border-kin-500/50 shadow-kin-700/20'
+                : 'panel-ai'
             }`}
           >
+            {index === 0 && (
+              <span className="seal animate-seal-stamp absolute -top-3 -right-2 w-12 h-12 rounded-md font-mincho text-xs font-bold" style={{ animationDelay: '0.3s' }}>
+                優勝
+              </span>
+            )}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{RANK_ICONS[index] || ''}</span>
                 <div
-                  className="w-4 h-4 rounded-full"
+                  className="w-4 h-4 rounded-full ring-2 ring-white/20"
                   style={{ backgroundColor: result.player.color }}
                 />
-                <span className="font-bold text-lg">{result.player.name}</span>
+                <span className="font-bold font-mincho text-lg text-washi">{result.player.name}</span>
               </div>
-              <span className="text-2xl font-extrabold text-amber-400">
+              <span className="text-2xl font-extrabold text-kin-300">
                 {result.score.total.toLocaleString()}pt
               </span>
             </div>

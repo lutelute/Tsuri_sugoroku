@@ -2,11 +2,11 @@ import type { Fish } from '../../game/types';
 import FishIllustration from '../shared/FishIllustration';
 
 const RARITY_COLORS: Record<string, string> = {
-  common: 'border-gray-500/30 bg-gray-800/30',
-  uncommon: 'border-green-500/30 bg-green-900/20',
-  rare: 'border-blue-500/30 bg-blue-900/20',
-  legendary: 'border-purple-500/30 bg-purple-900/20',
-  mythical: 'border-amber-500/30 bg-amber-900/20',
+  common: 'border-washi/15 bg-ai-800/40',
+  uncommon: 'border-emerald-500/30 bg-emerald-900/20',
+  rare: 'border-ai-400/40 bg-ai-700/30',
+  legendary: 'border-kin-500/40 bg-kin-500/10',
+  mythical: 'border-shu-500/40 bg-shu-500/15',
 };
 
 interface FishCardProps {
@@ -23,11 +23,11 @@ export default function FishCard({ fish, caught, isNew, onClick }: FishCardProps
       className={`relative rounded-lg p-2 border text-center transition-all cursor-pointer hover:scale-105 ${
         caught
           ? RARITY_COLORS[fish.rarity]
-          : 'border-white/5 bg-white/5'
+          : 'border-washi/5 bg-ai-900/40'
       }`}
     >
       {caught && isNew && (
-        <span className="absolute -top-1.5 -right-1.5 text-[10px] bg-pink-500/90 text-white px-1.5 py-0.5 rounded-full leading-none font-bold z-10">
+        <span className="seal absolute -top-1.5 -right-1.5 text-[10px] px-1.5 py-0.5 leading-none font-bold z-10">
           NEW
         </span>
       )}
@@ -38,7 +38,7 @@ export default function FishCard({ fish, caught, isNew, onClick }: FishCardProps
           <FishIllustration fishId={fish.id} width={48} height={32} silhouette />
         )}
       </div>
-      <div className="text-xs truncate">
+      <div className={`text-xs truncate font-mincho ${caught ? 'text-washi' : 'text-washi/40'}`}>
         {caught ? fish.name : '???'}
       </div>
     </button>

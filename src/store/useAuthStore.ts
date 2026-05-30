@@ -12,6 +12,7 @@ import { saveUserProfile, registerUsername } from '../lib/firestore';
 
 const SESSION_KEY = 'tsuri_session_at';
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24時間
+const GUEST_EMAIL = 'guest@tsuri.local';
 
 function toEmail(username: string): string {
   return `${username.toLowerCase()}@tsuri.local`;
@@ -36,6 +37,7 @@ interface AuthState {
   loading: boolean;
   error: string | null;
   initialized: boolean;
+  isGuest: boolean; // 共有ゲストアカウントでログイン中か（データはローカル専用に隔離）
   signUp: (username: string, password: string) => Promise<boolean>;
   signIn: (username: string, password: string) => Promise<boolean>;
   signInGuest: () => Promise<boolean>;
@@ -49,6 +51,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: false,
   error: null,
   initialized: false,
+  isGuest: false,
 
   signUp: async (username, password) => {
     set({ loading: true, error: null });
@@ -58,7 +61,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await updateProfile(cred.user, { displayName: username });
       saveUserProfile(cred.user.uid, username).catch(() => {});
       registerUsername(cred.user.uid, username).catch(() => {});
-      set({ user: cred.user, loading: false });
+      set({ user: cred.user, loading: false, isGuest: false });
       return true;
     } catch (e: unknown) {
       clearSession(); // 認証失敗時はセッション取り消し
@@ -79,7 +82,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const cred = await signInWithEmailAndPassword(auth, toEmail(username), password);
       saveUserProfile(cred.user.uid, username).catch(() => {});
       registerUsername(cred.user.uid, username).catch(() => {});
-      set({ user: cred.user, loading: false });
+      set({ user: cred.user, loading: false, isGuest: false });
       return true;
     } catch (e: unknown) {
       clearSession(); // 認証失敗時はセッション取り消し
@@ -96,25 +99,23 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signInGuest: async () => {
     set({ loading: true, error: null });
-    const guestEmail = 'guest@tsuri.local';
     const guestPassword = 'guest123456';
     const guestName = 'ゲスト';
     try {
       markSession(); // onAuthStateChangedより先にセッション記録
       // まずログインを試みる
-      const cred = await signInWithEmailAndPassword(auth, guestEmail, guestPassword);
-      saveUserProfile(cred.user.uid, guestName).catch(() => {});
-      set({ user: cred.user, loading: false });
+      // ゲストは全員が共有する固定アカウント。Firestore のプロフィール/ユーザー名には
+      // 登録せず、データはローカル専用に隔離する（storage.ts が isGuest を見て分離）。
+      const cred = await signInWithEmailAndPassword(auth, GUEST_EMAIL, guestPassword);
+      set({ user: cred.user, loading: false, isGuest: true });
       return true;
     } catch {
       // ログイン失敗 → アカウント未作成なので新規作成
       try {
         markSession();
-        const cred = await createUserWithEmailAndPassword(auth, guestEmail, guestPassword);
+        const cred = await createUserWithEmailAndPassword(auth, GUEST_EMAIL, guestPassword);
         await updateProfile(cred.user, { displayName: guestName });
-        saveUserProfile(cred.user.uid, guestName).catch(() => {});
-        registerUsername(cred.user.uid, guestName).catch(() => {});
-        set({ user: cred.user, loading: false });
+        set({ user: cred.user, loading: false, isGuest: true });
         return true;
       } catch (e2: unknown) {
         const msg = e2 instanceof Error ? e2.message : 'ゲストログインに失敗しました';
@@ -129,7 +130,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     clearSession();
     await firebaseSignOut(auth);
-    set({ user: null });
+    set({ user: null, isGuest: false });
   },
 
   clearError: () => set({ error: null }),
@@ -140,12 +141,16 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (user && isSessionExpired()) {
         clearSession();
         firebaseSignOut(auth).catch(() => {});
-        set({ user: null, initialized: true });
+        set({ user: null, initialized: true, isGuest: false });
         return;
       }
-      set({ user, initialized: true });
-      // 既存ユーザーでもusernamesコレクションに自動登録（検索可能にする）
-      if (user?.displayName) {
+      const guest = user?.email === GUEST_EMAIL;
+      // 有効なセッションを継続中ならウィンドウをスライド（アクティブなユーザーが
+      // 24時間操作後に突然ログアウトされるのを防ぐ）
+      if (user) markSession();
+      set({ user, initialized: true, isGuest: guest });
+      // 登録ユーザーのみ usernames に自動登録（ゲストは検索対象に載せない）
+      if (user?.displayName && !guest) {
         registerUsername(user.uid, user.displayName).catch(() => {});
       }
     });

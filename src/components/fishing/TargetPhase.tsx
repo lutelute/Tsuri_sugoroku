@@ -90,21 +90,12 @@ export default function TargetPhase({ fish, equipment, onSuccess, onFail }: Targ
     return () => cancelAnimationFrame(animRef.current);
   }, [totalTime, onFail]);
 
-  const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  const handleTap = useCallback((e: React.PointerEvent) => {
     if (doneRef.current) return;
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    let clientX: number, clientY: number;
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-
-    const tapX = clientX - rect.left;
-    const tapY = clientY - rect.top;
+    const tapX = e.clientX - rect.left;
+    const tapY = e.clientY - rect.top;
     const pos = posRef.current;
     const dist = Math.sqrt((tapX - pos.x) ** 2 + (tapY - pos.y) ** 2);
 
@@ -145,9 +136,8 @@ export default function TargetPhase({ fish, equipment, onSuccess, onFail }: Targ
 
       {/* ゲームエリア */}
       <div
-        className="relative w-[300px] h-[350px] bg-blue-950/50 rounded-2xl border border-white/10 overflow-hidden cursor-pointer"
-        onClick={handleTap}
-        onTouchStart={handleTap}
+        className="relative w-[300px] h-[350px] bg-blue-950/50 rounded-2xl border border-white/10 overflow-hidden cursor-pointer touch-none"
+        onPointerDown={handleTap}
       >
         {/* 魚 */}
         <div

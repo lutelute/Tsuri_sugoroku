@@ -39,6 +39,7 @@ interface GameActions {
   applyEventCard: () => void;
   doActionAgain: () => void;
   endTurn: () => void;
+  endGame: () => void;
   nextPlayer: () => void;
   setTurnPhase: (phase: TurnPhase) => void;
   resetGame: () => void;
@@ -440,13 +441,32 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!currentEvent) return;
 
     const player = players[currentPlayerIndex];
+    const prevNode = player.currentNode;
     const result = applyEvent(player, currentEvent, turn);
+    let updatedPlayer = result.player;
+
+    // 移動系イベント(move / move_steps)で新しいノードに着いた場合、ゴール到達を処理する
+    // （通常移動と異なり executeNodeAction を経由しないため、ここで明示的にゴール判定する）
+    if (updatedPlayer.currentNode !== prevNode && !updatedPlayer.hasFinished) {
+      const newNode = NODE_MAP.get(updatedPlayer.currentNode);
+      if (newNode?.type === 'goal') {
+        const finishedCount = players.filter(p => p.hasFinished).length;
+        const reward = GOAL_MONEY_REWARD[finishedCount] ?? GOAL_MONEY_REWARD[GOAL_MONEY_REWARD.length - 1];
+        updatedPlayer = {
+          ...updatedPlayer,
+          hasFinished: true,
+          finishOrder: finishedCount,
+          money: updatedPlayer.money + reward,
+        };
+      }
+    }
+
     const newPlayers = [...players];
-    newPlayers[currentPlayerIndex] = result.player;
+    newPlayers[currentPlayerIndex] = updatedPlayer;
 
     // イベントで魚を獲得した場合は図鑑も更新
     const oldFishIds = new Set(player.caughtFish.map(f => f.fishId));
-    const newFish = result.player.caughtFish.filter(f => !oldFishIds.has(f.fishId));
+    const newFish = updatedPlayer.caughtFish.filter(f => !oldFishIds.has(f.fishId));
     if (newFish.length > 0) {
       const newEncyclopedia = { ...encyclopedias[currentPlayerIndex] };
       for (const f of newFish) {
@@ -482,37 +502,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   endTurn: () => {
     const state = get();
-    const { players, settings } = state;
+    const { players } = state;
+    const idx = state.currentPlayerIndex;
 
-    const allFinished = players.every(p => p.hasFinished);
-    const maxTurnsReached = settings.maxTurns > 0 && state.turn >= settings.maxTurns;
-
-    if (allFinished || maxTurnsReached) {
-      const { encyclopedias } = state;
-      // 各プレイヤーの図鑑を保存（図鑑は常に保存。装備・所持金は引き継ぎモード時のみ）
-      for (let i = 0; i < players.length; i++) {
-        const p = players[i];
-        if (p.uid) {
-          saveUserEncyclopedia(p.uid, encyclopedias[i]).catch(() => {});
-          if (settings.carryOver !== false) {
-            saveUserEquipment(p.uid, p.equipment).catch(() => {});
-            saveUserMoney(p.uid, p.money).catch(() => {});
-          }
-        } else {
-          // ゲストプレイヤーはlocalStorageに保存
-          saveEncyclopedia(encyclopedias[i]);
-        }
-      }
-      set({ gameOver: true, screen: 'result', turnPhase: 'idle' });
-      clearGameState();
+    // 全員ゴール → 即終了
+    if (players.every(p => p.hasFinished)) {
+      get().endGame();
       return;
     }
 
-    const player = players[state.currentPlayerIndex];
+    const player = players[idx];
+
+    // 釣りポイントボーナスのターン減算（このプレイヤーのターン終了時に1減らす）
     if (player.fishBonusTurnsLeft > 0) {
       const newPlayers = [...players];
       const newTurns = player.fishBonusTurnsLeft - 1;
-      newPlayers[state.currentPlayerIndex] = {
+      newPlayers[idx] = {
         ...player,
         fishBonusTurnsLeft: newTurns,
         fishBonusMultiplier: newTurns > 0 ? player.fishBonusMultiplier : 1,
@@ -520,9 +525,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({ players: newPlayers });
     }
 
-    if (player.extraTurn) {
-      const newPlayers = [...players];
-      newPlayers[state.currentPlayerIndex] = { ...player, extraTurn: false };
+    // 追加ターン: 同じプレイヤーがもう一度（ターン番号は進めない）
+    const refreshed = get().players[idx];
+    if (refreshed.extraTurn) {
+      const newPlayers = [...get().players];
+      newPlayers[idx] = { ...refreshed, extraTurn: false };
       set({
         players: newPlayers,
         turnPhase: 'idle',
@@ -539,29 +546,49 @@ export const useGameStore = create<GameStore>((set, get) => ({
     get().nextPlayer();
   },
 
-  nextPlayer: () => {
-    const { players, currentPlayerIndex, turn } = get();
-    let nextIndex = (currentPlayerIndex + 1) % players.length;
-    let newTurn = turn;
-
-    if (nextIndex === 0) {
-      newTurn = turn + 1;
+  // ゲーム終了処理（永続化 + 結果画面へ）。endTurn と nextPlayer の双方から呼ばれる。
+  endGame: () => {
+    const { players, settings, encyclopedias } = get();
+    // 図鑑は常に保存。装備・所持金は引き継ぎモード時のみ。
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      if (p.uid) {
+        saveUserEncyclopedia(p.uid, encyclopedias[i]).catch(() => {});
+        if (settings.carryOver !== false) {
+          saveUserEquipment(p.uid, p.equipment).catch(() => {});
+          saveUserMoney(p.uid, p.money).catch(() => {});
+        }
+      } else {
+        // ゲストプレイヤーはlocalStorageに保存
+        saveEncyclopedia(encyclopedias[i]);
+      }
     }
+    set({ gameOver: true, screen: 'result', turnPhase: 'idle' });
+    clearGameState();
+  },
+
+  nextPlayer: () => {
+    const { players, currentPlayerIndex, turn, settings } = get();
+    const len = players.length;
+    // ループ内で逐次 set せず、走査用の作業コピーを1つ作り、最後に一度だけ反映する。
+    // （複数プレイヤーが同時に skipNextTurn の場合に解除が巻き戻るバグを防ぐ）
+    const workingPlayers = players.map(p => ({ ...p }));
+
+    let nextIndex = (currentPlayerIndex + 1) % len;
+    let newTurn = nextIndex === 0 ? turn + 1 : turn;
 
     let attempts = 0;
-    while (attempts < players.length) {
-      const nextPlayer = players[nextIndex];
-      if (nextPlayer.hasFinished) {
-        nextIndex = (nextIndex + 1) % players.length;
+    while (attempts < len) {
+      const cand = workingPlayers[nextIndex];
+      if (cand.hasFinished) {
+        nextIndex = (nextIndex + 1) % len;
         if (nextIndex === 0) newTurn++;
         attempts++;
         continue;
       }
-      if (nextPlayer.skipNextTurn) {
-        const newPlayers = [...players];
-        newPlayers[nextIndex] = { ...nextPlayer, skipNextTurn: false };
-        set({ players: newPlayers });
-        nextIndex = (nextIndex + 1) % players.length;
+      if (cand.skipNextTurn) {
+        cand.skipNextTurn = false; // 作業コピーに対して解除（最後にまとめて反映）
+        nextIndex = (nextIndex + 1) % len;
         if (nextIndex === 0) newTurn++;
         attempts++;
         continue;
@@ -569,7 +596,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       break;
     }
 
+    // 最大ターン到達: ラウンドが maxTurns を超えた時点で終了（全員が同数ラウンドをプレイ済み）
+    if (settings.maxTurns > 0 && newTurn > settings.maxTurns) {
+      set({ players: workingPlayers });
+      get().endGame();
+      return;
+    }
+
     set({
+      players: workingPlayers,
       currentPlayerIndex: nextIndex,
       turn: newTurn,
       turnPhase: 'idle',
@@ -613,6 +648,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       encyclopedias,
       initialEncyclopedias,
       nodeActionsThisTurn: saved.nodeActionsThisTurn,
+      boatFishingRemaining: saved.boatFishingRemaining ?? 0,
     });
   },
 

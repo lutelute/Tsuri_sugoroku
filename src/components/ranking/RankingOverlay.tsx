@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { loadScoreRankings, loadEncyclopediaRankings } from '../../lib/firestore';
 import type { RankingEntry } from '../../game/types';
-import Button from '../shared/Button';
+import Icon from '../shared/Icon';
 
 type RankingTab = 'score' | 'encyclopedia';
 
@@ -23,30 +23,41 @@ export default function RankingOverlay({ onClose }: RankingOverlayProps) {
       .finally(() => setLoading(false));
   }, [tab]);
 
-  const RANK_ICONS = ['🥇', '🥈', '🥉'];
-
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-ai-900 to-ai-950 overflow-y-auto">
       {/* ヘッダー */}
-      <div className="sticky top-0 bg-black/50 backdrop-blur-sm px-4 py-3 z-10">
+      <div className="sticky top-0 panel-ai px-4 py-3 z-10 border-b border-kin-500/20">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">🏆 ランキング</h2>
-          <Button onClick={onClose} variant="secondary" size="sm">閉じる</Button>
+          <h2 className="text-lg font-mincho font-bold text-kin-300 ink-underline flex items-center gap-2">
+            <Icon name="trophy" size={22} className="text-kin-400" />
+            番付
+          </h2>
+          <button
+            onClick={onClose}
+            aria-label="閉じる"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-ai-800/60 border border-kin-500/30 text-washi/80 hover:text-washi transition cursor-pointer"
+          >
+            <Icon name="close" size={18} />
+          </button>
         </div>
 
         {/* タブ切替 */}
-        <div className="flex gap-2 mt-2">
+        <div className="flex gap-2 mt-3">
           <button
             onClick={() => setTab('score')}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition cursor-pointer
-              ${tab === 'score' ? 'bg-amber-600 text-white' : 'bg-white/10 text-white/50 hover:bg-white/20'}`}
+            className={`flex-1 py-2 rounded-lg text-sm font-mincho font-medium transition cursor-pointer border
+              ${tab === 'score'
+                ? 'bg-kin-500/20 text-kin-300 border-kin-500/40'
+                : 'bg-ai-800/50 text-washi/50 border-transparent hover:bg-ai-700/50'}`}
           >
-            スコアランキング
+            スコア番付
           </button>
           <button
             onClick={() => setTab('encyclopedia')}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition cursor-pointer
-              ${tab === 'encyclopedia' ? 'bg-emerald-600 text-white' : 'bg-white/10 text-white/50 hover:bg-white/20'}`}
+            className={`flex-1 py-2 rounded-lg text-sm font-mincho font-medium transition cursor-pointer border
+              ${tab === 'encyclopedia'
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                : 'bg-ai-800/50 text-washi/50 border-transparent hover:bg-ai-700/50'}`}
           >
             図鑑コンプ率
           </button>
@@ -56,39 +67,51 @@ export default function RankingOverlay({ onClose }: RankingOverlayProps) {
       {/* ランキング一覧 */}
       <div className="p-4">
         {loading ? (
-          <p className="text-center text-white/40 py-8">読み込み中...</p>
+          <p className="text-center text-washi/40 py-8 font-mincho">読み込み中...</p>
         ) : rankings.length === 0 ? (
-          <p className="text-center text-white/40 py-8">まだ記録がありません</p>
+          <p className="text-center text-washi/40 py-8 font-mincho">まだ記録がありません</p>
         ) : (
           <div className="space-y-2">
             {rankings.map((entry, i) => (
               <div
                 key={entry.id ?? i}
-                className={`rounded-xl p-3 border ${
+                className={`rounded-xl p-3 ${
                   i < 3
-                    ? 'bg-gradient-to-r from-amber-900/20 to-transparent border-amber-500/20'
-                    : 'bg-white/5 border-white/10'
+                    ? 'panel-ai border border-kin-500/40'
+                    : 'panel-ai'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-8 text-center text-lg font-bold text-white/60">
-                    {RANK_ICONS[i] ?? `${i + 1}`}
+                  <span className="w-8 flex items-center justify-center">
+                    {i < 3 ? (
+                      <span className="seal w-8 h-8 rounded-full font-mincho text-sm font-bold tabular-nums">
+                        {i + 1}
+                      </span>
+                    ) : (
+                      <span className="text-lg font-mincho font-bold text-washi/50 tabular-nums">
+                        {i + 1}
+                      </span>
+                    )}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <span className="font-bold truncate block">{entry.displayName}</span>
-                    <div className="flex gap-3 text-xs text-white/40 mt-0.5">
-                      <span>{new Date(entry.date).toLocaleDateString('ja-JP')}</span>
-                      <span>🐟 {entry.fishCount}匹</span>
-                      <span>📖 {entry.encyclopediaRate}%</span>
+                    <span className="font-mincho font-bold text-washi truncate block">{entry.displayName}</span>
+                    <div className="flex gap-3 text-xs text-washi/40 mt-0.5">
+                      <span className="tabular-nums">{new Date(entry.date).toLocaleDateString('ja-JP')}</span>
+                      <span className="inline-flex items-center gap-1 tabular-nums">
+                        <Icon name="fish" size={13} className="text-ai-300" />{entry.fishCount}匹
+                      </span>
+                      <span className="inline-flex items-center gap-1 tabular-nums">
+                        <Icon name="book" size={13} className="text-ai-300" />{entry.encyclopediaRate}%
+                      </span>
                     </div>
                   </div>
                   <div className="text-right">
                     {tab === 'score' ? (
-                      <span className="text-lg font-extrabold text-amber-400">
+                      <span className="text-lg font-mincho font-extrabold text-kin-300 tabular-nums">
                         {entry.score.toLocaleString()}pt
                       </span>
                     ) : (
-                      <span className="text-lg font-extrabold text-emerald-400">
+                      <span className="text-lg font-mincho font-extrabold text-emerald-300 tabular-nums">
                         {entry.encyclopediaRate}%
                       </span>
                     )}
@@ -97,11 +120,15 @@ export default function RankingOverlay({ onClose }: RankingOverlayProps) {
 
                 {/* スコア内訳（展開は無し、コンパクト表示） */}
                 {tab === 'score' && entry.breakdown && (
-                  <div className="mt-2 pt-2 border-t border-white/5 grid grid-cols-4 gap-1 text-[10px] text-white/30">
-                    <span>🐟{entry.breakdown.fishPoints}</span>
+                  <div className="mt-2 pt-2 border-t border-kin-500/10 grid grid-cols-4 gap-1 text-[10px] text-washi/35 tabular-nums">
+                    <span className="inline-flex items-center gap-0.5">
+                      <Icon name="fish" size={11} className="text-ai-300/70" />{entry.breakdown.fishPoints}
+                    </span>
                     <span>💎{entry.breakdown.rarityBonus}</span>
                     <span>🗾{entry.breakdown.regionBonus}</span>
-                    <span>📖{entry.breakdown.encyclopediaBonus}</span>
+                    <span className="inline-flex items-center gap-0.5">
+                      <Icon name="book" size={11} className="text-ai-300/70" />{entry.breakdown.encyclopediaBonus}
+                    </span>
                   </div>
                 )}
               </div>

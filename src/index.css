@@ -1,34 +1,59 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ocean-50: #eff6ff;
-  --color-ocean-100: #dbeafe;
-  --color-ocean-200: #bfdbfe;
-  --color-ocean-300: #93c5fd;
-  --color-ocean-400: #60a5fa;
-  --color-ocean-500: #3b82f6;
-  --color-ocean-600: #2563eb;
-  --color-ocean-700: #1d4ed8;
-  --color-ocean-800: #1e40af;
-  --color-ocean-900: #1e3a5f;
+  /* ===== 和モダン パレット ===== */
+  /* 藍 (indigo) — 主役の深い藍〜群青 */
+  --color-ai-950: #0a1a2c;
+  --color-ai-900: #0c1f33;
+  --color-ai-800: #102a44;
+  --color-ai-700: #15314f;
+  --color-ai-600: #1b3a5b;
+  --color-ai-500: #24496e;
+  --color-ai-400: #2e5e8c;
+  --color-ai-300: #4a7faf;
+  --color-ai-200: #7fa9cd;
 
+  /* 朱 (vermilion) — 差し色 */
+  --color-shu-700: #a92e1d;
+  --color-shu-600: #c63a26;
+  --color-shu-500: #e34a33;
+  --color-shu-400: #ef6a52;
+
+  /* 金 (gold/kinpaku) — 上品なアクセント */
+  --color-kin-700: #9a6f24;
+  --color-kin-600: #b8862f;
+  --color-kin-500: #d4a843;
+  --color-kin-400: #e6c266;
+  --color-kin-300: #f1d893;
+
+  /* 生成 (washi) — 明るい和紙面 */
+  --color-washi: #f4ecd8;
+  --color-washi-200: #e9dcc0;
+  --color-washi-300: #d8c79e;
+  --color-sumi: #1a1510;
+
+  /* 既存トークン（互換のため保持） */
+  --color-ocean-500: #3b82f6;
+  --color-ocean-900: #1e3a5f;
   --color-fish-common: #6b7280;
   --color-fish-uncommon: #22c55e;
   --color-fish-rare: #3b82f6;
   --color-fish-legendary: #a855f7;
   --color-fish-mythical: #f59e0b;
-
-  --color-node-fishing: #3b82f6;
+  --color-node-fishing: #2e5e8c;
   --color-node-fishing-special: #8b5cf6;
-  --color-node-shop: #f59e0b;
-  --color-node-event-good: #22c55e;
-  --color-node-event-bad: #ef4444;
+  --color-node-shop: #d4a843;
+  --color-node-event-good: #2f9e6e;
+  --color-node-event-bad: #e34a33;
   --color-node-event-random: #a855f7;
   --color-node-rest: #14b8a6;
-  --color-node-start: #10b981;
-  --color-node-goal: #f43f5e;
+  --color-node-start: #2f9e6e;
+  --color-node-goal: #e34a33;
 
-  --font-sans: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "メイリオ", sans-serif;
+  /* ===== タイポグラフィ ===== */
+  --font-sans: "Zen Kaku Gothic New", "Noto Sans JP", "Hiragino Kaku Gothic ProN", "メイリオ", sans-serif;
+  --font-mincho: "Shippori Mincho", "Hiragino Mincho ProN", "游明朝", serif;
+  --font-brush: "Yuji Syuku", "Shippori Mincho", serif;
 }
 
 html {
@@ -47,8 +72,17 @@ body {
   height: 100vh;
   overflow: hidden;
   font-family: var(--font-sans);
-  background: linear-gradient(135deg, #0c1445 0%, #1a237e 30%, #0d47a1 60%, #01579b 100%);
-  color: white;
+  color: #f4ecd8;
+  /* 青海波（せいがいは）— 藍×群青の波文を背景全体に敷く */
+  background-color: #1b3a5b;
+  background-image:
+    radial-gradient(ellipse 120% 55% at 50% -8%, rgba(74, 127, 175, 0.30), transparent 70%),
+    radial-gradient(circle at 100% 150%, #1b3a5b 24%, #2a4d72 25%, #2a4d72 28%, #1b3a5b 29%, #1b3a5b 36%, #2a4d72 36%, #2a4d72 40%, transparent 40%, transparent),
+    radial-gradient(circle at 0    150%, #1b3a5b 24%, #2a4d72 25%, #2a4d72 28%, #1b3a5b 29%, #1b3a5b 36%, #2a4d72 36%, #2a4d72 40%, transparent 40%, transparent),
+    radial-gradient(circle at 50%  100%, #2a4d72 10%, #1b3a5b 11%, #1b3a5b 23%, #2a4d72 24%, #2a4d72 30%, #1b3a5b 31%, #1b3a5b 43%, #2a4d72 44%, #2a4d72 50%, transparent 50%, transparent),
+    radial-gradient(circle at 100% 50%, #2a4d72 5%, #1b3a5b 6%, #1b3a5b 15%, #2a4d72 16%, #2a4d72 20%, #1b3a5b 21%, #1b3a5b 30%, #2a4d72 31%, #2a4d72 35%, #1b3a5b 36%, #1b3a5b 45%, #2a4d72 46%, #2a4d72 49%, transparent 50%),
+    radial-gradient(circle at 0    50%, #2a4d72 5%, #1b3a5b 6%, #1b3a5b 15%, #2a4d72 16%, #2a4d72 20%, #1b3a5b 21%, #1b3a5b 30%, #2a4d72 31%, #2a4d72 35%, #1b3a5b 36%, #1b3a5b 45%, #2a4d72 46%, #2a4d72 49%, transparent 50%);
+  background-size: auto, 96px 48px, 96px 48px, 96px 48px, 96px 48px, 96px 48px;
 }
 
 #root {
@@ -57,6 +91,73 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* ===== 和モダン ユーティリティ ===== */
+
+/* 毛筆タイトル */
+.font-brush { font-family: var(--font-brush); }
+.font-mincho { font-family: var(--font-mincho); }
+
+/* 金箔グラデ文字 */
+.kinpaku {
+  background: linear-gradient(100deg, #b8862f 0%, #f1d893 30%, #e6c266 50%, #f7e7b8 70%, #b8862f 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+.kinpaku-shimmer {
+  animation: kinpaku-shimmer 4s linear infinite;
+}
+
+/* 藍のガラスパネル（金の細縁） */
+.panel-ai {
+  background:
+    linear-gradient(160deg, rgba(36, 73, 110, 0.72) 0%, rgba(16, 42, 68, 0.82) 100%);
+  border: 1px solid rgba(212, 168, 67, 0.28);
+  box-shadow:
+    0 10px 30px -10px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+/* 和紙カード（明色面・墨文字） */
+.washi-card {
+  background:
+    radial-gradient(120% 120% at 0% 0%, #fbf6e8 0%, #f1e7cf 60%, #e6d8b6 100%);
+  color: #2a2118;
+  border: 1px solid rgba(154, 111, 36, 0.35);
+  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* 朱印（はんこ）風バッジ */
+.seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, #ef6a52, #c63a26 70%, #a92e1d);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 8px rgba(169, 46, 29, 0.5), inset 0 0 6px rgba(0,0,0,0.25);
+}
+
+/* 毛筆風の下線 */
+.ink-underline {
+  position: relative;
+}
+.ink-underline::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -0.28em;
+  height: 0.16em;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #e34a33 18%, #e34a33 82%, transparent);
+  opacity: 0.85;
+  transform: scaleX(0.92) skewX(-6deg);
 }
 
 /* ===== Animation Keyframes ===== */
@@ -90,6 +191,32 @@ body {
   50% { transform: scale(1.3); }
 }
 
+/* 金箔シマー */
+@keyframes kinpaku-shimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* 墨で書き起こすようなフェードアップ */
+@keyframes ink-rise {
+  0% { transform: translateY(14px); opacity: 0; filter: blur(4px); }
+  100% { transform: translateY(0); opacity: 1; filter: blur(0); }
+}
+
+/* 朱印を押す */
+@keyframes seal-stamp {
+  0% { transform: scale(2.4) rotate(-18deg); opacity: 0; }
+  60% { transform: scale(0.9) rotate(4deg); opacity: 1; }
+  80% { transform: scale(1.08) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* ゆらゆら浮遊 */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
 /* Rarity glow: common (gray) */
 @keyframes glow-common {
   0%, 100% { box-shadow: 0 0 15px 5px rgba(107, 114, 128, 0.3); }
@@ -98,67 +225,45 @@ body {
 
 /* Rarity glow: uncommon (green) */
 @keyframes glow-uncommon {
-  0%, 100% { box-shadow: 0 0 15px 5px rgba(34, 197, 94, 0.3); }
-  50% { box-shadow: 0 0 25px 10px rgba(34, 197, 94, 0.5); }
+  0%, 100% { box-shadow: 0 0 15px 5px rgba(47, 158, 110, 0.35); }
+  50% { box-shadow: 0 0 25px 10px rgba(47, 158, 110, 0.55); }
 }
 
-/* Rarity glow: rare (blue) */
+/* Rarity glow: rare (indigo) */
 @keyframes glow-rare {
-  0%, 100% { box-shadow: 0 0 15px 5px rgba(59, 130, 246, 0.3); }
-  50% { box-shadow: 0 0 25px 10px rgba(59, 130, 246, 0.5); }
+  0%, 100% { box-shadow: 0 0 15px 5px rgba(46, 94, 140, 0.4); }
+  50% { box-shadow: 0 0 25px 10px rgba(74, 127, 175, 0.6); }
 }
 
 /* Rarity glow: legendary (gold) */
 @keyframes glow-legendary {
   0% { box-shadow: 0 0 20px 5px rgba(168, 85, 247, 0.4); }
-  25% { box-shadow: 0 0 30px 10px rgba(245, 158, 11, 0.6); }
+  25% { box-shadow: 0 0 30px 10px rgba(212, 168, 67, 0.65); }
   50% { box-shadow: 0 0 20px 5px rgba(168, 85, 247, 0.4); }
-  75% { box-shadow: 0 0 30px 10px rgba(245, 158, 11, 0.6); }
+  75% { box-shadow: 0 0 30px 10px rgba(212, 168, 67, 0.65); }
   100% { box-shadow: 0 0 20px 5px rgba(168, 85, 247, 0.4); }
 }
 
 /* Rarity glow: mythical (rainbow shimmer) */
 @keyframes glow-mythical {
-  0% { box-shadow: 0 0 20px 8px rgba(239, 68, 68, 0.5); }
-  20% { box-shadow: 0 0 25px 10px rgba(245, 158, 11, 0.5); }
-  40% { box-shadow: 0 0 25px 10px rgba(34, 197, 94, 0.5); }
-  60% { box-shadow: 0 0 25px 10px rgba(59, 130, 246, 0.5); }
+  0% { box-shadow: 0 0 20px 8px rgba(227, 74, 51, 0.55); }
+  20% { box-shadow: 0 0 25px 10px rgba(212, 168, 67, 0.55); }
+  40% { box-shadow: 0 0 25px 10px rgba(47, 158, 110, 0.5); }
+  60% { box-shadow: 0 0 25px 10px rgba(46, 94, 140, 0.55); }
   80% { box-shadow: 0 0 25px 10px rgba(168, 85, 247, 0.5); }
-  100% { box-shadow: 0 0 20px 8px rgba(239, 68, 68, 0.5); }
+  100% { box-shadow: 0 0 20px 8px rgba(227, 74, 51, 0.55); }
 }
 
-.animate-bounce-in {
-  animation: bounce-in 0.5s ease-out forwards;
-}
+.animate-bounce-in { animation: bounce-in 0.5s ease-out forwards; }
+.animate-dice-result { animation: dice-result-bounce 0.5s ease-out; }
+.animate-slide-in-down { animation: slide-in-down 0.4s ease-out forwards; }
+.animate-icon-pulse { animation: icon-pulse 1.5s ease-in-out infinite; }
+.animate-ink-rise { animation: ink-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.animate-seal-stamp { animation: seal-stamp 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.animate-float-y { animation: float-y 3.5s ease-in-out infinite; }
 
-.animate-dice-result {
-  animation: dice-result-bounce 0.5s ease-out;
-}
-
-.animate-slide-in-down {
-  animation: slide-in-down 0.4s ease-out forwards;
-}
-
-.animate-icon-pulse {
-  animation: icon-pulse 1.5s ease-in-out infinite;
-}
-
-.glow-common {
-  animation: glow-common 2s ease-in-out infinite;
-}
-
-.glow-uncommon {
-  animation: glow-uncommon 2s ease-in-out infinite;
-}
-
-.glow-rare {
-  animation: glow-rare 2s ease-in-out infinite;
-}
-
-.glow-legendary {
-  animation: glow-legendary 2s ease-in-out infinite;
-}
-
-.glow-mythical {
-  animation: glow-mythical 3s ease-in-out infinite;
-}
+.glow-common { animation: glow-common 2s ease-in-out infinite; }
+.glow-uncommon { animation: glow-uncommon 2s ease-in-out infinite; }
+.glow-rare { animation: glow-rare 2s ease-in-out infinite; }
+.glow-legendary { animation: glow-legendary 2s ease-in-out infinite; }
+.glow-mythical { animation: glow-mythical 3s ease-in-out infinite; }

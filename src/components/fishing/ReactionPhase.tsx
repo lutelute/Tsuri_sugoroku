@@ -136,8 +136,8 @@ export default function ReactionPhase({ fish, equipment, onSuccess, onFail }: Re
 
   return (
     <div
-      className="flex flex-col items-center justify-center h-full select-none cursor-pointer"
-      onClick={handleTap}
+      className="flex flex-col items-center justify-center h-full select-none cursor-pointer touch-none"
+      onPointerDown={handleTap}
     >
       <p className="text-lg font-bold mb-2 text-white/80">早押しリアクション！</p>
 

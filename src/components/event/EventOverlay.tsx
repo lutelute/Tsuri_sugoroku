@@ -70,13 +70,15 @@ export default function EventOverlay() {
   };
 
   const handleClose = () => {
-    setTurnPhase('action_choice');
+    // 移動イベントでゴールに到達した場合はターン終了へ（ゴール演出を出す）
+    const p = useGameStore.getState().players[currentPlayerIndex];
+    setTurnPhase(p?.hasFinished ? 'turn_end' : 'action_choice');
   };
 
   // ファイト中
   if (uiState === 'fighting' && fightFish) {
     return (
-      <div className="fixed inset-0 z-40 bg-gradient-to-b from-blue-900 to-blue-950">
+      <div className="fixed inset-0 z-40 bg-gradient-to-b from-ai-700 via-ai-800 to-ai-950">
         {/* ヘッダー */}
         <div className="absolute top-0 left-0 right-0 p-4 z-10">
           <div className="text-center">

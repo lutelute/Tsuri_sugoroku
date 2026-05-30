@@ -22,12 +22,12 @@ export default function ProgressBar({
   return (
     <div className={className}>
       {showLabel && (
-        <div className="flex justify-between text-xs mb-1 text-white/70">
+        <div className="flex justify-between text-xs mb-1 text-washi/75">
           <span>{label || ''}</span>
           <span>{Math.round(percent)}%</span>
         </div>
       )}
-      <div className={`${height} bg-white/10 rounded-full overflow-hidden`}>
+      <div className={`${height} bg-ai-950/60 rounded-full overflow-hidden border border-kin-500/15`}>
         <div
           className={`h-full ${color} rounded-full transition-all duration-300`}
           style={{ width: `${percent}%` }}

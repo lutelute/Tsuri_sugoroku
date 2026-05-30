@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getStrikeGreenZone } from '../../game/fishing';
 
 const STRIKE_TIMEOUT_MS = 2800;
 
@@ -47,8 +48,8 @@ export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }:
     onStrike(normalizedAngle);
   }, [hasBite, onStrike]);
 
-  // 緑ゾーン: strikeLevel 1=27%, 5=47%
-  const greenZoneSize = 0.27 + 0.05 * (strikeLevel - 1);
+  // 緑ゾーン: strikeLevel 1=27%, 5=47%（useFishingの当たり判定と同一の式）
+  const greenZoneSize = getStrikeGreenZone(strikeLevel);
   const greenStartDeg = (0.5 - greenZoneSize / 2) * 360;
 
   // SVG円周
@@ -58,7 +59,7 @@ export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }:
   const timerColor = timeLeft > 0.4 ? '#22c55e' : timeLeft > 0.2 ? '#f59e0b' : '#ef4444';
 
   return (
-    <div className="flex flex-col items-center justify-center h-full" onClick={handleClick}>
+    <div className="flex flex-col items-center justify-center h-full touch-none select-none" onPointerDown={handleClick}>
       {!hasBite ? (
         <div className="text-center">
           <div className="text-6xl mb-4 animate-bounce">🎣</div>

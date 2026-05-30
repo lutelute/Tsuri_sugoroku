@@ -3,8 +3,8 @@ import { useGameStore } from '../../store/useGameStore';
 import { FISH_DATABASE } from '../../data/fishDatabase';
 import { NODE_MAP } from '../../data/boardNodes';
 import type { FishRarity, CaughtFish } from '../../game/types';
-import Button from '../shared/Button';
 import FishIllustration from '../shared/FishIllustration';
+import Icon from '../shared/Icon';
 
 type SortMode = 'turn' | 'points' | 'size';
 type FilterRarity = 'all' | FishRarity;
@@ -19,11 +19,11 @@ const RARITY_FILTERS: { key: FilterRarity; label: string }[] = [
 ];
 
 const RARITY_COLORS: Record<FishRarity, string> = {
-  common: 'text-gray-300 bg-gray-700/50',
-  uncommon: 'text-green-400 bg-green-900/50',
-  rare: 'text-blue-400 bg-blue-900/50',
-  legendary: 'text-purple-400 bg-purple-900/50',
-  mythical: 'text-amber-400 bg-amber-900/50',
+  common: 'text-washi/70 bg-ai-700/50 border border-ai-600/40',
+  uncommon: 'text-emerald-300 bg-emerald-900/40 border border-emerald-500/30',
+  rare: 'text-ai-200 bg-ai-800/60 border border-ai-400/40',
+  legendary: 'text-kin-300 bg-kin-500/20 border border-kin-500/30',
+  mythical: 'text-shu-400 bg-shu-500/20 border border-shu-500/30',
 };
 
 const RARITY_NAMES: Record<FishRarity, string> = {
@@ -88,16 +88,25 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
   }, [caughtFish, filter, sortMode]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-ai-900 overflow-y-auto">
       {/* Header */}
-      <div className="sticky top-0 bg-black/50 backdrop-blur-sm px-4 py-3 flex items-center justify-between z-10">
+      <div className="sticky top-0 panel-ai backdrop-blur-sm px-4 py-3 flex items-center justify-between z-10 rounded-none border-x-0 border-t-0">
         <div>
-          <h2 className="text-lg font-bold">🎒 釣果バッグ</h2>
-          <span className="text-sm text-white/60">
+          <h2 className="text-lg font-mincho text-kin-300 ink-underline flex items-center gap-2">
+            <Icon name="creel" size={22} className="text-kin-300" />
+            釣果バッグ
+          </h2>
+          <span className="text-sm text-washi/60 tabular-nums">
             {caughtFish.length}匹 / {totalPoints}pt
           </span>
         </div>
-        <Button onClick={onClose} variant="secondary" size="sm">閉じる</Button>
+        <button
+          onClick={onClose}
+          aria-label="閉じる"
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-ai-800/60 border border-kin-500/30 text-washi hover:bg-ai-700/60 transition-colors"
+        >
+          <Icon name="close" size={18} />
+        </button>
       </div>
 
       {/* Filter tabs */}
@@ -106,10 +115,10 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
           <button
             key={key}
             onClick={() => setFilter(key)}
-            className={`px-2.5 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
+            className={`px-2.5 py-1 rounded-full text-xs font-mincho transition cursor-pointer border ${
               filter === key
-                ? 'bg-white/20 text-white'
-                : 'bg-white/5 text-white/50 hover:bg-white/10'
+                ? 'bg-kin-500/20 text-kin-300 border-kin-500/30'
+                : 'bg-ai-800/40 text-washi/50 border-ai-600/30 hover:bg-ai-700/40'
             }`}
           >
             {label}
@@ -118,14 +127,14 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
       </div>
 
       {/* Sort options */}
-      <div className="px-4 pt-2 pb-1 flex gap-2 text-xs text-white/50">
+      <div className="px-4 pt-2 pb-1 flex gap-2 text-xs text-washi/50 font-mincho">
         <span>並び替え:</span>
         {([['turn', '釣った順'], ['points', 'ポイント順'], ['size', 'サイズ順']] as const).map(([mode, label]) => (
           <button
             key={mode}
             onClick={() => setSortMode(mode)}
             className={`transition cursor-pointer ${
-              sortMode === mode ? 'text-white font-bold' : 'hover:text-white/70'
+              sortMode === mode ? 'text-kin-300 font-bold' : 'hover:text-washi/70'
             }`}
           >
             {label}
@@ -136,8 +145,8 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
       {/* Fish list */}
       <div className="p-4 space-y-2">
         {filtered.length === 0 ? (
-          <div className="text-center py-16 text-white/40">
-            <div className="text-5xl mb-4">🎣</div>
+          <div className="text-center py-16 text-washi/40 font-mincho">
+            <Icon name="rod" size={56} className="text-washi/30 mx-auto mb-4" />
             <p>まだ魚を釣っていません</p>
           </div>
         ) : (
@@ -151,28 +160,28 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
             return (
               <div
                 key={`${caught.fishId}-${caught.turn}-${idx}`}
-                className="bg-white/5 rounded-lg p-3 flex items-start gap-3"
+                className="panel-ai p-3 flex items-start gap-3"
               >
-                <div className="shrink-0">
+                <div className="shrink-0 washi-card rounded-md p-1 flex items-center justify-center">
                   <FishIllustration fishId={caught.fishId} width={48} height={32} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-sm">{fish.name}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${RARITY_COLORS[fish.rarity]}`}>
+                    <span className="font-mincho font-bold text-sm text-washi">{fish.name}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mincho ${RARITY_COLORS[fish.rarity]}`}>
                       {RARITY_NAMES[fish.rarity]}
                     </span>
                     {(caught.bonusMultiplier ?? 1) > 1 && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-600/50 text-amber-200 font-medium">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-shu-500/20 text-shu-400 border border-shu-500/30 font-mincho tabular-nums">
                         x{caught.bonusMultiplier}
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-white/50 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                    <span>サイズ {sizePercent}%</span>
-                    <span className="text-amber-300 font-medium">{pts}pt</span>
+                  <div className="text-xs text-washi/50 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                    <span className="tabular-nums">サイズ {sizePercent}%</span>
+                    <span className="text-kin-300 font-medium tabular-nums">{pts}pt</span>
                     <span>📍{locationNode?.name ?? caught.caughtAt}</span>
-                    <span>Turn {caught.turn}</span>
+                    <span className="tabular-nums">Turn {caught.turn}</span>
                   </div>
                 </div>
               </div>

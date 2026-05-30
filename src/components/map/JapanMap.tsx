@@ -5,6 +5,7 @@ import { BOARD_EDGES } from '../../data/boardEdges';
 import MapNode from './MapNode';
 import MapEdge from './MapEdge';
 import PlayerToken from './PlayerToken';
+import { LAND_PATHS, ISLANDS, REGION_LABELS } from './landmass';
 
 const DEFAULT_VIEWBOX = { x: -5, y: -5, width: 180, height: 180 };
 const MIN_WIDTH = 50;
@@ -47,6 +48,13 @@ export default function JapanMap() {
   const reachableEndpoints = new Set(
     reachableNodes.map(path => path[path.length - 1])
   );
+
+  // パス選択中は到達可能ノードを最後に描画して最前面に出す（密集箇所での誤タップ・重なり防止）
+  const orderedNodes = turnPhase === 'path_selection'
+    ? [...BOARD_NODES].sort(
+        (a, b) => Number(reachableEndpoints.has(a.id)) - Number(reachableEndpoints.has(b.id)),
+      )
+    : BOARD_NODES;
 
   // 各到達可能ノードの歩数（path.length - 1）を計算
   const reachableSteps = new Map<string, number>();
@@ -227,6 +235,8 @@ export default function JapanMap() {
         viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
         className="w-full h-full touch-none"
         preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label="日本全国の釣りすごろくマップ"
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
@@ -239,13 +249,57 @@ export default function JapanMap() {
         {/* 背景装飾 */}
         <defs>
           <radialGradient id="ocean-glow" cx="50%" cy="50%">
-            <stop offset="0%" stopColor="rgba(59,130,246,0.1)" />
+            <stop offset="0%" stopColor="rgba(74,127,175,0.18)" />
             <stop offset="100%" stopColor="transparent" />
           </radialGradient>
+          {/* 陸地（和紙・砂浜色） */}
+          <linearGradient id="land-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#e9dcc0" stopOpacity="0.20" />
+            <stop offset="100%" stopColor="#c2a978" stopOpacity="0.12" />
+          </linearGradient>
+          <filter id="land-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" floodColor="#06121f" floodOpacity="0.55" />
+          </filter>
         </defs>
         <rect x={viewBox.x - 20} y={viewBox.y - 20} width={viewBox.width + 40} height={viewBox.height + 40} fill="url(#ocean-glow)" />
 
-        {/* エッジ */}
+        {/* 陸地シルエット（日本列島・海岸線は二重線） */}
+        <g filter="url(#land-shadow)" aria-hidden="true">
+          {LAND_PATHS.map((d, i) => (
+            <path key={`land-${i}`} d={d} fill="url(#land-grad)" stroke="rgba(212,168,67,0.42)" strokeWidth="0.85" strokeLinejoin="round" />
+          ))}
+          {ISLANDS.map((is, i) => (
+            <ellipse key={`isle-${i}`} cx={is.cx} cy={is.cy} rx={is.rx} ry={is.ry} fill="url(#land-grad)" stroke="rgba(212,168,67,0.42)" strokeWidth="0.7" />
+          ))}
+        </g>
+        {/* 海岸線の内側ハイライト */}
+        <g aria-hidden="true" className="pointer-events-none">
+          {LAND_PATHS.map((d, i) => (
+            <path key={`coast-${i}`} d={d} fill="none" stroke="rgba(251,246,232,0.14)" strokeWidth="0.3" strokeLinejoin="round" />
+          ))}
+        </g>
+
+        {/* 地方名の透かし */}
+        <g aria-hidden="true" className="pointer-events-none">
+          {REGION_LABELS.map((r, i) => (
+            <text
+              key={`reg-${i}`}
+              x={r.x}
+              y={r.y}
+              textAnchor="middle"
+              fontSize="5.5"
+              fill="#fbf6e8"
+              opacity="0.1"
+              fontFamily='"Shippori Mincho", serif'
+              fontWeight="700"
+              letterSpacing="1"
+            >
+              {r.name}
+            </text>
+          ))}
+        </g>
+
+        {/* エッジ（海路） */}
         {BOARD_EDGES.map((edge, i) => {
           const from = NODE_MAP.get(edge.from);
           const to = NODE_MAP.get(edge.to);
@@ -253,8 +307,20 @@ export default function JapanMap() {
           return <MapEdge key={i} from={from} to={to} />;
         })}
 
-        {/* ノード */}
-        {BOARD_NODES.map(node => (
+        {/* 到達可能ルート（金の航路を強調） */}
+        {turnPhase === 'path_selection' && reachableNodes.map((path, pi) => (
+          <g key={`route-${pi}`} aria-hidden="true" className="pointer-events-none">
+            {path.slice(1).map((nid, si) => {
+              const a = NODE_MAP.get(path[si]);
+              const b = NODE_MAP.get(nid);
+              if (!a || !b) return null;
+              return <line key={si} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#f1d893" strokeWidth="1" strokeLinecap="round" opacity="0.9" />;
+            })}
+          </g>
+        ))}
+
+        {/* ノード（パス選択中は到達可能ノードを最前面に） */}
+        {orderedNodes.map(node => (
           <MapNode
             key={node.id}
             node={node}
@@ -276,6 +342,20 @@ export default function JapanMap() {
         ))}
       </svg>
 
+      {/* 方位コンパス（装飾） */}
+      <div className="absolute left-2 top-2 w-11 h-11 opacity-70 pointer-events-none select-none" aria-hidden="true">
+        <svg viewBox="0 0 44 44" className="w-full h-full">
+          <circle cx="22" cy="22" r="20" fill="rgba(16,42,68,0.45)" stroke="rgba(212,168,67,0.45)" strokeWidth="1" />
+          <circle cx="22" cy="22" r="14" fill="none" stroke="rgba(212,168,67,0.2)" strokeWidth="0.6" />
+          {/* 方位の星 */}
+          <path d="M22,5 L25,20 L22,22 L19,20 Z" fill="#e34a33" />
+          <path d="M22,39 L19,24 L22,22 L25,24 Z" fill="rgba(241,216,147,0.85)" />
+          <path d="M5,22 L20,19 L22,22 L20,25 Z" fill="rgba(241,216,147,0.6)" />
+          <path d="M39,22 L24,25 L22,22 L24,19 Z" fill="rgba(241,216,147,0.6)" />
+          <text x="22" y="11.5" textAnchor="middle" fontSize="6" fill="#f1d893" fontWeight="bold" fontFamily="serif">北</text>
+        </svg>
+      </div>
+
       {/* リセットボタン */}
       {!isDefaultView && (
         <button
@@ -285,6 +365,31 @@ export default function JapanMap() {
         >
           ↺ リセット
         </button>
+      )}
+
+      {/* パス選択の代替操作: 行き先ボタン群（モバイルの小さなノードを押せない場合や
+          キーボード/スクリーンリーダー利用者のための大きなタップ領域） */}
+      {turnPhase === 'path_selection' && reachableNodes.length > 0 && (
+        <div
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex flex-wrap gap-1.5 justify-center max-w-[95%] px-2"
+          role="group"
+          aria-label="移動先を選択"
+        >
+          {reachableNodes.map((path, i) => {
+            const dest = path[path.length - 1];
+            const n = NODE_MAP.get(dest);
+            if (!n) return null;
+            return (
+              <button
+                key={dest}
+                onClick={() => selectPath(i)}
+                className="bg-amber-600/90 hover:bg-amber-500 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg backdrop-blur-sm transition-colors cursor-pointer"
+              >
+                {n.name} <span className="opacity-70">({path.length - 1}マス)</span>
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );

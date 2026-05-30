@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { getBiteDelay, createCaughtFish, generateFishSize, getEffectiveLevel, checkTairyou, selectFish, interpolateBonus } from '../game/fishing';
+import { getBiteDelay, createCaughtFish, getEffectiveLevel, checkTairyou, selectFish, interpolateBonus, getStrikeGreenZone } from '../game/fishing';
 import { NODE_MAP } from '../data/boardNodes';
 import type { FishRarity, FishingMiniGame } from '../game/types';
 import {
@@ -46,11 +46,12 @@ export function useFishing() {
   const timeLimitRef = useRef(FISHING_REELING_TIME_LIMIT_MS);
 
   // 釣り開始（fishingStateは既にstartFishing/startBoatFishingでセット済み）
+  // クリーンアップ関数を返し、アンマウント時に cast→waiting タイマーを解除する
   const begin = useCallback(() => {
-    // cast → waiting 自動遷移
-    setTimeout(() => {
+    const t = window.setTimeout(() => {
       updateFishingState({ phase: 'waiting' });
     }, 1500);
+    return () => clearTimeout(t);
   }, [updateFishingState]);
 
   // waiting フェーズ: バイト待ち
@@ -74,9 +75,9 @@ export function useFishing() {
   const handleStrike = useCallback((normalizedAngle: number) => {
     if (!fishingState || fishingState.phase !== 'waiting' || !fishingState.hasBite) return;
 
-    // 装備の重み付きストライクレベルで緑ゾーンを計算
+    // 装備の重み付きストライクレベルで緑ゾーンを計算（WaitingPhaseの描画と同一の式）
     const strikeLevel = getEffectiveLevel(player.equipment, 'strike');
-    const greenZone = 0.27 + 0.05 * (strikeLevel - 1);
+    const greenZone = getStrikeGreenZone(strikeLevel);
 
     // 緑ゾーンの中心は0.5に配置
     const greenStart = 0.5 - greenZone / 2;
@@ -100,8 +101,10 @@ export function useFishing() {
   }, [fishingState, player.equipment, updateFishingState, failFishing]);
 
   // リーリング: テンション自然減衰 + 制限時間
+  // ※ phase が 'reeling' でも miniGame が 'reeling' 以外（target/reaction/rhythm）のときは
+  //    各ミニゲームが自前の制限時間・成否を持つため、この孤立タイマーを起動してはならない。
   useEffect(() => {
-    if (fishingState?.phase !== 'reeling') return;
+    if (fishingState?.phase !== 'reeling' || fishingState.miniGame !== 'reeling') return;
 
     reelingStartRef.current = Date.now();
 
@@ -141,7 +144,7 @@ export function useFishing() {
       clearInterval(interval);
       clearTimeout(timeLimit);
     };
-  }, [fishingState?.phase, updateFishingState, failFishing]);
+  }, [fishingState?.phase, fishingState?.miniGame, player.equipment, updateFishingState, failFishing]);
 
   // リーリング: タップ
   const handleReelTap = useCallback(() => {
@@ -178,9 +181,8 @@ export function useFishing() {
     if (progressRef.current >= FISHING_REELING_TARGET) {
       if (reelingRef.current) clearInterval(reelingRef.current);
       if (reelingTimerRef.current) clearTimeout(reelingTimerRef.current);
-      const size = generateFishSize(player.equipment);
-      const caught = createCaughtFish(fishingState.targetFish!.id, player.currentNode, turn);
-      caught.size = size;
+      const caught = createCaughtFish(fishingState.targetFish!.id, player.currentNode, turn, player.equipment);
+      const size = caught.size;
 
       // 大漁判定
       const node = NODE_MAP.get(player.currentNode);
@@ -190,10 +192,7 @@ export function useFishing() {
       if (bonusCount > 0 && node) {
         for (let i = 0; i < bonusCount; i++) {
           const extraFish = selectFish(node.id, node.region, player.equipment, isSpecial, fishingState.boatFishing);
-          const extraSize = generateFishSize(player.equipment);
-          const extra = createCaughtFish(extraFish.id, player.currentNode, turn);
-          extra.size = extraSize;
-          bonusFish.push(extra);
+          bonusFish.push(createCaughtFish(extraFish.id, player.currentNode, turn, player.equipment));
         }
       }
 
@@ -215,9 +214,8 @@ export function useFishing() {
   // 新ミニゲーム共通: 成功コールバック
   const handleMiniGameSuccess = useCallback(() => {
     if (!fishingState || !fishingState.targetFish) return;
-    const size = generateFishSize(player.equipment);
-    const caught = createCaughtFish(fishingState.targetFish.id, player.currentNode, turn);
-    caught.size = size;
+    const caught = createCaughtFish(fishingState.targetFish.id, player.currentNode, turn, player.equipment);
+    const size = caught.size;
 
     const node = NODE_MAP.get(player.currentNode);
     const isSpecial = node?.type === 'fishing_special';
@@ -226,10 +224,7 @@ export function useFishing() {
     if (bonusCount > 0 && node) {
       for (let i = 0; i < bonusCount; i++) {
         const extraFish = selectFish(node.id, node.region, player.equipment, isSpecial, fishingState.boatFishing);
-        const extraSize = generateFishSize(player.equipment);
-        const extra = createCaughtFish(extraFish.id, player.currentNode, turn);
-        extra.size = extraSize;
-        bonusFish.push(extra);
+        bonusFish.push(createCaughtFish(extraFish.id, player.currentNode, turn, player.equipment));
       }
     }
 
