@@ -9,6 +9,7 @@ import TargetPhase from './TargetPhase';
 import ReactionPhase from './ReactionPhase';
 import RhythmPhase from './RhythmPhase';
 import FishCaughtModal from './FishCaughtModal';
+import Ruby from '../shared/Ruby';
 
 export default function FishingOverlay() {
   const { players, currentPlayerIndex, endFishing, initialEncyclopedias } = useGameStore();
@@ -28,11 +29,11 @@ export default function FishingOverlay() {
       {/* ヘッダー */}
       <div className="absolute top-0 left-0 right-0 bg-ai-950/40 px-4 py-2 flex justify-between items-center z-10 border-b border-kin-500/15">
         <span className="text-sm text-washi/65 font-mincho">
-          {fishingState.boatFishing ? '🚢' : '🎣'} {player.name} の{fishingState.boatFishing ? '船釣り' : '釣り'}
+          {fishingState.boatFishing ? '🚢' : '🎣'} {player.name} の<Ruby>{fishingState.boatFishing ? '船釣り' : '釣り'}</Ruby>
         </span>
         {fishingState.targetFish && fishingState.phase === 'reeling' && (
           <span className="text-sm text-kin-300">
-            何かがかかっている！
+            <Ruby>何かがかかっている！</Ruby>
           </span>
         )}
       </div>
@@ -42,7 +43,7 @@ export default function FishingOverlay() {
         {fishingState.phase === 'cast' && (
           <div className="flex flex-col items-center justify-center h-full">
             <div className="text-7xl animate-spin" style={{ animationDuration: '1s' }}>🎣</div>
-            <p className="text-xl text-white/60 mt-4">キャスト中...</p>
+            <p className="text-xl text-white/60 mt-4"><Ruby>キャスト中...</Ruby></p>
           </div>
         )}
 

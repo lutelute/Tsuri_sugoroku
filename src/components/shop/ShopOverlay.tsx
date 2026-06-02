@@ -6,6 +6,7 @@ import type { EquipmentType } from '../../game/types';
 import EquipmentCard from './EquipmentCard';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
+import Ruby from '../shared/Ruby';
 
 export default function ShopOverlay() {
   const { players, currentPlayerIndex, buyEquipment, skipShop } = useGameStore();
@@ -23,11 +24,11 @@ export default function ShopOverlay() {
           <div className="flex justify-center mb-2">
             <Icon name="cart" size={40} className="text-kin-300" />
           </div>
-          <h2 className="text-xl font-mincho text-kin-300 ink-underline inline-block">{node?.name} ショップ</h2>
-          <p className="text-sm text-ai-200 mt-2">Tier <span className="tabular-nums">{shopTier}</span> — Lv.<span className="tabular-nums">{maxLevel}</span>まで購入可能</p>
+          <h2 className="text-xl font-mincho text-kin-300 ink-underline inline-block"><Ruby>{node?.name ?? ''}</Ruby> ショップ</h2>
+          <p className="text-sm text-ai-200 mt-2">Tier <span className="tabular-nums">{shopTier}</span> — Lv.<span className="tabular-nums">{maxLevel}</span><Ruby>まで購入可能</Ruby></p>
           <p className="text-sm text-kin-300 mt-1 flex items-center justify-center gap-1">
             <Icon name="coin" size={16} className="text-kin-400" />
-            所持金: ¥<span className="tabular-nums">{player.money.toLocaleString()}</span>
+            <Ruby>所持金</Ruby>: ¥<span className="tabular-nums">{player.money.toLocaleString()}</span>
           </p>
         </div>
 
@@ -58,7 +59,7 @@ export default function ShopOverlay() {
         ))}
 
         <Button onClick={skipShop} variant="secondary" className="w-full mt-2">
-          ショップを出る
+          <Ruby>ショップを出る</Ruby>
         </Button>
       </div>
     </div>

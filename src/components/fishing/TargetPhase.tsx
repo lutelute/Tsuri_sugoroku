@@ -4,6 +4,7 @@ import { getEffectiveLevel, interpolateBonus } from '../../game/fishing';
 import { REEL_TIME_EXTENSION } from '../../game/constants';
 import FishIllustration from '../shared/FishIllustration';
 import ProgressBar from '../shared/ProgressBar';
+import Ruby from '../shared/Ruby';
 
 const HITS_REQUIRED: Record<string, number> = {
   common: 3,
@@ -126,7 +127,7 @@ export default function TargetPhase({ fish, equipment, onSuccess, onFail }: Targ
 
   return (
     <div className="flex flex-col items-center justify-center h-full select-none">
-      <p className="text-lg font-bold mb-3 text-white/80">魚をタップして捕まえろ！</p>
+      <p className="text-lg font-bold mb-3 text-white/80"><Ruby>魚をタップして捕まえろ！</Ruby></p>
 
       <div className="mb-3 text-center">
         <span className="text-sm text-amber-400 font-bold">
@@ -176,7 +177,7 @@ export default function TargetPhase({ fish, equipment, onSuccess, onFail }: Targ
         />
       </div>
 
-      <p className="text-xs text-white/30 mt-3">魚をタップして{required}回当てよう</p>
+      <p className="text-xs text-white/30 mt-3"><Ruby>魚をタップして</Ruby>{required}<Ruby>回当てよう</Ruby></p>
     </div>
   );
 }

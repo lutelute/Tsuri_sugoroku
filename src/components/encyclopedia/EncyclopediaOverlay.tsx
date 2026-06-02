@@ -6,6 +6,7 @@ import FishCard from './FishCard';
 import FishDetail from './FishDetail';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
+import Ruby from '../shared/Ruby';
 
 const RARITY_ORDER: FishRarity[] = ['common', 'uncommon', 'rare', 'legendary', 'mythical'];
 const RARITY_NAMES: Record<FishRarity, string> = {
@@ -68,12 +69,12 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowResetConfirm(false)} />
           <div className="panel-ai relative rounded-2xl border-shu-500/40 shadow-2xl p-6 w-[85%] max-w-sm">
-            <h3 className="font-mincho text-lg font-bold text-shu-400 mb-2">図鑑データをリセット</h3>
+            <h3 className="font-mincho text-lg font-bold text-shu-400 mb-2"><Ruby>図鑑データをリセット</Ruby></h3>
             <p className="text-sm text-washi/60 mb-1">
-              全ての図鑑データが削除されます。この操作は取り消せません。
+              <Ruby>全ての図鑑データが削除されます。この操作は取り消せません。</Ruby>
             </p>
             <p className="text-sm text-washi/80 mb-4">
-              続行するには「<span className="text-shu-400 font-bold">リセット</span>」と入力してください。
+              <Ruby>続行するには「</Ruby><span className="text-shu-400 font-bold">リセット</span><Ruby>」と入力してください。</Ruby>
             </p>
             <input
               type="text"
@@ -96,7 +97,7 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
                 className="flex-1"
                 disabled={resetInput !== 'リセット' || resetting}
               >
-                {resetting ? '処理中...' : '実行'}
+                <Ruby>{resetting ? '処理中...' : '実行'}</Ruby>
               </Button>
             </div>
           </div>
@@ -108,7 +109,7 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 font-mincho text-lg font-bold text-kin-300">
             <Icon name="book" size={22} className="text-kin-400" />
-            図鑑
+            <Ruby>図鑑</Ruby>
           </h2>
           <div className="flex items-center gap-3">
             <span className="text-sm text-washi/60 tabular-nums">

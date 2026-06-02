@@ -7,6 +7,7 @@ import { MERGE_DURABILITY_BONUS, MERGE_MAX_DURABILITY } from '../../game/constan
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import type { IconName } from '../shared/Icon';
+import Ruby from '../shared/Ruby';
 
 const TYPE_ICONS: Record<EquipmentType, IconName> = {
   rod: 'rod',
@@ -68,9 +69,9 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
           <div className="flex items-center justify-center mb-1">
             <Icon name="tacklebox" size={32} className="text-kin-300" />
           </div>
-          <h2 className="font-mincho text-lg text-kin-300 ink-underline inline-block">装備インベントリ</h2>
+          <h2 className="font-mincho text-lg text-kin-300 ink-underline inline-block"><Ruby>装備インベントリ</Ruby></h2>
           <p className="text-xs text-washi/50 mt-2">
-            所持数: <span className="tabular-nums">{inventory.length}</span> | タップで装着/取り外し
+            <Ruby>所持数</Ruby>: <span className="tabular-nums">{inventory.length}</span> | <Ruby>タップで装着/取り外し</Ruby>
           </p>
         </div>
 
@@ -84,7 +85,7 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
                 : 'bg-ai-800/50 text-washi/40 border border-transparent hover:bg-ai-700/60'
             }`}
           >
-            全て (<span className="tabular-nums">{inventory.length}</span>)
+            <Ruby>全て</Ruby> (<span className="tabular-nums">{inventory.length}</span>)
           </button>
           {types.map(t => (
             <button
@@ -104,7 +105,7 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
         {/* 装備リスト */}
         <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
           {sorted.length === 0 && (
-            <p className="text-center text-sm text-washi/30 py-8">装備がありません</p>
+            <p className="text-center text-sm text-washi/30 py-8"><Ruby>装備がありません</Ruby></p>
           )}
           {sorted.map(item => {
             const eqData = getEquipment(item.type, item.level);
@@ -126,16 +127,16 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
                       <Icon name={TYPE_ICONS[item.type]} size={22} className={active ? 'text-kin-300' : 'text-ai-200'} />
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mincho font-bold text-sm text-washi">{eqData?.name || '???'}</span>
+                          <span className="font-mincho font-bold text-sm text-washi"><Ruby>{eqData?.name || '???'}</Ruby></span>
                           <span className="text-xs text-washi/40 tabular-nums">Lv.{item.level}</span>
                           {active && (
                             <span className="seal text-[10px] px-1.5 py-0.5">
-                              装着中
+                              <Ruby>装着中</Ruby>
                             </span>
                           )}
                         </div>
                         <p className="text-[11px] text-washi/40 mt-0.5">
-                          {TYPE_LABELS[item.type]} | {eqData?.effect || ''}
+                          {TYPE_LABELS[item.type]} | <Ruby>{eqData?.effect || ''}</Ruby>
                         </p>
                       </div>
                     </div>
@@ -162,7 +163,7 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
                         onClick={() => setMergeTarget(item.id)}
                         className="w-full text-center py-1.5 rounded-lg text-xs font-medium bg-kin-500/20 text-kin-300 border border-kin-500/30 hover:bg-kin-500/30 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                       >
-                        <Icon name="merge" size={14} /> 同じ装備と合体 (→ 最大<span className="tabular-nums">{Math.min(MERGE_MAX_DURABILITY, item.durability + partner.durability + MERGE_DURABILITY_BONUS)}</span>%)
+                        <Icon name="merge" size={14} /> <Ruby>同じ装備と合体 (→ 最大</Ruby><span className="tabular-nums">{Math.min(MERGE_MAX_DURABILITY, item.durability + partner.durability + MERGE_DURABILITY_BONUS)}</span>%)
                       </button>
                     ) : (
                       <div className="flex gap-1">
@@ -173,13 +174,13 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
                           }}
                           className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-kin-500/40 text-kin-200 border border-kin-500/50 hover:bg-kin-500/60 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
-                          <Icon name="merge" size={14} /> 合体する
+                          <Icon name="merge" size={14} /> <Ruby>合体する</Ruby>
                         </button>
                         <button
                           onClick={() => setMergeTarget(null)}
                           className="px-3 py-1.5 rounded-lg text-xs text-washi/40 bg-ai-800/50 border border-ai-700/40 hover:bg-ai-700/60 transition-all cursor-pointer"
                         >
-                          やめる
+                          <Ruby>やめる</Ruby>
                         </button>
                       </div>
                     )}
@@ -191,7 +192,7 @@ export default function InventoryPanel({ onClose }: InventoryPanelProps) {
         </div>
 
         <Button onClick={onClose} variant="secondary" className="w-full mt-3">
-          閉じる
+          <Ruby>閉じる</Ruby>
         </Button>
       </div>
     </div>

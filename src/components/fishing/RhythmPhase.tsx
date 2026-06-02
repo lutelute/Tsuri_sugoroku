@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Fish, PlayerEquipment } from '../../game/types';
 import { getEffectiveLevel } from '../../game/fishing';
 import ProgressBar from '../shared/ProgressBar';
+import Ruby from '../shared/Ruby';
 
 const MARKER_COUNT: Record<string, number> = {
   common: 7,
@@ -194,7 +195,7 @@ export default function RhythmPhase({ fish, equipment, onSuccess, onFail }: Rhyt
       className="flex flex-col items-center justify-center h-full select-none cursor-pointer touch-none"
       onPointerDown={handleTap}
     >
-      <p className="text-lg font-bold mb-2 text-white/80">リズムタップ！</p>
+      <p className="text-lg font-bold mb-2 text-white/80"><Ruby>リズムタップ！</Ruby></p>
 
       {/* 進捗バー */}
       <div className="w-64 mb-3">
@@ -249,10 +250,10 @@ export default function RhythmPhase({ fish, equipment, onSuccess, onFail }: Rhyt
       )}
 
       {!started && (
-        <p className="text-white/50 mt-4">準備中...</p>
+        <p className="text-white/50 mt-4"><Ruby>準備中...</Ruby></p>
       )}
 
-      <p className="text-xs text-white/30 mt-3">🐟が線に来たらタップ！</p>
+      <p className="text-xs text-white/30 mt-3">🐟<Ruby>が線に来たらタップ！</Ruby></p>
     </div>
   );
 }

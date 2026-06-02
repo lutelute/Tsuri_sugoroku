@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getStrikeGreenZone } from '../../game/fishing';
+import Ruby from '../shared/Ruby';
 
 const STRIKE_TIMEOUT_MS = 2800;
 
@@ -63,7 +64,7 @@ export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }:
       {!hasBite ? (
         <div className="text-center">
           <div className="text-6xl mb-4 animate-bounce">🎣</div>
-          <p className="text-xl text-white/60 animate-pulse">当たりを待っています...</p>
+          <p className="text-xl text-white/60 animate-pulse"><Ruby>当たりを待っています...</Ruby></p>
           <div className="mt-4 flex justify-center gap-1">
             {[0, 1, 2].map(i => (
               <div
@@ -77,7 +78,7 @@ export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }:
       ) : (
         <div className="text-center cursor-pointer select-none">
           <p className="text-2xl font-bold text-amber-400 mb-4 animate-pulse">
-            当たり！タップ！
+            <Ruby>当たり！タップ！</Ruby>
           </p>
 
           {/* 円形ゲージ */}
@@ -130,7 +131,7 @@ export default function WaitingPhase({ hasBite, onStrike, onMiss, strikeLevel }:
             </div>
           </div>
 
-          <p className="text-sm text-white/40 mt-2">緑のゾーンでタップ！</p>
+          <p className="text-sm text-white/40 mt-2"><Ruby>緑のゾーンでタップ！</Ruby></p>
         </div>
       )}
     </div>

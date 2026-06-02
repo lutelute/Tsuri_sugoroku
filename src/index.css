@@ -93,6 +93,19 @@ body {
   overflow: hidden;
 }
 
+/* ===== ふりがな（ルビ・子供向け） ===== */
+ruby { ruby-align: center; }
+rt {
+  font-size: 0.56em;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  color: inherit;
+  opacity: 0.9;
+  user-select: none;
+  font-family: var(--font-sans);
+}
+
 /* ===== 和モダン ユーティリティ ===== */
 
 /* 毛筆タイトル */

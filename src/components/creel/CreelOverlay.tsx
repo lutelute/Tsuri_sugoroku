@@ -5,6 +5,7 @@ import { NODE_MAP } from '../../data/boardNodes';
 import type { FishRarity, CaughtFish } from '../../game/types';
 import FishIllustration from '../shared/FishIllustration';
 import Icon from '../shared/Icon';
+import Ruby from '../shared/Ruby';
 
 type SortMode = 'turn' | 'points' | 'size';
 type FilterRarity = 'all' | FishRarity;
@@ -94,10 +95,10 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
         <div>
           <h2 className="text-lg font-mincho text-kin-300 ink-underline flex items-center gap-2">
             <Icon name="creel" size={22} className="text-kin-300" />
-            釣果バッグ
+            <Ruby>釣果バッグ</Ruby>
           </h2>
           <span className="text-sm text-washi/60 tabular-nums">
-            {caughtFish.length}匹 / {totalPoints}pt
+            {caughtFish.length}<Ruby>匹</Ruby> / {totalPoints}pt
           </span>
         </div>
         <button
@@ -121,14 +122,14 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
                 : 'bg-ai-800/40 text-washi/50 border-ai-600/30 hover:bg-ai-700/40'
             }`}
           >
-            {label}
+            <Ruby>{label}</Ruby>
           </button>
         ))}
       </div>
 
       {/* Sort options */}
       <div className="px-4 pt-2 pb-1 flex gap-2 text-xs text-washi/50 font-mincho">
-        <span>並び替え:</span>
+        <span><Ruby>並び替え</Ruby>:</span>
         {([['turn', '釣った順'], ['points', 'ポイント順'], ['size', 'サイズ順']] as const).map(([mode, label]) => (
           <button
             key={mode}
@@ -137,7 +138,7 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
               sortMode === mode ? 'text-kin-300 font-bold' : 'hover:text-washi/70'
             }`}
           >
-            {label}
+            <Ruby>{label}</Ruby>
           </button>
         ))}
       </div>
@@ -147,7 +148,7 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
         {filtered.length === 0 ? (
           <div className="text-center py-16 text-washi/40 font-mincho">
             <Icon name="rod" size={56} className="text-washi/30 mx-auto mb-4" />
-            <p>まだ魚を釣っていません</p>
+            <p><Ruby>まだ魚を釣っていません</Ruby></p>
           </div>
         ) : (
           filtered.map((caught, idx) => {
@@ -167,7 +168,7 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mincho font-bold text-sm text-washi">{fish.name}</span>
+                    <span className="font-mincho font-bold text-sm text-washi"><Ruby>{fish.name}</Ruby></span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mincho ${RARITY_COLORS[fish.rarity]}`}>
                       {RARITY_NAMES[fish.rarity]}
                     </span>
@@ -180,7 +181,7 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
                   <div className="text-xs text-washi/50 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
                     <span className="tabular-nums">サイズ {sizePercent}%</span>
                     <span className="text-kin-300 font-medium tabular-nums">{pts}pt</span>
-                    <span>📍{locationNode?.name ?? caught.caughtAt}</span>
+                    <span>📍<Ruby>{locationNode?.name ?? caught.caughtAt}</Ruby></span>
                     <span className="tabular-nums">Turn {caught.turn}</span>
                   </div>
                 </div>

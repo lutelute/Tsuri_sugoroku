@@ -5,6 +5,7 @@ import type { EquipmentType, EquipmentItem } from '../../game/types';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import type { IconName } from '../shared/Icon';
+import Ruby from '../shared/Ruby';
 
 const TYPE_ICONS: Record<EquipmentType, IconName> = {
   rod: 'rod',
@@ -42,11 +43,11 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
         </button>
         <div className="text-center mb-4">
           <div className="text-5xl mb-3">♨️</div>
-          <h3 className="font-mincho text-kin-300 text-xl font-bold mb-1 ink-underline inline-block">{nodeName}で休憩</h3>
-          <p className="text-washi/60 text-sm mt-2">ゆっくり湯に浸かって体力回復! ¥500を獲得した!</p>
+          <h3 className="font-mincho text-kin-300 text-xl font-bold mb-1 ink-underline inline-block"><Ruby>{nodeName}</Ruby><Ruby>で休憩</Ruby></h3>
+          <p className="text-washi/60 text-sm mt-2"><Ruby>ゆっくり湯に浸かって体力回復! ¥500を獲得した!</Ruby></p>
           <p className="text-sm text-kin-300 mt-1 inline-flex items-center gap-1">
             <Icon name="coin" size={14} className="text-kin-400" />
-            所持金: ¥<span className="tabular-nums">{player.money.toLocaleString()}</span>
+            <Ruby>所持金</Ruby>: ¥<span className="tabular-nums">{player.money.toLocaleString()}</span>
           </p>
         </div>
 
@@ -55,7 +56,7 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
           <div className="mt-4 pt-4 border-t border-kin-500/20">
             <h4 className="font-mincho text-kin-300 text-sm font-bold text-center mb-3 inline-flex items-center justify-center gap-1.5 w-full">
               <Icon name="repair" size={16} className="text-shu-400" />
-              装備修理
+              <Ruby>装備修理</Ruby>
             </h4>
             <div className="space-y-2">
               {damagedItems.map(item => {
@@ -78,10 +79,10 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
                         <Icon name={TYPE_ICONS[item.type]} size={20} className={broken ? 'text-shu-400' : 'text-ai-700'} />
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-mincho text-sm font-bold">{eqData?.name || '???'}</span>
+                            <span className="font-mincho text-sm font-bold"><Ruby>{eqData?.name || '???'}</Ruby></span>
                             {broken && (
                               <span className="seal text-[10px] px-1.5 py-0.5">
-                                故障
+                                <Ruby>故障</Ruby>
                               </span>
                             )}
                           </div>
@@ -105,7 +106,7 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
                         size="sm"
                         disabled={!canAfford}
                       >
-                        {canAfford ? <span className="tabular-nums">¥{cost.toLocaleString()}</span> : '金欠'}
+                        {canAfford ? <span className="tabular-nums">¥{cost.toLocaleString()}</span> : <Ruby>金欠</Ruby>}
                       </Button>
                     </div>
                   </div>
@@ -117,7 +118,7 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
 
         {damagedItems.length === 0 && (
           <p className="text-center text-xs text-washi/30 mt-3">
-            修理が必要な装備はありません
+            <Ruby>修理が必要な装備はありません</Ruby>
           </p>
         )}
 

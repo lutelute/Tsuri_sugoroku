@@ -16,6 +16,7 @@ import InventoryPanel from '../inventory/InventoryPanel';
 import RestOverlay from '../rest/RestOverlay';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
+import Ruby from '../shared/Ruby';
 
 export default function GameScreen() {
   const {
@@ -78,14 +79,14 @@ export default function GameScreen() {
 
         {turnPhase === 'path_selection' && (
           <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-amber-600/90 px-4 py-2 rounded-lg text-sm font-bold z-20 animate-bounce shadow-lg">
-            光っているマスをタップ！ (🎲{rouletteResult})
+            <Ruby>光っているマスをタップ！</Ruby> (🎲{rouletteResult})
           </div>
         )}
 
         {turnPhase === 'node_action' && node && (
           <div className="absolute top-2 left-1/2 animate-slide-in-down bg-blue-600/90 px-4 py-2 rounded-lg text-sm z-20 shadow-lg flex items-center gap-2">
             <span className="animate-icon-pulse inline-block">📍</span>
-            <span>{node.name} に到着！</span>
+            <span><Ruby>{node.name}</Ruby> <Ruby>に到着！</Ruby></span>
           </div>
         )}
 
@@ -98,7 +99,7 @@ export default function GameScreen() {
               size="lg"
               className="w-full shadow-2xl font-mincho tracking-widest"
             >
-              <span className="inline-flex items-center justify-center gap-2"><Icon name="dice" size={20} /> サイコロを振る</span>
+              <span className="inline-flex items-center justify-center gap-2"><Icon name="dice" size={20} /> <Ruby>サイコロを振る</Ruby></span>
             </Button>
           </div>
         )}
@@ -107,7 +108,7 @@ export default function GameScreen() {
         {turnPhase === 'action_choice' && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-xs space-y-2">
             <div className="text-center text-xs text-white/70 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1.5">
-              📍 {node?.name || '???'} — 何をする？
+              📍 <Ruby>{node?.name || '???'}</Ruby> — <Ruby>何をする？</Ruby>
             </div>
             {canDoActionAgain && (
               <Button
@@ -116,7 +117,7 @@ export default function GameScreen() {
                 size="md"
                 className="w-full shadow-xl"
               >
-                {actionLabel}
+                <Ruby>{actionLabel}</Ruby>
               </Button>
             )}
             <Button
@@ -125,7 +126,7 @@ export default function GameScreen() {
               size="md"
               className="w-full shadow-xl"
             >
-              ターンを終了する
+              <Ruby>ターンを終了する</Ruby>
             </Button>
           </div>
         )}
@@ -195,9 +196,9 @@ export default function GameScreen() {
           <div className="bg-gradient-to-b from-amber-900/80 to-amber-950/80 rounded-2xl border border-amber-500/20 p-8 text-center max-w-sm w-[90%]">
             <div className="text-5xl mb-4">🏁</div>
             <h3 className="text-xl font-bold mb-2">ゴール！</h3>
-            <p className="text-white/60 mb-3">{player.name}がゴールに到達した！</p>
+            <p className="text-white/60 mb-3">{player.name}が<Ruby>ゴールに到達した！</Ruby></p>
             <p className="text-amber-300 font-bold text-lg">
-              賞金 ¥{(GOAL_MONEY_REWARD[player.finishOrder ?? 0] ?? GOAL_MONEY_REWARD[GOAL_MONEY_REWARD.length - 1]).toLocaleString()} 獲得！
+              <Ruby>賞金</Ruby> ¥{(GOAL_MONEY_REWARD[player.finishOrder ?? 0] ?? GOAL_MONEY_REWARD[GOAL_MONEY_REWARD.length - 1]).toLocaleString()} <Ruby>獲得！</Ruby>
             </p>
           </div>
         </div>

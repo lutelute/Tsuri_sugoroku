@@ -6,6 +6,7 @@ import MapNode from './MapNode';
 import MapEdge from './MapEdge';
 import PlayerToken from './PlayerToken';
 import { LAND_PATHS, ISLANDS, REGION_LABELS } from './landmass';
+import Ruby from '../shared/Ruby';
 
 const DEFAULT_VIEWBOX = { x: -5, y: -5, width: 180, height: 180 };
 const MIN_WIDTH = 50;
@@ -414,7 +415,7 @@ export default function JapanMap() {
                 onClick={() => selectPath(i)}
                 className="bg-amber-600/90 hover:bg-amber-500 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg backdrop-blur-sm transition-colors cursor-pointer"
               >
-                {n.name} <span className="opacity-70">({path.length - 1}マス)</span>
+                <Ruby>{n.name}</Ruby> <span className="opacity-70">({path.length - 1}マス)</span>
               </button>
             );
           })}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { loadScoreRankings, loadEncyclopediaRankings } from '../../lib/firestore';
 import type { RankingEntry } from '../../game/types';
 import Icon from '../shared/Icon';
+import Ruby from '../shared/Ruby';
 
 type RankingTab = 'score' | 'encyclopedia';
 
@@ -30,7 +31,7 @@ export default function RankingOverlay({ onClose }: RankingOverlayProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-mincho font-bold text-kin-300 ink-underline flex items-center gap-2">
             <Icon name="trophy" size={22} className="text-kin-400" />
-            番付
+            <Ruby>番付</Ruby>
           </h2>
           <button
             onClick={onClose}
@@ -50,7 +51,7 @@ export default function RankingOverlay({ onClose }: RankingOverlayProps) {
                 ? 'bg-kin-500/20 text-kin-300 border-kin-500/40'
                 : 'bg-ai-800/50 text-washi/50 border-transparent hover:bg-ai-700/50'}`}
           >
-            スコア番付
+            <Ruby>スコア番付</Ruby>
           </button>
           <button
             onClick={() => setTab('encyclopedia')}
@@ -59,7 +60,7 @@ export default function RankingOverlay({ onClose }: RankingOverlayProps) {
                 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                 : 'bg-ai-800/50 text-washi/50 border-transparent hover:bg-ai-700/50'}`}
           >
-            図鑑コンプ率
+            <Ruby>図鑑コンプ率</Ruby>
           </button>
         </div>
       </div>
@@ -67,9 +68,9 @@ export default function RankingOverlay({ onClose }: RankingOverlayProps) {
       {/* ランキング一覧 */}
       <div className="p-4">
         {loading ? (
-          <p className="text-center text-washi/40 py-8 font-mincho">読み込み中...</p>
+          <p className="text-center text-washi/40 py-8 font-mincho"><Ruby>読み込み中...</Ruby></p>
         ) : rankings.length === 0 ? (
-          <p className="text-center text-washi/40 py-8 font-mincho">まだ記録がありません</p>
+          <p className="text-center text-washi/40 py-8 font-mincho"><Ruby>まだ記録がありません</Ruby></p>
         ) : (
           <div className="space-y-2">
             {rankings.map((entry, i) => (
@@ -98,7 +99,7 @@ export default function RankingOverlay({ onClose }: RankingOverlayProps) {
                     <div className="flex gap-3 text-xs text-washi/40 mt-0.5">
                       <span className="tabular-nums">{new Date(entry.date).toLocaleDateString('ja-JP')}</span>
                       <span className="inline-flex items-center gap-1 tabular-nums">
-                        <Icon name="fish" size={13} className="text-ai-300" />{entry.fishCount}匹
+                        <Icon name="fish" size={13} className="text-ai-300" />{entry.fishCount}<Ruby>匹</Ruby>
                       </span>
                       <span className="inline-flex items-center gap-1 tabular-nums">
                         <Icon name="book" size={13} className="text-ai-300" />{entry.encyclopediaRate}%

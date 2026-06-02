@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ProgressBar from '../shared/ProgressBar';
+import Ruby from '../shared/Ruby';
 
 interface ReelingPhaseProps {
   progress: number;
@@ -31,7 +32,7 @@ export default function ReelingPhase({ progress, tension, tensionMax, timeLimit,
       className="flex flex-col items-center justify-center h-full cursor-pointer select-none touch-none"
       onPointerDown={onTap}
     >
-      <p className="text-lg font-bold mb-6 text-white/80">リズミカルにタップ！</p>
+      <p className="text-lg font-bold mb-6 text-white/80"><Ruby>リズミカルにタップ！</Ruby></p>
 
       {/* 魚のアイコン */}
       <div className="text-5xl mb-6 animate-bounce" style={{ animationDuration: '0.5s' }}>
@@ -76,17 +77,17 @@ export default function ReelingPhase({ progress, tension, tensionMax, timeLimit,
 
       {tensionRatio > 0.7 && (
         <p className="text-red-400 text-sm animate-pulse font-bold">
-          テンション高い！少し待とう！
+          <Ruby>テンション高い！少し待とう！</Ruby>
         </p>
       )}
 
       {timeRatio <= 0.2 && timeRatio > 0 && (
         <p className="text-amber-400 text-xs animate-pulse mt-1">
-          時間がない！急いで！
+          <Ruby>時間がない！急いで！</Ruby>
         </p>
       )}
 
-      <p className="text-xs text-white/30 mt-4">画面をタップして巻き上げ</p>
+      <p className="text-xs text-white/30 mt-4"><Ruby>画面をタップして巻き上げ</Ruby></p>
     </div>
   );
 }

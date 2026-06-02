@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Fish, PlayerEquipment } from '../../game/types';
 import { getEffectiveLevel } from '../../game/fishing';
 import ProgressBar from '../shared/ProgressBar';
+import Ruby from '../shared/Ruby';
 
 const ROUNDS_REQUIRED: Record<string, number> = {
   common: 7,
@@ -139,7 +140,7 @@ export default function ReactionPhase({ fish, equipment, onSuccess, onFail }: Re
       className="flex flex-col items-center justify-center h-full select-none cursor-pointer touch-none"
       onPointerDown={handleTap}
     >
-      <p className="text-lg font-bold mb-2 text-white/80">早押しリアクション！</p>
+      <p className="text-lg font-bold mb-2 text-white/80"><Ruby>早押しリアクション！</Ruby></p>
 
       <div className="mb-3 text-sm text-white/50">
         ラウンド {round}/{effectiveRounds}
@@ -162,7 +163,7 @@ export default function ReactionPhase({ fish, equipment, onSuccess, onFail }: Re
         className={`w-40 h-40 rounded-full flex items-center justify-center transition-all duration-100 ${circleColor}`}
       >
         {roundState === 'waiting' && (
-          <span className="text-3xl text-white/40">待って...</span>
+          <span className="text-3xl text-white/40"><Ruby>待って...</Ruby></span>
         )}
         {roundState === 'ready' && (
           <span className="text-6xl text-white font-black animate-pulse">!</span>
@@ -180,11 +181,11 @@ export default function ReactionPhase({ fish, equipment, onSuccess, onFail }: Re
         <p className={`text-sm font-bold mt-4 ${
           roundState === 'foul' ? 'text-yellow-400' : 'text-cyan-300'
         }`}>
-          {message}
+          <Ruby>{message}</Ruby>
         </p>
       )}
 
-      <p className="text-xs text-white/30 mt-6">赤く光ったら即タップ！</p>
+      <p className="text-xs text-white/30 mt-6"><Ruby>赤く光ったら即タップ！</Ruby></p>
     </div>
   );
 }

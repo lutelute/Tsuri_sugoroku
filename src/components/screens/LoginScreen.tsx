@@ -3,6 +3,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useGameStore } from '../../store/useGameStore';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
+import Ruby from '../shared/Ruby';
 
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
@@ -32,16 +33,16 @@ export default function LoginScreen() {
             <Icon name="login" size={26} className="text-shu-400" />
           </span>
           <h2 className="text-3xl font-mincho text-kin-300 text-center ink-underline">
-            {mode === 'login' ? 'ログイン' : '新規登録'}
+            <Ruby>{mode === 'login' ? 'ログイン' : '新規登録'}</Ruby>
           </h2>
         </div>
         <p className="text-sm text-washi/50 text-center mb-6 mt-3">
-          データをクラウドに保存して、どの端末からでも遊べます
+          <Ruby>データをクラウドに保存して、どの端末からでも遊べます</Ruby>
         </p>
 
         {error && (
           <div className="mb-4 p-3 rounded-xl bg-shu-500/20 border border-shu-500/30 text-shu-400 text-sm text-center whitespace-pre-line">
-            {error}
+            <Ruby>{error}</Ruby>
           </div>
         )}
 
@@ -82,14 +83,14 @@ export default function LoginScreen() {
             className="w-full flex items-center justify-center gap-2"
           >
             <Icon name="login" size={20} />
-            {loading ? '処理中...' : mode === 'login' ? 'ログイン' : '登録する'}
+            <Ruby>{loading ? '処理中...' : mode === 'login' ? 'ログイン' : '登録する'}</Ruby>
           </Button>
 
           <button
             onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); clearError(); }}
             className="text-sm font-mincho text-kin-300/70 hover:text-kin-300 transition-colors cursor-pointer"
           >
-            {mode === 'login' ? 'アカウントを作成する' : 'ログインに戻る'}
+            <Ruby>{mode === 'login' ? 'アカウントを作成する' : 'ログインに戻る'}</Ruby>
           </button>
 
           <div className="relative my-2">
@@ -97,7 +98,7 @@ export default function LoginScreen() {
               <div className="w-full border-t border-kin-500/20" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="panel-ai px-3 py-0.5 rounded-full text-washi/40">または</span>
+              <span className="panel-ai px-3 py-0.5 rounded-full text-washi/40"><Ruby>または</Ruby></span>
             </div>
           </div>
 
@@ -111,7 +112,7 @@ export default function LoginScreen() {
             disabled={loading}
             className="w-full text-center"
           >
-            {loading ? '処理中...' : 'ゲストで遊ぶ'}
+            <Ruby>{loading ? '処理中...' : 'ゲストで遊ぶ'}</Ruby>
           </Button>
         </div>
       </div>

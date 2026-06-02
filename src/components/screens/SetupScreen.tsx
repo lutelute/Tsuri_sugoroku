@@ -7,6 +7,7 @@ import { lookupUserByUsername, loadUserEquipment, loadUserMoney, loadUserEncyclo
 import { verifyAuth } from '../../lib/firebase';
 import type { PlayerEquipment } from '../../game/types';
 import Button from '../shared/Button';
+import Ruby from '../shared/Ruby';
 
 interface LinkedUser {
   uid: string;
@@ -217,11 +218,11 @@ export default function SetupScreen() {
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 overflow-y-auto py-6">
       <div className="panel-ai rounded-2xl p-6 sm:p-8 w-full max-w-md">
-        <h2 className="font-mincho text-2xl font-bold text-center mb-7 text-kin-300 ink-underline">ゲーム設定</h2>
+        <h2 className="font-mincho text-2xl font-bold text-center mb-7 text-kin-300 ink-underline"><Ruby>ゲーム設定</Ruby></h2>
 
         {/* プレイヤー人数 */}
         <div className="mb-6">
-          <label className="block text-sm text-white/60 mb-2">プレイヤー人数</label>
+          <label className="block text-sm text-white/60 mb-2"><Ruby>プレイヤー人数</Ruby></label>
           <div className="flex gap-2">
             {[1, 2, 3, 4].map(n => (
               <button
@@ -233,7 +234,7 @@ export default function SetupScreen() {
                     : 'bg-white/10 text-white/60 hover:bg-white/20'
                   }`}
               >
-                {n}人
+                {n}<Ruby>人</Ruby>
               </button>
             ))}
           </div>
@@ -263,13 +264,13 @@ export default function SetupScreen() {
               {linkedUsers[i] ? (
                 <div className="flex items-center justify-between text-xs mt-1">
                   <span className="text-cyan-300">
-                    🔗 {linkedUsers[i]!.displayName}（登録ユーザー）
+                    🔗 {linkedUsers[i]!.displayName}（<Ruby>登録ユーザー</Ruby>）
                   </span>
                   <button
                     onClick={() => unlinkUser(i)}
                     className="text-white/40 hover:text-red-400 transition cursor-pointer"
                   >
-                    解除
+                    <Ruby>解除</Ruby>
                   </button>
                 </div>
               ) : (
@@ -309,7 +310,7 @@ export default function SetupScreen() {
                       disabled={searching[i] || !searchInputs[i].trim() || !passwordInputs[i]}
                       className="text-xs bg-cyan-600/50 hover:bg-cyan-600/80 disabled:opacity-30 px-3 py-1.5 rounded-lg transition cursor-pointer disabled:cursor-default"
                     >
-                      {searching[i] ? '...' : '紐付'}
+                      {searching[i] ? '...' : <Ruby>紐付</Ruby>}
                     </button>
                   </div>
                   {currentUser && !isGuest && !linkedUsers.some(u => u?.uid === currentUser.uid) && (
@@ -317,11 +318,11 @@ export default function SetupScreen() {
                       onClick={() => linkCurrentUser(i)}
                       className="text-xs text-cyan-300/60 hover:text-cyan-300 mt-1.5 transition cursor-pointer"
                     >
-                      自分のアカウントを紐付け
+                      <Ruby>自分のアカウントを紐付け</Ruby>
                     </button>
                   )}
                   {searchErrors[i] && (
-                    <p className="text-xs text-red-400 mt-1">{searchErrors[i]}</p>
+                    <p className="text-xs text-red-400 mt-1"><Ruby>{searchErrors[i]}</Ruby></p>
                   )}
                 </div>
               )}
@@ -332,7 +333,7 @@ export default function SetupScreen() {
         {/* 引き継ぎモード */}
         {hasLinkedUser && (
           <div className="mb-6">
-            <label className="block text-sm text-white/60 mb-2">装備・お金の引き継ぎ</label>
+            <label className="block text-sm text-white/60 mb-2"><Ruby>装備・お金の引き継ぎ</Ruby></label>
             <div className="flex gap-2">
               <button
                 onClick={() => setCarryOver(true)}
@@ -342,7 +343,7 @@ export default function SetupScreen() {
                     : 'bg-white/10 text-white/60 hover:bg-white/20'
                   }`}
               >
-                引き継ぐ
+                <Ruby>引き継ぐ</Ruby>
               </button>
               <button
                 onClick={() => setCarryOver(false)}
@@ -352,21 +353,21 @@ export default function SetupScreen() {
                     : 'bg-white/10 text-white/60 hover:bg-white/20'
                   }`}
               >
-                引き継がない
+                <Ruby>引き継がない</Ruby>
               </button>
             </div>
             <p className="text-xs text-white/40 mt-1.5">
-              {carryOver
+              <Ruby>{carryOver
                 ? '前回の装備・所持金を引き継いでスタート'
                 : '全員初期装備・初期所持金で公平にスタート'
-              }
+              }</Ruby>
             </p>
           </div>
         )}
 
         {/* ターン数設定 */}
         <div className="mb-8">
-          <label className="block text-sm text-white/60 mb-2">最大ターン数</label>
+          <label className="block text-sm text-white/60 mb-2"><Ruby>最大ターン数</Ruby></label>
           <div className="flex gap-2">
             {[30, 50, 80, 0].map(n => (
               <button
@@ -378,7 +379,7 @@ export default function SetupScreen() {
                     : 'bg-white/10 text-white/60 hover:bg-white/20'
                   }`}
               >
-                {n === 0 ? '無制限' : `${n}T`}
+                {n === 0 ? <Ruby>無制限</Ruby> : `${n}T`}
               </button>
             ))}
           </div>
@@ -391,7 +392,7 @@ export default function SetupScreen() {
             variant="secondary"
             className="flex-1"
           >
-            戻る
+            <Ruby>戻る</Ruby>
           </Button>
           <Button
             onClick={handleStart}
@@ -399,7 +400,7 @@ export default function SetupScreen() {
             className="flex-1"
             disabled={starting}
           >
-            {starting ? '読込中...' : 'はじめる'}
+            <Ruby>{starting ? '読込中...' : 'はじめる'}</Ruby>
           </Button>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { loadAllUsers } from '../../lib/firestore';
 import type { UserInfo } from '../../game/types';
 import Icon from '../shared/Icon';
+import Ruby from '../shared/Ruby';
 
 interface UserListOverlayProps {
   onClose: () => void;
@@ -33,10 +34,10 @@ export default function UserListOverlay({ onClose }: UserListOverlayProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-mincho text-kin-300 ink-underline flex items-center gap-2">
             <Icon name="users" size={22} className="text-kin-300" />
-            釣り人一覧
+            <Ruby>釣り人一覧</Ruby>
           </h2>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-ai-200 tabular-nums">{users.length}人</span>
+            <span className="text-sm text-ai-200 tabular-nums">{users.length}<Ruby>人</Ruby></span>
             <button
               onClick={onClose}
               aria-label="閉じる"
@@ -51,9 +52,9 @@ export default function UserListOverlay({ onClose }: UserListOverlayProps) {
       {/* ユーザー一覧 */}
       <div className="p-4">
         {loading ? (
-          <p className="text-center text-washi/40 py-8 font-mincho">読み込み中...</p>
+          <p className="text-center text-washi/40 py-8 font-mincho"><Ruby>読み込み中...</Ruby></p>
         ) : users.length === 0 ? (
-          <p className="text-center text-washi/40 py-8 font-mincho">登録ユーザーがいません</p>
+          <p className="text-center text-washi/40 py-8 font-mincho"><Ruby>登録ユーザーがいません</Ruby></p>
         ) : (
           <div className="space-y-2">
             {users.map((user) => (
@@ -68,7 +69,7 @@ export default function UserListOverlay({ onClose }: UserListOverlayProps) {
                   <span className="font-mincho text-washi truncate block">{user.displayName}</span>
                   {user.lastLoginAt && (
                     <span className="text-xs text-ai-300 tabular-nums">
-                      最終ログイン: {new Date(user.lastLoginAt).toLocaleDateString('ja-JP')}
+                      <Ruby>最終ログイン</Ruby>: {new Date(user.lastLoginAt).toLocaleDateString('ja-JP')}
                     </span>
                   )}
                 </div>

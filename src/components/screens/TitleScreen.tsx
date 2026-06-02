@@ -4,8 +4,10 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { loadUserEncyclopedia, resetUserEncyclopedia } from '../../lib/firestore';
 import { loadEncyclopedia, saveEncyclopedia } from '../../utils/storage';
 import { APP_VERSION } from '../../game/constants';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
+import Ruby from '../shared/Ruby';
 import RankingOverlay from '../ranking/RankingOverlay';
 import EncyclopediaOverlay from '../encyclopedia/EncyclopediaOverlay';
 import UserListOverlay from '../users/UserListOverlay';
@@ -17,6 +19,9 @@ export default function TitleScreen() {
 
   const user = useAuthStore(s => s.user);
   const signOut = useAuthStore(s => s.signOut);
+
+  const furiganaEnabled = useSettingsStore(s => s.furiganaEnabled);
+  const toggleFurigana = useSettingsStore(s => s.toggleFurigana);
 
   const [showRanking, setShowRanking] = useState(false);
   const [showEncyclopedia, setShowEncyclopedia] = useState(false);
@@ -51,6 +56,16 @@ export default function TitleScreen() {
 
   return (
     <div className="relative flex flex-col items-center justify-center h-full px-4 select-none">
+      {/* ふりがな（ルビ）ON/OFF — 子供向け */}
+      <button
+        onClick={toggleFurigana}
+        className="absolute top-4 left-4 text-xs px-2.5 py-1 rounded-full bg-ai-800/55 border border-kin-500/25 text-washi/70 hover:text-washi hover:bg-ai-700/60 transition cursor-pointer z-10"
+        title="ふりがなの表示を切り替え"
+        aria-pressed={furiganaEnabled}
+      >
+        ふりがな {furiganaEnabled ? 'ON' : 'OFF'}
+      </button>
+
       {/* ユーザー情報 */}
       <div className="absolute top-4 right-4 flex items-center gap-3">
         {user ? (
@@ -81,19 +96,19 @@ export default function TitleScreen() {
             className="font-brush text-6xl sm:text-7xl text-washi leading-none animate-ink-rise"
             style={{ textShadow: '0 6px 22px rgba(0,0,0,0.55)' }}
           >
-            釣りすごろく
+            <Ruby>釣りすごろく</Ruby>
           </h1>
           {/* 朱印 */}
           <span
             className="seal animate-seal-stamp font-mincho absolute -right-4 -bottom-4 w-12 h-12 rounded-md text-[10px] leading-[1.05] font-bold flex-col"
             style={{ animationDelay: '0.55s' }}
           >
-            <span>日本</span>
-            <span>一周</span>
+            <span><Ruby>日本</Ruby></span>
+            <span><Ruby>一周</Ruby></span>
           </span>
         </div>
         <p className="font-mincho text-base text-kin-300/90 mt-6 tracking-[0.32em] animate-ink-rise" style={{ animationDelay: '0.15s' }}>
-          日本列島 釣り旅
+          <Ruby>日本列島 釣り旅</Ruby>
         </p>
         <p className="text-xs text-washi/30 mt-1">v{APP_VERSION}</p>
       </div>
@@ -149,25 +164,25 @@ export default function TitleScreen() {
           onClick={() => setShowRanking(true)}
           className="flex-1 py-2.5 rounded-xl bg-ai-800/50 border border-kin-500/25 text-sm text-washi/75 hover:bg-ai-700/60 hover:text-washi transition cursor-pointer flex flex-col items-center gap-1"
         >
-          <Icon name="trophy" size={20} className="text-kin-300" /> 番付
+          <Icon name="trophy" size={20} className="text-kin-300" /> <Ruby>番付</Ruby>
         </button>
         <button
           onClick={handleShowEncyclopedia}
           className="flex-1 py-2.5 rounded-xl bg-ai-800/50 border border-kin-500/25 text-sm text-washi/75 hover:bg-ai-700/60 hover:text-washi transition cursor-pointer flex flex-col items-center gap-1"
         >
-          <Icon name="book" size={20} className="text-kin-300" /> 図鑑
+          <Icon name="book" size={20} className="text-kin-300" /> <Ruby>図鑑</Ruby>
         </button>
         <button
           onClick={() => setShowUsers(true)}
           className="flex-1 py-2.5 rounded-xl bg-ai-800/50 border border-kin-500/25 text-sm text-washi/75 hover:bg-ai-700/60 hover:text-washi transition cursor-pointer flex flex-col items-center gap-1"
         >
-          <Icon name="users" size={20} className="text-kin-300" /> 釣り人
+          <Icon name="users" size={20} className="text-kin-300" /> <Ruby>釣り人</Ruby>
         </button>
       </div>
 
       {/* フッター */}
       <p className="absolute bottom-4 text-xs text-washi/35 font-mincho tracking-wider">
-        稚内から那覇まで、日本の魚を釣り尽くせ
+        <Ruby>稚内から那覇まで、日本の魚を釣り尽くせ</Ruby>
       </p>
     </div>
   );

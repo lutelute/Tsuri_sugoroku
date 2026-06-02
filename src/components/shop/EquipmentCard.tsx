@@ -2,6 +2,7 @@ import type { Equipment, EquipmentType } from '../../game/types';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import type { IconName } from '../shared/Icon';
+import Ruby from '../shared/Ruby';
 
 const TYPE_ICONS: Record<EquipmentType, IconName> = {
   rod: 'rod',
@@ -36,10 +37,10 @@ export default function EquipmentCard({ equipment, ownedCount, canAfford, canBuy
         <div>
           <div className="flex items-center gap-1.5">
             <Icon name={TYPE_ICONS[equipment.type]} size={18} className="text-kin-300 shrink-0" />
-            <span className="font-mincho font-bold text-sm text-washi">{equipment.name}</span>
+            <span className="font-mincho font-bold text-sm text-washi"><Ruby>{equipment.name}</Ruby></span>
             {ownedCount > 0 && (
               <span className="seal text-[10px] rounded-full px-1.5 py-0.5 tabular-nums">
-                所持 x{ownedCount}
+                <Ruby>所持</Ruby> x{ownedCount}
               </span>
             )}
           </div>
@@ -49,7 +50,7 @@ export default function EquipmentCard({ equipment, ownedCount, canAfford, canBuy
         </div>
         <div className="text-right text-sm">
           {equipment.cost === 0 ? (
-            <span className="text-emerald-300">初期装備</span>
+            <span className="text-emerald-300"><Ruby>初期装備</Ruby></span>
           ) : (
             <span className="inline-flex items-center gap-1 text-kin-300 tabular-nums">
               <Icon name="coin" size={14} className="text-kin-400" />
@@ -59,8 +60,8 @@ export default function EquipmentCard({ equipment, ownedCount, canAfford, canBuy
         </div>
       </div>
 
-      <p className="text-xs text-washi/50 mb-1">{equipment.description}</p>
-      <p className="text-xs text-ai-200/80">{equipment.effect}</p>
+      <p className="text-xs text-washi/50 mb-1"><Ruby>{equipment.description}</Ruby></p>
+      <p className="text-xs text-ai-200/80"><Ruby>{equipment.effect}</Ruby></p>
 
       {canBuy && (
         <Button
@@ -70,7 +71,7 @@ export default function EquipmentCard({ equipment, ownedCount, canAfford, canBuy
           disabled={!canAfford}
           className="w-full mt-2"
         >
-          {canAfford ? '購入する' : 'お金が足りない'}
+          <Ruby>{canAfford ? '購入する' : 'お金が足りない'}</Ruby>
         </Button>
       )}
     </div>

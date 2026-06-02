@@ -5,6 +5,7 @@ import { saveEncyclopedia } from '../../utils/storage';
 import { saveUserEncyclopedia, saveUserScore } from '../../lib/firestore';
 import { FISH_DATABASE } from '../../data/fishDatabase';
 import Button from '../shared/Button';
+import Ruby from '../shared/Ruby';
 
 export default function ResultScreen() {
   const { players, encyclopedias, resetGame } = useGameStore();
@@ -60,9 +61,9 @@ export default function ResultScreen() {
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 overflow-y-auto py-8">
       <h1 className="font-brush text-5xl mb-2 kinpaku kinpaku-shimmer animate-ink-rise">
-        釣果番付
+        <Ruby>釣果番付</Ruby>
       </h1>
-      <p className="text-washi/55 mb-6 font-mincho tracking-widest">お疲れ様でした</p>
+      <p className="text-washi/55 mb-6 font-mincho tracking-widest"><Ruby>お疲れ様でした</Ruby></p>
 
       <div className="w-full max-w-lg space-y-4">
         {results.map((result, index) => (
@@ -76,7 +77,7 @@ export default function ResultScreen() {
           >
             {index === 0 && (
               <span className="seal animate-seal-stamp absolute -top-3 -right-2 w-12 h-12 rounded-md font-mincho text-xs font-bold" style={{ animationDelay: '0.3s' }}>
-                優勝
+                <Ruby>優勝</Ruby>
               </span>
             )}
             <div className="flex items-center justify-between mb-3">
@@ -96,7 +97,7 @@ export default function ResultScreen() {
             {/* スコア内訳 */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-white/60">
               <div className="flex justify-between">
-                <span>🐟 魚ポイント</span>
+                <span>🐟 <Ruby>魚</Ruby>ポイント</span>
                 <span>{result.score.fishPoints.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
@@ -104,33 +105,33 @@ export default function ResultScreen() {
                 <span>{result.score.rarityBonus.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span>🗾 地域制覇</span>
+                <span>🗾 <Ruby>地域制覇</Ruby></span>
                 <span>{result.score.regionBonus.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span>📖 図鑑</span>
+                <span>📖 <Ruby>図鑑</Ruby></span>
                 <span>{result.score.encyclopediaBonus.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span>🌟 巨大魚</span>
+                <span>🌟 <Ruby>巨大魚</Ruby></span>
                 <span>{result.score.giantFishBonus.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span>🏁 ゴール順位</span>
+                <span>🏁 ゴール<Ruby>順位</Ruby></span>
                 <span>{result.score.finishBonus.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span>💰 残金</span>
+                <span>💰 <Ruby>残金</Ruby></span>
                 <span>{result.score.moneyBonus.toLocaleString()}</span>
               </div>
             </div>
 
             {/* 統計 */}
             <div className="mt-3 pt-3 border-t border-white/10 flex gap-4 text-xs text-white/40">
-              <span>釣った魚: {result.player.caughtFish.length}匹</span>
-              <span>残金: ¥{result.player.money.toLocaleString()}</span>
+              <span><Ruby>釣った魚</Ruby>: {result.player.caughtFish.length}<Ruby>匹</Ruby></span>
+              <span><Ruby>残金</Ruby>: ¥{result.player.money.toLocaleString()}</span>
               {result.player.finishOrder !== null && (
-                <span>{result.player.finishOrder + 1}位でゴール</span>
+                <span>{result.player.finishOrder + 1}<Ruby>位でゴール</Ruby></span>
               )}
             </div>
           </div>
@@ -139,7 +140,7 @@ export default function ResultScreen() {
 
       <div className="mt-8">
         <Button onClick={resetGame} variant="gold" size="lg">
-          タイトルに戻る
+          <Ruby>タイトルに戻る</Ruby>
         </Button>
       </div>
     </div>

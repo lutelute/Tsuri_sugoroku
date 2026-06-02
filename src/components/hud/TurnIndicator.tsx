@@ -1,6 +1,7 @@
 import { useGameStore } from '../../store/useGameStore';
 import { NODE_MAP } from '../../data/boardNodes';
 import { computeDistanceToGoal } from '../../utils/pathfinding';
+import Ruby from '../shared/Ruby';
 
 const distanceToGoal = computeDistanceToGoal();
 
@@ -34,7 +35,7 @@ export default function TurnIndicator() {
     >
       <div className="flex items-center gap-3">
         <span className="font-mincho text-washi/55 transition-opacity duration-300">
-          {turn}{settings.maxTurns > 0 ? `/${settings.maxTurns}` : ''} 巡目
+          {turn}{settings.maxTurns > 0 ? `/${settings.maxTurns}` : ''} <Ruby>巡目</Ruby>
         </span>
         <span className="text-kin-500/40">｜</span>
         <span
@@ -51,13 +52,13 @@ export default function TurnIndicator() {
             x{player.fishBonusMultiplier} ({player.fishBonusTurnsLeft}T)
           </span>
         )}
-        {node && <span className="mr-2 font-mincho">{node.name}</span>}
+        {node && <span className="mr-2 font-mincho"><Ruby>{node.name}</Ruby></span>}
         {remainingDist !== undefined && remainingDist > 0 && (
           <span className="text-kin-300/75 text-xs">
             ゴールまで {remainingDist} マス
           </span>
         )}
-        <span>{phaseLabels[turnPhase] || ''}</span>
+        <span><Ruby>{phaseLabels[turnPhase] || ''}</Ruby></span>
       </div>
     </div>
   );

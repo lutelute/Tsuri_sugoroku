@@ -2,6 +2,7 @@ import type { Fish } from '../../game/types';
 import { FISH_SELL_PRICE } from '../../game/constants';
 import Button from '../shared/Button';
 import FishIllustration from '../shared/FishIllustration';
+import Ruby from '../shared/Ruby';
 
 const RARITY_LABELS: Record<string, { label: string; color: string }> = {
   common: { label: 'コモン', color: 'text-gray-300' },
@@ -44,9 +45,9 @@ export default function FishCaughtModal({ fish, size, escaped, tairyouCount, isN
         {escaped ? (
           <>
             <div className="text-6xl mb-4">💨</div>
-            <h3 className="font-mincho text-2xl font-bold text-shu-400 mb-2">逃げられた…</h3>
-            <p className="text-washi/65 mb-2">{fish.name}に逃げられてしまった</p>
-            <p className="text-sm text-washi/45 mb-6">{fish.description}</p>
+            <h3 className="font-mincho text-2xl font-bold text-shu-400 mb-2"><Ruby>逃げられた…</Ruby></h3>
+            <p className="text-washi/65 mb-2"><Ruby>{fish.name}</Ruby><Ruby>に逃げられてしまった</Ruby></p>
+            <p className="text-sm text-washi/45 mb-6"><Ruby>{fish.description}</Ruby></p>
           </>
         ) : (
           <>
@@ -61,41 +62,41 @@ export default function FishCaughtModal({ fish, size, escaped, tairyouCount, isN
                 </span>
               )}
             </div>
-            <h3 className="font-mincho text-2xl font-bold mb-1 text-washi">{fish.name}</h3>
+            <h3 className="font-mincho text-2xl font-bold mb-1 text-washi"><Ruby>{fish.name}</Ruby></h3>
             <p className={`text-sm font-bold mb-3 ${rarity.color}`}>{rarity.label}</p>
-            <p className="text-sm text-washi/65 mb-3">{fish.description}</p>
+            <p className="text-sm text-washi/65 mb-3"><Ruby>{fish.description}</Ruby></p>
             <div className="flex flex-wrap justify-center gap-1.5 mb-4">
-              <span className="text-xs bg-ai-500/30 text-ai-200 px-2 py-0.5 rounded-full border border-ai-300/20">{fish.habitat}</span>
-              <span className="text-xs bg-kin-500/20 text-kin-300 px-2 py-0.5 rounded-full border border-kin-500/25">{fish.season}</span>
+              <span className="text-xs bg-ai-500/30 text-ai-200 px-2 py-0.5 rounded-full border border-ai-300/20"><Ruby>{fish.habitat}</Ruby></span>
+              <span className="text-xs bg-kin-500/20 text-kin-300 px-2 py-0.5 rounded-full border border-kin-500/25"><Ruby>{fish.season}</Ruby></span>
             </div>
 
             <div className="grid grid-cols-4 gap-2 mb-6 text-sm">
               <div className="bg-ai-950/45 rounded-lg p-2 border border-kin-500/12">
-                <div className="text-washi/45 text-xs">重量</div>
+                <div className="text-washi/45 text-xs"><Ruby>重量</Ruby></div>
                 <div className="font-bold text-washi">{weight}kg</div>
               </div>
               <div className="bg-ai-950/45 rounded-lg p-2 border border-kin-500/12">
                 <div className="text-washi/45 text-xs">サイズ</div>
-                <div className="font-bold text-washi">{(size * 100).toFixed(0)}%<span className="text-xs ml-0.5">({sizeLabel})</span></div>
+                <div className="font-bold text-washi">{(size * 100).toFixed(0)}%<span className="text-xs ml-0.5">(<Ruby>{sizeLabel}</Ruby>)</span></div>
               </div>
               <div className="bg-ai-950/45 rounded-lg p-2 border border-kin-500/12">
                 <div className="text-washi/45 text-xs">ポイント</div>
                 <div className="font-bold text-kin-300">{points.toLocaleString()}pt</div>
               </div>
               <div className="bg-ai-950/45 rounded-lg p-2 border border-kin-500/12">
-                <div className="text-washi/45 text-xs">売却</div>
+                <div className="text-washi/45 text-xs"><Ruby>売却</Ruby></div>
                 <div className="font-bold text-emerald-300">¥{sellPrice.toLocaleString()}</div>
               </div>
             </div>
 
             {size >= 1.5 && (
               <div className="text-kin-300 text-sm mb-2 animate-pulse">
-                🌟 巨大魚ボーナス +200pt！
+                🌟 <Ruby>巨大魚</Ruby>ボーナス +200pt！
               </div>
             )}
             {tairyouCount > 0 && (
               <div className="text-shu-400 text-sm mb-4 animate-bounce font-bold">
-                🐟 大漁！ +{tairyouCount}匹ボーナス！
+                🐟 <Ruby>大漁</Ruby>！ +{tairyouCount}<Ruby>匹</Ruby>ボーナス！
               </div>
             )}
           </>

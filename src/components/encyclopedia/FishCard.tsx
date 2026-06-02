@@ -1,5 +1,6 @@
 import type { Fish } from '../../game/types';
 import FishIllustration from '../shared/FishIllustration';
+import Ruby from '../shared/Ruby';
 
 const RARITY_COLORS: Record<string, string> = {
   common: 'border-washi/15 bg-ai-800/40',
@@ -39,7 +40,7 @@ export default function FishCard({ fish, caught, isNew, onClick }: FishCardProps
         )}
       </div>
       <div className={`text-xs truncate font-mincho ${caught ? 'text-washi' : 'text-washi/40'}`}>
-        {caught ? fish.name : '???'}
+        {caught ? <Ruby>{fish.name}</Ruby> : '???'}
       </div>
     </button>
   );

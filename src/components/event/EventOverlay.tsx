@@ -6,6 +6,7 @@ import TargetPhase from '../fishing/TargetPhase';
 import ReactionPhase from '../fishing/ReactionPhase';
 import RhythmPhase from '../fishing/RhythmPhase';
 import Button from '../shared/Button';
+import Ruby from '../shared/Ruby';
 
 const TYPE_STYLES: Record<string, { bg: string; icon: string }> = {
   good: { bg: 'from-green-900/50 to-green-950/50', icon: '✨' },
@@ -83,7 +84,7 @@ export default function EventOverlay() {
         <div className="absolute top-0 left-0 right-0 p-4 z-10">
           <div className="text-center">
             <p className="text-xs text-amber-300/80 font-medium">イベントファイト</p>
-            <p className="text-lg font-bold text-white">{fightFish.name}が現れた！</p>
+            <p className="text-lg font-bold text-white"><Ruby>{fightFish.name}</Ruby><Ruby>が現れた！</Ruby></p>
           </div>
         </div>
 
@@ -124,12 +125,12 @@ export default function EventOverlay() {
         <div className={`bg-gradient-to-b ${fightWon ? 'from-green-900/50 to-green-950/50' : 'from-red-900/50 to-red-950/50'} rounded-2xl border border-white/10 p-8 max-w-sm w-[90%] text-center shadow-2xl`}>
           <div className="text-6xl mb-4">{fightWon ? '🎉' : '💨'}</div>
           <h3 className="text-xl font-bold mb-2">
-            {fightWon ? '勝利！' : '逃げられた...'}
+            <Ruby>{fightWon ? '勝利！' : '逃げられた...'}</Ruby>
           </h3>
           <p className="text-white/70 mb-6 text-sm leading-relaxed">
             {fightWon
-              ? `${currentEvent.name}の魚を手に入れた！`
-              : '魚に逃げられてしまった...次こそ！'}
+              ? <><Ruby>{currentEvent.name}</Ruby><Ruby>の魚を手に入れた！</Ruby></>
+              : <Ruby>魚に逃げられてしまった...次こそ！</Ruby>}
           </p>
           <Button onClick={handleClose} variant="primary" size="md" className="w-full">
             OK
@@ -144,20 +145,20 @@ export default function EventOverlay() {
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className={`bg-gradient-to-b ${style.bg} rounded-2xl border border-white/10 p-8 max-w-sm w-[90%] text-center shadow-2xl`}>
         <div className="text-6xl mb-4">{style.icon}</div>
-        <h3 className="text-xl font-bold mb-2">{currentEvent.name}</h3>
+        <h3 className="text-xl font-bold mb-2"><Ruby>{currentEvent.name}</Ruby></h3>
         <p className="text-white/70 mb-6 text-sm leading-relaxed">
-          {currentEvent.description}
+          <Ruby>{currentEvent.description}</Ruby>
         </p>
 
         {fishEvent && (
           <p className="text-xs text-amber-300/60 mb-3">
-            ⚔️ 魚を手に入れるにはファイトに勝とう！
+            ⚔️ <Ruby>魚を手に入れるにはファイトに勝とう！</Ruby>
           </p>
         )}
 
         {!nonFishApplied ? (
           <Button onClick={handleApply} variant="gold" size="md" className="w-full">
-            {fishEvent ? 'ファイト開始！' : 'イベント発動'}
+            <Ruby>{fishEvent ? 'ファイト開始！' : 'イベント発動'}</Ruby>
           </Button>
         ) : (
           <Button onClick={handleClose} variant="primary" size="md" className="w-full">
