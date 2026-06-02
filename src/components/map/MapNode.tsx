@@ -67,7 +67,7 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
       <circle
         cx={cx}
         cy={cy}
-        r={isReachable ? 8 : 4}
+        r={isReachable ? 9.5 : 4}
         fill="transparent"
         className={isReachable ? 'cursor-pointer' : 'pointer-events-none'}
       />
@@ -128,20 +128,7 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
         </>
       )}
 
-      {/* ラベル */}
-      <text
-        x={cx}
-        y={cy + R + 2.8}
-        textAnchor="middle"
-        fontSize="2.2"
-        fill={isReachable ? '#f1d893' : '#e9dcc0'}
-        opacity={isReachable ? 0.95 : 0.62}
-        fontFamily='"Shippori Mincho", serif'
-        className="pointer-events-none select-none"
-        fontWeight={isReachable ? 'bold' : 'normal'}
-      >
-        {node.name}
-      </text>
+      {/* 地名ラベルは JapanMap 側の専用レイヤーで最前面に描画する（隣接ノードの円に隠れないように） */}
     </g>
   );
 }

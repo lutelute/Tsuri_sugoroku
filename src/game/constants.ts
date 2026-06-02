@@ -1,4 +1,4 @@
-export const APP_VERSION = '2.0.0';
+export const APP_VERSION = '2.1.0';
 
 export const ROULETTE_MIN = 1;
 export const ROULETTE_MAX = 6;
@@ -60,6 +60,19 @@ export const LURE_TAIRYOU_CHANCE = [0, 0, 0.08, 0.15, 0.25, 0.35];
 // 大漁時のボーナス匹数（1〜3匹追加）
 export const TAIRYOU_BONUS_MIN = 1;
 export const TAIRYOU_BONUS_MAX = 3;
+
+// 高レア度の出現重み（selectFish で使用）。mythical は最高装備＋限定マスでしか出ないため底上げする。
+export const RARITY_BASE_WEIGHT: Record<string, number> = {
+  common: 50,
+  uncommon: 30,
+  rare: 12,
+  legendary: 5,
+  mythical: 3,
+};
+// 特別釣りスポット(🌟/名マス)での高レア度ブースト。名所は「幻の魚」を狙う場所にする。
+export const SPECIAL_SPOT_RARE_BONUS = 0.5;      // rare以上の重み倍率に加算（従来の特別ボーナス）
+export const SPECIAL_SPOT_LEGENDARY_MULT = 2;    // 特別スポットで legendary の重み×2
+export const SPECIAL_SPOT_MYTHICAL_MULT = 12;    // 特別スポットで mythical の重み×12（名所＝幻の魚の聖地）
 
 // 魚の売却価格（レアリティ別）
 export const FISH_SELL_PRICE: Record<string, number> = {

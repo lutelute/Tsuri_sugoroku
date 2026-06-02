@@ -331,6 +331,35 @@ export default function JapanMap() {
           />
         ))}
 
+        {/* 地名ラベル専用レイヤー（全ノードの円の上に描画し、隣接ノードに隠れないようにする。
+            暗い縁取り(paint-order)で、陸地・円・海路のどこに重なっても可読性を確保） */}
+        <g aria-hidden="true" className="pointer-events-none select-none">
+          {orderedNodes.map(node => {
+            const reachable = turnPhase === 'path_selection' && reachableEndpoints.has(node.id);
+            const special = node.type === 'start' || node.type === 'goal';
+            const r = special ? 3.6 : 2.6;
+            return (
+              <text
+                key={`label-${node.id}`}
+                x={node.x}
+                y={node.y + r + 2.8}
+                textAnchor="middle"
+                fontSize="2.2"
+                fill={reachable ? '#f1d893' : '#e9dcc0'}
+                opacity={reachable ? 1 : 0.72}
+                fontFamily='"Shippori Mincho", serif'
+                fontWeight={reachable ? 'bold' : 'normal'}
+                stroke="#0a1c2e"
+                strokeWidth="0.6"
+                strokeLinejoin="round"
+                style={{ paintOrder: 'stroke' }}
+              >
+                {node.name}
+              </text>
+            );
+          })}
+        </g>
+
         {/* プレイヤートークン */}
         {players.map((player, i) => (
           <PlayerToken

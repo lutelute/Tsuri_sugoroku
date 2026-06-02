@@ -17,6 +17,9 @@ export const EVENT_CARDS: EventCard[] = [
   { id: 'local_guide', name: '地元ガイド', type: 'good', description: 'ベテラン漁師がポイントまで案内してくれた！3マス進む！', effect: { kind: 'move_steps', steps: 3 } },
   { id: 'bounty_fish', name: '懸賞金の魚', type: 'good', description: 'タグ付きの調査対象魚を発見！懸賞金¥2,500獲得！', effect: { kind: 'money', amount: 2500 } },
   { id: 'ancient_rod', name: '名匠の竿', type: 'good', description: '蔵から名匠が作った竿が見つかった！', effect: { kind: 'free_upgrade', equipmentType: 'rod' } },
+  // 幻の魚（mythical）限定イベント
+  { id: 'shingyo_descent', name: '神魚降臨', type: 'good', description: '海面が黄金色に輝き、伝説の神魚が一瞬だけ姿を現した…！奇跡的にその一匹が魚籠へ舞い込んだ！', effect: { kind: 'random_fish', rarity: 'mythical' } },
+  { id: 'ryujin_blessing', name: '龍神の加護', type: 'good', description: '嵐の海で龍神に祈ると波が割れ、幻とされる神魚が静かに姿を現した…！', effect: { kind: 'random_fish', rarity: 'mythical' } },
   // 大漁イベント（Good）
   { id: 'sardine_school', name: 'イワシの大群', type: 'good', description: '目の前にイワシの大群が！網ですくって大漁だ！', effect: { kind: 'multi_fish', count: 10, rarity: 'common' } },
   { id: 'fishing_net_haul', name: '地引網体験', type: 'good', description: '地元の地引網に参加！大量の魚を分けてもらった！', effect: { kind: 'multi_fish', count: 8, rarity: 'common' } },

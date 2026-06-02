@@ -20,13 +20,15 @@ import {
 import { getEquippedItem } from '../game/equipment';
 
 // レア度による難易度倍率: テンション上昇・魚の抵抗が高くなり、タップ効果が下がる
-// バランス: mythicalでも20秒あれば高レベル装備なしで釣り上げ可能
+// バランス（子供向け）: 出会えた幻の魚は「ちゃんと釣れる」手応えにする。
+// mythical は出現自体に Lv4〜5 装備が必要（＝テンション上限・制限時間が延長される）ため、
+// 以下の倍率でも余裕をもって釣り上げられる。難しすぎないよう最上位2段階は控えめに設定。
 const RARITY_DIFFICULTY: Record<FishRarity, { tensionMul: number; resistMul: number; tapMul: number }> = {
   common:    { tensionMul: 1.0,  resistMul: 1.0,  tapMul: 1.0 },
-  uncommon:  { tensionMul: 1.03, resistMul: 1.08, tapMul: 0.97 },
-  rare:      { tensionMul: 1.07, resistMul: 1.18, tapMul: 0.92 },
-  legendary: { tensionMul: 1.12, resistMul: 1.3,  tapMul: 0.85 },
-  mythical:  { tensionMul: 1.18, resistMul: 1.45, tapMul: 0.78 },
+  uncommon:  { tensionMul: 1.03, resistMul: 1.07, tapMul: 0.97 },
+  rare:      { tensionMul: 1.06, resistMul: 1.15, tapMul: 0.93 },
+  legendary: { tensionMul: 1.09, resistMul: 1.2,  tapMul: 0.9 },
+  mythical:  { tensionMul: 1.12, resistMul: 1.28, tapMul: 0.85 },
 };
 
 export function useFishing() {
