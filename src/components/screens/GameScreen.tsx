@@ -14,6 +14,7 @@ import EncyclopediaOverlay from '../encyclopedia/EncyclopediaOverlay';
 import CreelOverlay from '../creel/CreelOverlay';
 import InventoryPanel from '../inventory/InventoryPanel';
 import RestOverlay from '../rest/RestOverlay';
+import CapitalEventOverlay from '../capital/CapitalEventOverlay';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
@@ -22,12 +23,13 @@ export default function GameScreen() {
   const {
     turnPhase, players, currentPlayerIndex, nodeActionsThisTurn,
     setTurnPhase, executeNodeAction, endTurn, doActionAgain, rouletteResult,
-    setScreen,
+    setScreen, endGame,
   } = useGameStore();
 
   const [showEncyclopedia, setShowEncyclopedia] = useState(false);
   const [showCreel, setShowCreel] = useState(false);
   const [showInventory, setShowInventory] = useState(false);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
   const player = players[currentPlayerIndex];
   const node = NODE_MAP.get(player?.currentNode || '');
@@ -131,15 +133,25 @@ export default function GameScreen() {
           </div>
         )}
 
-        {/* 左上: タイトルに戻る */}
-        <button
-          onClick={() => setScreen('title')}
-          className="absolute left-3 top-2 bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-10 h-10 flex items-center justify-center text-washi transition cursor-pointer z-20"
-          title="タイトルに戻る"
-          aria-label="タイトルに戻る"
-        >
-          <Icon name="home" size={19} />
-        </button>
+        {/* 左上: メニュー（タイトルに戻る / ゲーム終了） */}
+        <div className="absolute left-3 top-2 flex flex-col gap-2 z-20">
+          <button
+            onClick={() => setScreen('title')}
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-10 h-10 flex items-center justify-center text-washi transition cursor-pointer"
+            title="タイトルに戻る（中断保存）"
+            aria-label="タイトルに戻る"
+          >
+            <Icon name="home" size={19} />
+          </button>
+          <button
+            onClick={() => setShowQuitConfirm(true)}
+            className="bg-ai-900/55 hover:bg-shu-700/60 backdrop-blur-sm border border-shu-500/40 rounded-full w-10 h-10 flex items-center justify-center text-shu-200 transition cursor-pointer"
+            title="ここで終了して結果を見る"
+            aria-label="ここで終了して結果を見る"
+          >
+            <Icon name="trophy" size={19} />
+          </button>
+        </div>
 
         {/* 右サイドボタン群 */}
         <div className="absolute right-3 bottom-4 flex flex-col gap-2 z-20">
@@ -181,6 +193,7 @@ export default function GameScreen() {
       {turnPhase === 'fishing' && <FishingOverlay />}
       {turnPhase === 'shop' && <ShopOverlay />}
       {turnPhase === 'event' && <EventOverlay />}
+      {turnPhase === 'capital_event' && <CapitalEventOverlay />}
 
       {/* 休憩所（修理機能付き） */}
       {turnPhase === 'rest' && node && (
@@ -217,6 +230,41 @@ export default function GameScreen() {
       {/* インベントリ */}
       {showInventory && (
         <InventoryPanel onClose={() => setShowInventory(false)} />
+      )}
+
+      {/* 途中終了の確認ダイアログ */}
+      {showQuitConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowQuitConfirm(false)} />
+          <div className="panel-ai relative rounded-2xl border-shu-500/40 shadow-2xl p-6 w-[85%] max-w-sm">
+            <h3 className="font-mincho text-lg font-bold text-shu-300 mb-2 flex items-center gap-2">
+              <Icon name="trophy" size={20} className="text-shu-400" />
+              <Ruby>ここで終了しますか？</Ruby>
+            </h3>
+            <p className="text-sm text-washi/70 mb-1">
+              <Ruby>ゴール前でも現在の釣果で結果画面に進みます。</Ruby>
+            </p>
+            <p className="text-xs text-washi/45 mb-4">
+              <Ruby>図鑑・装備・所持金は通常どおり保存されます。</Ruby>
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setShowQuitConfirm(false)}
+                variant="secondary"
+                className="flex-1"
+              >
+                <Ruby>続ける</Ruby>
+              </Button>
+              <Button
+                onClick={() => { setShowQuitConfirm(false); endGame(); }}
+                variant="danger"
+                className="flex-1"
+              >
+                <Ruby>終了する</Ruby>
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

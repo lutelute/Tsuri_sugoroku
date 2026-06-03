@@ -337,21 +337,25 @@ export default function JapanMap() {
         <g aria-hidden="true" className="pointer-events-none select-none">
           {orderedNodes.map(node => {
             const reachable = turnPhase === 'path_selection' && reachableEndpoints.has(node.id);
-            const special = node.type === 'start' || node.type === 'goal';
-            const r = special ? 3.6 : 2.6;
+            const isCapital = node.type === 'capital';
+            const isRoute = node.type === 'route';
+            // route ノードは地名ラベルを出さない（密度を上げないため）
+            if (isRoute) return null;
+            const special = node.type === 'start' || node.type === 'goal' || isCapital;
+            const r = isCapital ? 4.0 : special ? 3.6 : 2.6;
             return (
               <text
                 key={`label-${node.id}`}
                 x={node.x}
                 y={node.y + r + 2.8}
                 textAnchor="middle"
-                fontSize="2.2"
-                fill={reachable ? '#f1d893' : '#e9dcc0'}
-                opacity={reachable ? 1 : 0.72}
+                fontSize={isCapital ? '2.8' : '2.2'}
+                fill={isCapital ? '#ffd97a' : reachable ? '#f1d893' : '#e9dcc0'}
+                opacity={reachable ? 1 : isCapital ? 0.95 : 0.72}
                 fontFamily='"Shippori Mincho", serif'
-                fontWeight={reachable ? 'bold' : 'normal'}
+                fontWeight={isCapital || reachable ? 'bold' : 'normal'}
                 stroke="#0a1c2e"
-                strokeWidth="0.6"
+                strokeWidth={isCapital ? '0.8' : '0.6'}
                 strokeLinejoin="round"
                 style={{ paintOrder: 'stroke' }}
               >

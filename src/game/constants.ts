@@ -1,4 +1,4 @@
-export const APP_VERSION = '2.2.0';
+export const APP_VERSION = '3.0.0';
 
 export const ROULETTE_MIN = 1;
 export const ROULETTE_MAX = 6;
@@ -127,4 +127,5 @@ export const NO_REEL_TENSION_MULTIPLIER = 1.8; // リールなし: テンショ�
 export const NO_LURE_BITE_DELAY_MULTIPLIER = 2.5; // ルアーなし: バイト待ち2.5倍
 
 // デフォルト設定
-export const DEFAULT_MAX_TURNS = 50;
+// v2.x: ボード拡張(79→207ノード)に合わせて50→80に増量
+export const DEFAULT_MAX_TURNS = 80;

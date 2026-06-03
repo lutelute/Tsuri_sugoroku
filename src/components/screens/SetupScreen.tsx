@@ -369,7 +369,7 @@ export default function SetupScreen() {
         <div className="mb-8">
           <label className="block text-sm text-white/60 mb-2"><Ruby>最大ターン数</Ruby></label>
           <div className="flex gap-2">
-            {[30, 50, 80, 0].map(n => (
+            {[50, 80, 120, 0].map(n => (
               <button
                 key={n}
                 onClick={() => setMaxTurns(n)}

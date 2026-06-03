@@ -11,6 +11,7 @@ import Ruby from '../shared/Ruby';
 import RankingOverlay from '../ranking/RankingOverlay';
 import EncyclopediaOverlay from '../encyclopedia/EncyclopediaOverlay';
 import UserListOverlay from '../users/UserListOverlay';
+import DevPanel from '../dev/DevPanel';
 
 export default function TitleScreen() {
   const setScreen = useGameStore(s => s.setScreen);
@@ -184,6 +185,9 @@ export default function TitleScreen() {
       <p className="absolute bottom-4 text-xs text-washi/35 font-mincho tracking-wider">
         <Ruby>稚内から那覇まで、日本の魚を釣り尽くせ</Ruby>
       </p>
+
+      {/* 開発用チートパネル（DEVビルドのみ） */}
+      {import.meta.env.DEV && <DevPanel />}
     </div>
   );
 }

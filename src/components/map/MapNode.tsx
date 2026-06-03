@@ -1,4 +1,4 @@
-import type { BoardNode, NodeType } from '../../game/types';
+import type { BoardNode, NodeType, RouteTheme } from '../../game/types';
 import { computeDistanceToGoal } from '../../utils/pathfinding';
 
 const distanceToGoal = computeDistanceToGoal();
@@ -22,6 +22,16 @@ const NODE_COLORS: Record<NodeType, string> = {
   event_bad: '#e34a33',
   event_random: '#a06cc9',
   rest: '#1aa6a0',
+  route: '#7a8a9a',
+  capital: '#e8a23a',
+};
+
+// 街道テーマ別の色（routeノード時に上書き）
+const ROUTE_THEME_COLORS: Record<RouteTheme, string> = {
+  mountain: '#7a6a4a',  // 茶系（峠）
+  sea: '#4a6a90',       // 藍系（海路）
+  river: '#5a8a98',     // 水色系（河川）
+  town: '#8a7a64',      // 茶白系（街道宿）
 };
 
 // 絵文字をやめ、明朝の漢字記号で種別を表す
@@ -35,6 +45,8 @@ const NODE_GLYPH: Record<NodeType, string> = {
   event_bad: '凶',
   event_random: '籤',
   rest: '湯',
+  route: '道',
+  capital: '都',
 };
 
 function darken(hex: string, a: number): string {
@@ -46,11 +58,14 @@ function darken(hex: string, a: number): string {
 }
 
 export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onClick }: MapNodeProps) {
-  const color = NODE_COLORS[node.type];
-  const special = node.type === 'start' || node.type === 'goal';
-  const R = special ? 3.6 : 2.6;
+  const isCapital = node.type === 'capital';
+  const isRoute = node.type === 'route';
+  // routeはrouteThemeに応じて色を上書き
+  const color = isRoute && node.routeTheme ? ROUTE_THEME_COLORS[node.routeTheme] : NODE_COLORS[node.type];
+  const special = node.type === 'start' || node.type === 'goal' || isCapital;
+  const R = isCapital ? 4.0 : isRoute ? 1.8 : special ? 3.6 : 2.6;
   const dist = distanceToGoal.get(node.id);
-  const rim = isCurrentPlayer ? '#ffffff' : 'rgba(212,168,67,0.85)';
+  const rim = isCurrentPlayer ? '#ffffff' : isCapital ? '#fff4cf' : 'rgba(212,168,67,0.85)';
   const cx = node.x;
   const cy = node.y;
 
@@ -71,6 +86,17 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
         fill="transparent"
         className={isReachable ? 'cursor-pointer' : 'pointer-events-none'}
       />
+
+      {/* capitalノード: 常時光る金のオーラ */}
+      {isCapital && (
+        <>
+          <circle cx={cx} cy={cy} r={R + 3.5} fill="rgba(241,216,147,0.10)" className="pointer-events-none">
+            <animate attributeName="r" values={`${R + 2.5};${R + 4.5};${R + 2.5}`} dur="2.4s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.55;0.95;0.55" dur="2.4s" repeatCount="indefinite" />
+          </circle>
+          <circle cx={cx} cy={cy} r={R + 2.0} fill="none" stroke="#f1d893" strokeWidth="0.45" opacity="0.7" className="pointer-events-none" />
+        </>
+      )}
 
       {/* 到達可能ハイライト（金の波紋） */}
       {isReachable && (
@@ -102,6 +128,33 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
         <g className="pointer-events-none">
           <path d={`M ${cx - 1.7},${cy - 2.1} L ${cx - 1.7},${cy + 2.1}`} stroke="#ffffff" strokeWidth="0.6" strokeLinecap="round" fill="none" />
           <path d={`M ${cx - 1.7},${cy - 2.1} L ${cx + 1.9},${cy - 1.3} L ${cx - 1.7},${cy - 0.4} Z`} fill="#f1d893" stroke="#b8862f" strokeWidth="0.3" />
+        </g>
+      ) : isRoute ? (
+        // 街道テーマ別の小グラフィック（道なりの記号）
+        <g className="pointer-events-none">
+          {node.routeTheme === 'mountain' && (
+            // ▲ 山型（峠）
+            <path d={`M ${cx - 1.2},${cy + 0.7} L ${cx},${cy - 1.1} L ${cx + 1.2},${cy + 0.7} Z`} fill="#fff" opacity="0.85" />
+          )}
+          {node.routeTheme === 'sea' && (
+            // 〜 海路（波線）
+            <path d={`M ${cx - 1.4},${cy} Q ${cx - 0.7},${cy - 0.8} ${cx},${cy} T ${cx + 1.4},${cy}`} fill="none" stroke="#ffffff" strokeWidth="0.55" strokeLinecap="round" opacity="0.9" />
+          )}
+          {node.routeTheme === 'river' && (
+            // = 河川（細い二重線）
+            <g stroke="#ffffff" strokeWidth="0.45" strokeLinecap="round" opacity="0.85">
+              <path d={`M ${cx - 1.3},${cy - 0.5} Q ${cx},${cy - 0.9} ${cx + 1.3},${cy - 0.4}`} fill="none" />
+              <path d={`M ${cx - 1.3},${cy + 0.4} Q ${cx},${cy + 0.9} ${cx + 1.3},${cy + 0.5}`} fill="none" />
+            </g>
+          )}
+          {node.routeTheme === 'town' && (
+            // ▢ 街道沿いの宿（小さな四角）
+            <rect x={cx - 1.1} y={cy - 0.9} width="2.2" height="1.8" rx="0.3" fill="#fff" opacity="0.85" />
+          )}
+          {!node.routeTheme && (
+            // フォールバック（旧データ用）
+            <circle cx={cx} cy={cy} r="0.6" fill="#fff" opacity="0.7" />
+          )}
         </g>
       ) : (
         <text

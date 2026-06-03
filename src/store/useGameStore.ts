@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import type {
   GameState, GameScreen, TurnPhase, Player, GameSettings,
-  FishingState, CaughtFish, EquipmentType,
+  FishingState, CaughtFish, EquipmentType, CapitalChoiceEffect,
 } from '../game/types';
 import { INITIAL_MONEY, PLAYER_COLORS, PLAYER_DEFAULT_NAMES, REST_MONEY_BONUS, DEFAULT_MAX_TURNS, FISH_SELL_PRICE, BOAT_FISHING_COST, GOAL_MONEY_REWARD } from '../game/constants';
+import { getCapitalEvent } from '../data/capitalEvents';
 import { calculateReachableNodes } from '../game/movement';
 import { NODE_MAP } from '../data/boardNodes';
 import { getRandomEventCard } from '../data/eventCards';
@@ -37,6 +38,7 @@ interface GameActions {
   mergeEquipment: (itemId1: string, itemId2: string) => void;
   skipShop: () => void;
   applyEventCard: () => void;
+  applyCapitalChoice: (choiceId: string) => void;
   doActionAgain: () => void;
   endTurn: () => void;
   endGame: () => void;
@@ -207,6 +209,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
           money: player.money + REST_MONEY_BONUS,
         };
         set({ players: newPlayers, turnPhase: 'rest' });
+        break;
+      }
+      case 'route': {
+        // 街道中継マス: 50%でランダム小イベント、50%は素通り。稀にレア魚遭遇。
+        const r = Math.random();
+        if (r < 0.5) {
+          const event = getRandomEventCard();
+          set({ currentEvent: event, turnPhase: 'event' });
+        } else {
+          set({ turnPhase: 'action_choice' });
+        }
+        break;
+      }
+      case 'capital': {
+        // 県メインイベント: 固有イベントを表示
+        if (node.capitalEventId && getCapitalEvent(node.capitalEventId)) {
+          set({ turnPhase: 'capital_event' });
+        } else {
+          // フォールバック: ショップ扱い
+          set({ turnPhase: 'shop' });
+        }
         break;
       }
       case 'start': {
@@ -478,6 +501,69 @@ export const useGameStore = create<GameStore>((set, get) => ({
     } else {
       set({ players: newPlayers });
     }
+  },
+
+  applyCapitalChoice: (choiceId) => {
+    const { players, currentPlayerIndex, encyclopedias, turn } = get();
+    const player = players[currentPlayerIndex];
+    const node = NODE_MAP.get(player.currentNode);
+    if (!node || !node.capitalEventId) return;
+    const event = getCapitalEvent(node.capitalEventId);
+    if (!event) return;
+    const choice = event.choices.find(c => c.id === choiceId);
+    if (!choice) return;
+
+    const effect: CapitalChoiceEffect = choice.effect;
+    const newPlayers = [...players];
+    const newEncyclopedias = [...encyclopedias];
+    const p: Player = { ...player };
+
+    switch (effect.kind) {
+      case 'feast': {
+        p.money += effect.moneyBonus;
+        p.equipment = {
+          ...p.equipment,
+          inventory: p.equipment.inventory.map(it => ({ ...it, durability: 100 })),
+        };
+        break;
+      }
+      case 'specialty_shop': {
+        if (p.money < effect.price) break;
+        const item = createEquipmentItem(effect.equipmentType, effect.level);
+        p.money -= effect.price;
+        p.equipment = {
+          equipped: { ...p.equipment.equipped, [effect.equipmentType]: item.id },
+          inventory: [...p.equipment.inventory, item],
+        };
+        break;
+      }
+      case 'special_fishing': {
+        const fishData = FISH_DATABASE.find(f => f.id === effect.fishId);
+        if (fishData) {
+          const caught: CaughtFish = { fishId: fishData.id, caughtAt: node.id, turn, size: 1.2 };
+          p.caughtFish = [...p.caughtFish, caught];
+          p.money += effect.reward;
+          const newEnc = { ...encyclopedias[currentPlayerIndex], [fishData.id]: true };
+          newEncyclopedias[currentPlayerIndex] = newEnc;
+          if (p.uid) saveUserEncyclopedia(p.uid, newEnc).catch(() => {});
+          else saveEncyclopedia(newEnc);
+        }
+        break;
+      }
+      case 'money':
+        p.money += effect.amount;
+        break;
+      case 'extra_turn':
+        p.extraTurn = true;
+        break;
+      case 'lore_event': {
+        // 将来: 県固有イベントカードに対応
+        break;
+      }
+    }
+
+    newPlayers[currentPlayerIndex] = p;
+    set({ players: newPlayers, encyclopedias: newEncyclopedias, turnPhase: 'turn_end' });
   },
 
   doActionAgain: () => {

@@ -9,7 +9,12 @@ export type NodeType =
   | 'event_good'
   | 'event_bad'
   | 'event_random'
-  | 'rest';
+  | 'rest'
+  | 'route'      // 街道中継マス（道中の小イベント/小釣り）
+  | 'capital';   // 県メインイベントマス（県固有の大型イベント）
+
+// 街道テーマ（route ノードの装飾用）
+export type RouteTheme = 'mountain' | 'sea' | 'river' | 'town';
 
 export type Region = 'hokkaido' | 'tohoku' | 'kanto' | 'chubu' | 'kinki' | 'chugoku' | 'shikoku' | 'kyushu';
 
@@ -22,7 +27,36 @@ export interface BoardNode {
   y: number;
   shopTier?: number; // 1-3: ショップノードのみ
   description?: string;
+  // capital ノード用: 県固有メインイベントのID（capitalEvents.tsを参照）
+  capitalEventId?: string;
+  // route ノード用: 街道テーマ（描画と背景イベントテーブル切り替え）
+  routeTheme?: RouteTheme;
 }
+
+// ===== 県メインイベント =====
+// 県(capital)に紐づく固有の大イベント。選択肢ベースで複数アクションを提供。
+export interface CapitalEvent {
+  id: string;
+  title: string;       // 「江戸前ハゼ釣り選手権」など
+  flavor: string;      // 短い紹介文
+  region: Region;
+  choices: CapitalChoice[];
+}
+
+export interface CapitalChoice {
+  id: string;
+  label: string;       // 選択肢ラベル
+  description: string; // 効果説明
+  effect: CapitalChoiceEffect;
+}
+
+export type CapitalChoiceEffect =
+  | { kind: 'special_fishing'; fishId: string; difficulty: number; reward: number } // 県固有大物釣り(成功で名声魚+お金)
+  | { kind: 'specialty_shop'; equipmentType: EquipmentType; level: number; price: number; durabilityBonus?: number }
+  | { kind: 'feast'; moneyBonus: number; repairAll: true }   // ご褒美宴会(全装備修理+お金)
+  | { kind: 'lore_event'; eventCardId: string }              // 県固有イベントカード適用
+  | { kind: 'money'; amount: number }
+  | { kind: 'extra_turn' };
 
 export interface BoardEdge {
   from: string;
@@ -34,7 +68,12 @@ export interface BoardEdge {
 
 export type FishRarity = 'common' | 'uncommon' | 'rare' | 'legendary' | 'mythical';
 
-export type FishBodyShape = 'standard' | 'elongated' | 'flat' | 'round' | 'eel' | 'squid' | 'octopus' | 'crab';
+export type FishBodyShape =
+  | 'standard' | 'elongated' | 'flat' | 'round'
+  | 'eel'
+  | 'squid' | 'octopus' | 'crab'
+  | 'shell_bivalve' | 'shell_spiral'
+  | 'catfish' | 'shark' | 'whale' | 'ray' | 'urchin' | 'oarfish';
 export type FishPattern = 'stripes' | 'spots' | 'gradient' | 'none';
 export type FishFinStyle = 'normal' | 'large' | 'spiky' | 'long' | 'small';
 export type FishSizeClass = 'small' | 'medium' | 'large' | 'huge';
@@ -184,6 +223,7 @@ export type TurnPhase =
   | 'shop'
   | 'event'
   | 'rest'
+  | 'capital_event'
   | 'action_choice'
   | 'turn_end';
 

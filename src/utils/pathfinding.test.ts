@@ -48,10 +48,11 @@ describe('getReachableNodes', () => {
 });
 
 describe('getNeighbors', () => {
-  it('startの隣接にwakkanaiとkushiroを含む', () => {
+  it('startの隣接には街道中継マス(r_start_wakkanai/r_start_kushiro)を含む', () => {
+    // v2.x: 県と県の間に street ノードを挿入したため、startの直接隣接は中継マスになった
     const n = getNeighbors('start');
-    expect(n).toContain('wakkanai');
-    expect(n).toContain('kushiro');
+    expect(n).toContain('r_start_wakkanai');
+    expect(n).toContain('r_start_kushiro');
   });
 
   it('未知ノードは空配列', () => {
