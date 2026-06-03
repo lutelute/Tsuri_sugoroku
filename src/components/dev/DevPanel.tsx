@@ -3,7 +3,9 @@
 
 import { useState } from 'react';
 import { FISH_DATABASE } from '../../data/fishDatabase';
+import { BOARD_NODES } from '../../data/boardNodes';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useGameStore } from '../../store/useGameStore';
 import { saveEncyclopedia, clearGameState } from '../../utils/storage';
 import { saveUserEncyclopedia, saveUserEquipment, saveUserMoney, resetUserEncyclopedia } from '../../lib/firestore';
 import { createEquipmentItem } from '../../game/equipment';
@@ -24,7 +26,11 @@ function buildMaxEquipment(): PlayerEquipment {
 export default function DevPanel() {
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [showWarp, setShowWarp] = useState(false);
   const user = useAuthStore(s => s.user);
+  const screen = useGameStore(s => s.screen);
+  const warpCurrentPlayerTo = useGameStore(s => s.warpCurrentPlayerTo);
+  const capitalNodes = BOARD_NODES.filter(n => n.type === 'capital');
 
   const flash = (m: string) => {
     setMsg(m);
@@ -69,6 +75,12 @@ export default function DevPanel() {
     flash('中断中のセーブデータを削除');
   };
 
+  const warpTo = (nodeId: string, nodeName: string) => {
+    warpCurrentPlayerTo(nodeId);
+    setShowWarp(false);
+    flash(`${nodeName} へワープしました`);
+  };
+
   if (!open) {
     return (
       <button
@@ -101,6 +113,26 @@ export default function DevPanel() {
         <button onClick={resetEncyclopedia} className="px-2 py-1.5 rounded-md bg-ai-800/60 hover:bg-ai-700/70 border border-washi/15 text-washi/80 cursor-pointer">図鑑リセット</button>
         <button onClick={giveMoney} disabled={!user} className="px-2 py-1.5 rounded-md bg-ai-700/60 hover:bg-ai-600/70 border border-kin-500/25 text-washi cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">¥999,999</button>
         <button onClick={maxEquipment} disabled={!user} className="px-2 py-1.5 rounded-md bg-ai-700/60 hover:bg-ai-600/70 border border-kin-500/25 text-washi cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">装備Lv5</button>
+        <button
+          onClick={() => setShowWarp(v => !v)}
+          disabled={screen !== 'game'}
+          className="col-span-2 px-2 py-1.5 rounded-md bg-purple-800/60 hover:bg-purple-700/70 border border-purple-500/30 text-purple-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {showWarp ? '▲ 県ワープを閉じる' : '▼ 県メインイベントへワープ'}
+        </button>
+        {showWarp && (
+          <div className="col-span-2 max-h-48 overflow-y-auto rounded-md bg-ai-900/50 border border-purple-500/20 p-1.5 space-y-1">
+            {capitalNodes.map(n => (
+              <button
+                key={n.id}
+                onClick={() => warpTo(n.id, n.name)}
+                className="w-full text-left px-2 py-1 rounded bg-ai-800/40 hover:bg-purple-700/40 border border-transparent hover:border-purple-400/40 text-washi/85 text-[11px] cursor-pointer transition"
+              >
+                {n.name} <span className="text-washi/40 text-[9px]">({n.region})</span>
+              </button>
+            ))}
+          </div>
+        )}
         <button onClick={clearSave} className="col-span-2 px-2 py-1.5 rounded-md bg-shu-800/50 hover:bg-shu-700/60 border border-shu-500/30 text-shu-200 cursor-pointer">中断セーブ削除</button>
       </div>
       {msg && (

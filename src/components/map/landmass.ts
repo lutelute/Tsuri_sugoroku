@@ -66,17 +66,18 @@ function landPath(nodes: BoardNode[], pad: number): string {
 const inRegions = (regions: string[]) => BOARD_NODES.filter(n => regions.includes(n.region));
 
 // 4つの主要な島（本州は複数地域を結合）
+// v3.x: 座標スケール×3に追従してpadも×3
 export const LAND_PATHS: string[] = [
-  landPath(inRegions(['hokkaido']), 9),
-  landPath(inRegions(['tohoku', 'kanto', 'chubu', 'kinki', 'chugoku']), 8),
-  landPath(inRegions(['shikoku']), 8),
-  landPath(BOARD_NODES.filter(n => n.region === 'kyushu' && n.y < 160), 8),
+  landPath(inRegions(['hokkaido']), 27),
+  landPath(inRegions(['tohoku', 'kanto', 'chubu', 'kinki', 'chugoku']), 24),
+  landPath(inRegions(['shikoku']), 24),
+  landPath(BOARD_NODES.filter(n => n.region === 'kyushu' && n.y < 480), 24),
 ];
 
 // 南西諸島（種子島〜那覇・ゴール）は小さな島として個別に描く
 export const ISLANDS = BOARD_NODES
-  .filter(n => n.region === 'kyushu' && n.y >= 160)
-  .map(n => ({ cx: n.x, cy: n.y, rx: 7, ry: 6 }));
+  .filter(n => n.region === 'kyushu' && n.y >= 480)
+  .map(n => ({ cx: n.x, cy: n.y, rx: 21, ry: 18 }));
 
 // 地方名の透かしラベル（各地域ノードの重心に配置）
 const REGION_NAMES: Record<string, string> = {
@@ -84,7 +85,7 @@ const REGION_NAMES: Record<string, string> = {
   kinki: '近畿', chugoku: '中国', shikoku: '四国', kyushu: '九州',
 };
 export const REGION_LABELS = Object.entries(REGION_NAMES).map(([region, name]) => {
-  const ns = BOARD_NODES.filter(n => n.region === region && n.y < 160);
+  const ns = BOARD_NODES.filter(n => n.region === region && n.y < 480);
   const src = ns.length ? ns : BOARD_NODES.filter(n => n.region === region);
   const cx = src.reduce((s, n) => s + n.x, 0) / src.length;
   const cy = src.reduce((s, n) => s + n.y, 0) / src.length;

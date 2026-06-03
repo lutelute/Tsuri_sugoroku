@@ -5,12 +5,16 @@ import { BOARD_EDGES } from '../../data/boardEdges';
 import MapNode from './MapNode';
 import MapEdge from './MapEdge';
 import PlayerToken from './PlayerToken';
+import NodeInfoOverlay from './NodeInfoOverlay';
 import { LAND_PATHS, ISLANDS, REGION_LABELS } from './landmass';
 import Ruby from '../shared/Ruby';
 
-const DEFAULT_VIEWBOX = { x: -5, y: -5, width: 180, height: 180 };
-const MIN_WIDTH = 50;
-const MAX_WIDTH = 250;
+// v3.x: ノード座標を×3にスケールしたため、viewBoxも×3。
+// テキスト/ストローク等の絶対値もそれに合わせて拡大している。
+const DEFAULT_VIEWBOX = { x: -15, y: -15, width: 660, height: 660 };
+// v3.x: 座標スケール×3に追従
+const MIN_WIDTH = 150;
+const MAX_WIDTH = 800;
 const DRAG_THRESHOLD = 5; // px on screen
 
 interface DragState {
@@ -39,6 +43,8 @@ function getTouchDist(t1: React.Touch, t2: React.Touch) {
 export default function JapanMap() {
   const { players, currentPlayerIndex, turnPhase, reachableNodes, selectPath } = useGameStore();
   const [viewBox, setViewBox] = useState(DEFAULT_VIEWBOX);
+  const [infoNodeId, setInfoNodeId] = useState<string | null>(null);
+  const infoNode = infoNodeId ? NODE_MAP.get(infoNodeId) ?? null : null;
 
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState>({ active: false, moved: false, startScreenX: 0, startScreenY: 0, startViewX: 0, startViewY: 0 });
@@ -75,9 +81,9 @@ export default function JapanMap() {
   const clampViewBox = useCallback((vb: typeof DEFAULT_VIEWBOX) => {
     const w = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, vb.width));
     const h = w; // keep aspect ratio 1:1
-    // Keep viewBox within wide bounds so south (Okinawa/goal y:90+) is reachable
-    const x = Math.max(-50, Math.min(250 - w, vb.x));
-    const y = Math.max(-30, Math.min(350 - h, vb.y));
+    // v3.x: 座標スケール×3。南端ゴール(y=600)まで到達できるよう境界を拡張
+    const x = Math.max(-150, Math.min(750 - w, vb.x));
+    const y = Math.max(-90, Math.min(1050 - h, vb.y));
     return { x, y, width: w, height: h };
   }, []);
 
@@ -215,15 +221,20 @@ export default function JapanMap() {
   }, [clampViewBox]);
 
   // --- Node click with drag suppression ---
+  // path_selection時は到達可能ノードで移動、それ以外はそのマスの属性表示
   const handleNodeClick = (nodeId: string) => {
     if (suppressClickRef.current) return;
-    if (turnPhase !== 'path_selection') return;
-    const pathIndex = reachableNodes.findIndex(
-      path => path[path.length - 1] === nodeId
-    );
-    if (pathIndex >= 0) {
-      selectPath(pathIndex);
+    if (turnPhase === 'path_selection') {
+      const pathIndex = reachableNodes.findIndex(
+        path => path[path.length - 1] === nodeId
+      );
+      if (pathIndex >= 0) {
+        selectPath(pathIndex);
+        return;
+      }
+      // 到達不能なマスをタップしたときは属性表示にフォールバック
     }
+    setInfoNodeId(nodeId);
   };
 
   const resetView = () => setViewBox(DEFAULT_VIEWBOX);
@@ -259,24 +270,24 @@ export default function JapanMap() {
             <stop offset="100%" stopColor="#c2a978" stopOpacity="0.12" />
           </linearGradient>
           <filter id="land-shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" floodColor="#06121f" floodOpacity="0.55" />
+            <feDropShadow dx="0" dy="4.2" stdDeviation="4.8" floodColor="#06121f" floodOpacity="0.55" />
           </filter>
         </defs>
-        <rect x={viewBox.x - 20} y={viewBox.y - 20} width={viewBox.width + 40} height={viewBox.height + 40} fill="url(#ocean-glow)" />
+        <rect x={viewBox.x - 60} y={viewBox.y - 60} width={viewBox.width + 120} height={viewBox.height + 120} fill="url(#ocean-glow)" />
 
-        {/* 陸地シルエット（日本列島・海岸線は二重線） */}
+        {/* 陸地シルエット（v3: ×3スケール） */}
         <g filter="url(#land-shadow)" aria-hidden="true">
           {LAND_PATHS.map((d, i) => (
-            <path key={`land-${i}`} d={d} fill="url(#land-grad)" stroke="rgba(212,168,67,0.42)" strokeWidth="0.85" strokeLinejoin="round" />
+            <path key={`land-${i}`} d={d} fill="url(#land-grad)" stroke="rgba(212,168,67,0.42)" strokeWidth="2.55" strokeLinejoin="round" />
           ))}
           {ISLANDS.map((is, i) => (
-            <ellipse key={`isle-${i}`} cx={is.cx} cy={is.cy} rx={is.rx} ry={is.ry} fill="url(#land-grad)" stroke="rgba(212,168,67,0.42)" strokeWidth="0.7" />
+            <ellipse key={`isle-${i}`} cx={is.cx} cy={is.cy} rx={is.rx} ry={is.ry} fill="url(#land-grad)" stroke="rgba(212,168,67,0.42)" strokeWidth="2.1" />
           ))}
         </g>
         {/* 海岸線の内側ハイライト */}
         <g aria-hidden="true" className="pointer-events-none">
           {LAND_PATHS.map((d, i) => (
-            <path key={`coast-${i}`} d={d} fill="none" stroke="rgba(251,246,232,0.14)" strokeWidth="0.3" strokeLinejoin="round" />
+            <path key={`coast-${i}`} d={d} fill="none" stroke="rgba(251,246,232,0.14)" strokeWidth="0.9" strokeLinejoin="round" />
           ))}
         </g>
 
@@ -288,7 +299,7 @@ export default function JapanMap() {
               x={r.x}
               y={r.y}
               textAnchor="middle"
-              fontSize="5.5"
+              fontSize="16.5"
               fill="#fbf6e8"
               opacity="0.1"
               fontFamily='"Shippori Mincho", serif'
@@ -315,7 +326,7 @@ export default function JapanMap() {
               const a = NODE_MAP.get(path[si]);
               const b = NODE_MAP.get(nid);
               if (!a || !b) return null;
-              return <line key={si} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#f1d893" strokeWidth="1" strokeLinecap="round" opacity="0.9" />;
+              return <line key={si} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#f1d893" strokeWidth="3" strokeLinecap="round" opacity="0.9" />;
             })}
           </g>
         ))}
@@ -342,20 +353,20 @@ export default function JapanMap() {
             // route ノードは地名ラベルを出さない（密度を上げないため）
             if (isRoute) return null;
             const special = node.type === 'start' || node.type === 'goal' || isCapital;
-            const r = isCapital ? 4.0 : special ? 3.6 : 2.6;
+            const r = isCapital ? 12 : special ? 10.8 : 7.8;
             return (
               <text
                 key={`label-${node.id}`}
                 x={node.x}
-                y={node.y + r + 2.8}
+                y={node.y + r + 8.4}
                 textAnchor="middle"
-                fontSize={isCapital ? '2.8' : '2.2'}
+                fontSize={isCapital ? '8.4' : '6.6'}
                 fill={isCapital ? '#ffd97a' : reachable ? '#f1d893' : '#e9dcc0'}
                 opacity={reachable ? 1 : isCapital ? 0.95 : 0.72}
                 fontFamily='"Shippori Mincho", serif'
                 fontWeight={isCapital || reachable ? 'bold' : 'normal'}
                 stroke="#0a1c2e"
-                strokeWidth={isCapital ? '0.8' : '0.6'}
+                strokeWidth={isCapital ? '2.4' : '1.8'}
                 strokeLinejoin="round"
                 style={{ paintOrder: 'stroke' }}
               >
@@ -425,6 +436,9 @@ export default function JapanMap() {
           })}
         </div>
       )}
+
+      {/* ノード属性表示モーダル（サイコロ振らない時 or 到達不能マスをタップしたとき） */}
+      {infoNode && <NodeInfoOverlay node={infoNode} onClose={() => setInfoNodeId(null)} />}
     </div>
   );
 }

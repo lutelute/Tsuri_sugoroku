@@ -10,7 +10,7 @@ import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
 import FishIllustration from '../shared/FishIllustration';
-import type { CapitalChoice, CapitalChoiceEffect } from '../../game/types';
+import type { CapitalChoice, CapitalChoiceEffect, CapitalResult } from '../../game/types';
 
 function effectIcon(effect: CapitalChoiceEffect) {
   switch (effect.kind) {
@@ -60,15 +60,62 @@ function ChoiceCard({ choice, money, onPick }: { choice: CapitalChoice; money: n
   );
 }
 
+function ResultView({ result, onOk }: { result: CapitalResult; onOk: () => void }) {
+  const fish = result.fishId ? FISH_DATABASE.find(f => f.id === result.fishId) : null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className={`panel-ai relative rounded-2xl shadow-2xl p-6 w-[92%] max-w-md border-2 ${result.success ? 'border-kin-500/50' : 'border-shu-500/50'}`}>
+        <div className="text-center mb-4">
+          <div className="text-[10px] tracking-[0.4em] mb-1" style={{ color: result.success ? '#f1d893' : '#e88f7f' }}>
+            {result.success ? '成功' : '失敗'}
+          </div>
+          <h2 className={`font-mincho text-2xl font-bold ${result.success ? 'text-kin-300' : 'text-shu-300'}`}>
+            <Ruby>{result.choiceLabel}</Ruby>
+          </h2>
+        </div>
+
+        {fish && result.success && (
+          <div className="flex justify-center mb-3">
+            <div className="washi-card rounded-2xl px-5 py-3">
+              <FishIllustration fishId={fish.id} width={120} height={80} />
+            </div>
+          </div>
+        )}
+
+        <p className="text-center text-sm text-washi/85 font-mincho mb-4 leading-relaxed">
+          <Ruby>{result.message}</Ruby>
+        </p>
+
+        {result.successChance !== undefined && (
+          <div className="text-center text-[10px] text-washi/45 mb-3">
+            判定確率: {Math.round(result.successChance * 100)}%
+          </div>
+        )}
+
+        <Button onClick={onOk} variant={result.success ? 'gold' : 'secondary'} className="w-full">
+          <Ruby>続ける</Ruby>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function CapitalEventOverlay() {
   const players = useGameStore(s => s.players);
   const currentPlayerIndex = useGameStore(s => s.currentPlayerIndex);
   const applyCapitalChoice = useGameStore(s => s.applyCapitalChoice);
   const setTurnPhase = useGameStore(s => s.setTurnPhase);
+  const lastCapitalResult = useGameStore(s => s.lastCapitalResult);
+  const acknowledgeCapitalResult = useGameStore(s => s.acknowledgeCapitalResult);
 
   const player = players[currentPlayerIndex];
   const node = NODE_MAP.get(player?.currentNode || '');
   const event = node?.capitalEventId ? getCapitalEvent(node.capitalEventId) : null;
+
+  // 結果表示モード
+  if (lastCapitalResult) {
+    return <ResultView result={lastCapitalResult} onOk={acknowledgeCapitalResult} />;
+  }
 
   if (!event) return null;
 

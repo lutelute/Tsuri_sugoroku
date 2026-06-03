@@ -58,6 +58,17 @@ export type CapitalChoiceEffect =
   | { kind: 'money'; amount: number }
   | { kind: 'extra_turn' };
 
+// 県メインイベントの結果（applyCapitalChoice後に結果モーダルへ渡す）
+export interface CapitalResult {
+  choiceId: string;
+  choiceLabel: string;
+  success: boolean;          // special_fishingの成功/失敗、その他はtrue
+  fishId?: string;            // special_fishing成功時の釣果
+  moneyDelta: number;         // 入出金合計（負なら出費）
+  message: string;            // 結果メッセージ
+  successChance?: number;     // special_fishing時の判定確率（参考表示）
+}
+
 export interface BoardEdge {
   from: string;
   to: string;
@@ -251,6 +262,7 @@ export interface GameState {
   initialEncyclopedias: Record<string, boolean>[]; // ゲーム開始時の図鑑スナップショット（NEW判定用）
   nodeActionsThisTurn: number;
   boatFishingRemaining: number; // 船釣り残り回数（0=通常モード）
+  lastCapitalResult: CapitalResult | null; // 直近の県メインイベント結果（モーダル表示用）
 }
 
 // ===== スコア =====

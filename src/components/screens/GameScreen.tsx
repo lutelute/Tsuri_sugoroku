@@ -15,6 +15,7 @@ import CreelOverlay from '../creel/CreelOverlay';
 import InventoryPanel from '../inventory/InventoryPanel';
 import RestOverlay from '../rest/RestOverlay';
 import CapitalEventOverlay from '../capital/CapitalEventOverlay';
+import DevPanel from '../dev/DevPanel';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
@@ -137,19 +138,19 @@ export default function GameScreen() {
         <div className="absolute left-3 top-2 flex flex-col gap-2 z-20">
           <button
             onClick={() => setScreen('title')}
-            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-10 h-10 flex items-center justify-center text-washi transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex items-center justify-center text-washi transition cursor-pointer"
             title="タイトルに戻る（中断保存）"
             aria-label="タイトルに戻る"
           >
-            <Icon name="home" size={19} />
+            <Icon name="home" size={26} />
           </button>
           <button
             onClick={() => setShowQuitConfirm(true)}
-            className="bg-ai-900/55 hover:bg-shu-700/60 backdrop-blur-sm border border-shu-500/40 rounded-full w-10 h-10 flex items-center justify-center text-shu-200 transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-shu-700/60 backdrop-blur-sm border border-shu-500/40 rounded-full w-14 h-14 flex items-center justify-center text-shu-200 transition cursor-pointer"
             title="ここで終了して結果を見る"
             aria-label="ここで終了して結果を見る"
           >
-            <Icon name="trophy" size={19} />
+            <Icon name="trophy" size={26} />
           </button>
         </div>
 
@@ -157,27 +158,27 @@ export default function GameScreen() {
         <div className="absolute right-3 bottom-4 flex flex-col gap-2 z-20">
           <button
             onClick={() => setShowInventory(true)}
-            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-10 h-10 flex items-center justify-center text-washi transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex items-center justify-center text-washi transition cursor-pointer"
             title="道具箱"
             aria-label="道具箱を開く"
           >
-            <Icon name="tacklebox" size={20} />
+            <Icon name="tacklebox" size={28} />
           </button>
           <button
             onClick={() => setShowCreel(true)}
-            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-10 h-10 flex items-center justify-center text-washi transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex items-center justify-center text-washi transition cursor-pointer"
             title="魚籠"
             aria-label="魚籠を開く"
           >
-            <Icon name="creel" size={20} />
+            <Icon name="creel" size={28} />
           </button>
           <button
             onClick={() => setShowEncyclopedia(true)}
-            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-10 h-10 flex items-center justify-center text-washi transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex items-center justify-center text-washi transition cursor-pointer"
             title="図鑑"
             aria-label="魚図鑑を開く"
           >
-            <Icon name="book" size={20} />
+            <Icon name="book" size={28} />
           </button>
         </div>
       </div>
@@ -231,6 +232,9 @@ export default function GameScreen() {
       {showInventory && (
         <InventoryPanel onClose={() => setShowInventory(false)} />
       )}
+
+      {/* 開発用チートパネル（DEVビルドのみ） */}
+      {import.meta.env.DEV && <DevPanel />}
 
       {/* 途中終了の確認ダイアログ */}
       {showQuitConfirm && (

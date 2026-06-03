@@ -63,7 +63,8 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
   // routeはrouteThemeに応じて色を上書き
   const color = isRoute && node.routeTheme ? ROUTE_THEME_COLORS[node.routeTheme] : NODE_COLORS[node.type];
   const special = node.type === 'start' || node.type === 'goal' || isCapital;
-  const R = isCapital ? 4.0 : isRoute ? 1.8 : special ? 3.6 : 2.6;
+  // v3.x: 座標スケール×3に合わせてサイズも×3
+  const R = isCapital ? 12 : isRoute ? 5.4 : special ? 10.8 : 7.8;
   const dist = distanceToGoal.get(node.id);
   const rim = isCurrentPlayer ? '#ffffff' : isCapital ? '#fff4cf' : 'rgba(212,168,67,0.85)';
   const cx = node.x;
@@ -71,89 +72,84 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
 
   return (
     <g
-      className={isReachable ? 'cursor-pointer' : ''}
-      onClick={isReachable ? onClick : undefined}
+      className="cursor-pointer"
+      onClick={onClick}
     >
       <title>
         {node.name}{dist !== undefined && dist > 0 ? ` - ゴールまで${dist}マス` : dist === 0 ? ' - ゴール' : ''}
       </title>
 
-      {/* 透明な大きいタップ判定（到達可能時は広く、非到達は透過） */}
+      {/* 透明な大きいタップ判定（v3: ×3スケール。常時クリック可能） */}
       <circle
         cx={cx}
         cy={cy}
-        r={isReachable ? 9.5 : 4}
+        r={isReachable ? 28 : 14}
         fill="transparent"
-        className={isReachable ? 'cursor-pointer' : 'pointer-events-none'}
+        className="cursor-pointer"
       />
 
       {/* capitalノード: 常時光る金のオーラ */}
       {isCapital && (
         <>
-          <circle cx={cx} cy={cy} r={R + 3.5} fill="rgba(241,216,147,0.10)" className="pointer-events-none">
-            <animate attributeName="r" values={`${R + 2.5};${R + 4.5};${R + 2.5}`} dur="2.4s" repeatCount="indefinite" />
+          <circle cx={cx} cy={cy} r={R + 10.5} fill="rgba(241,216,147,0.10)" className="pointer-events-none">
+            <animate attributeName="r" values={`${R + 7.5};${R + 13.5};${R + 7.5}`} dur="2.4s" repeatCount="indefinite" />
             <animate attributeName="opacity" values="0.55;0.95;0.55" dur="2.4s" repeatCount="indefinite" />
           </circle>
-          <circle cx={cx} cy={cy} r={R + 2.0} fill="none" stroke="#f1d893" strokeWidth="0.45" opacity="0.7" className="pointer-events-none" />
+          <circle cx={cx} cy={cy} r={R + 6} fill="none" stroke="#f1d893" strokeWidth="1.35" opacity="0.7" className="pointer-events-none" />
         </>
       )}
 
       {/* 到達可能ハイライト（金の波紋） */}
       {isReachable && (
-        <circle cx={cx} cy={cy} r={R + 2.2} fill="rgba(241,216,147,0.16)" stroke="#f1d893" strokeWidth="0.6" className="pointer-events-none">
-          <animate attributeName="r" values={`${R + 1.6};${R + 3.4};${R + 1.6}`} dur="1.1s" repeatCount="indefinite" />
+        <circle cx={cx} cy={cy} r={R + 6.6} fill="rgba(241,216,147,0.16)" stroke="#f1d893" strokeWidth="1.8" className="pointer-events-none">
+          <animate attributeName="r" values={`${R + 4.8};${R + 10.2};${R + 4.8}`} dur="1.1s" repeatCount="indefinite" />
           <animate attributeName="opacity" values="1;0.45;1" dur="1.1s" repeatCount="indefinite" />
         </circle>
       )}
 
       {/* 影 */}
-      <circle cx={cx} cy={cy + 0.5} r={R} fill="rgba(6,18,31,0.5)" className="pointer-events-none" />
+      <circle cx={cx} cy={cy + 1.5} r={R} fill="rgba(6,18,31,0.5)" className="pointer-events-none" />
 
       {/* 本体ディスク */}
-      <circle cx={cx} cy={cy} r={R} fill={color} stroke={rim} strokeWidth={isCurrentPlayer ? 0.7 : 0.5} className="pointer-events-none" />
+      <circle cx={cx} cy={cy} r={R} fill={color} stroke={rim} strokeWidth={isCurrentPlayer ? 2.1 : 1.5} className="pointer-events-none" />
       {/* 内側の陰 */}
-      <circle cx={cx} cy={cy} r={R} fill="none" stroke={darken(color, 0.35)} strokeWidth="0.3" opacity="0.6" className="pointer-events-none" />
+      <circle cx={cx} cy={cy} r={R} fill="none" stroke={darken(color, 0.35)} strokeWidth="0.9" opacity="0.6" className="pointer-events-none" />
       {/* 上面の照り */}
       <ellipse cx={cx} cy={cy - R * 0.32} rx={R * 0.62} ry={R * 0.34} fill="#ffffff" opacity="0.22" className="pointer-events-none" />
 
-      {/* 種別グリフ / 特殊グラフィック */}
+      {/* 種別グリフ / 特殊グラフィック（v3: ×3スケール） */}
       {node.type === 'start' ? (
-        <g className="pointer-events-none" stroke="#ffffff" strokeWidth="0.7" strokeLinecap="round" fill="none">
-          <path d={`M ${cx - 2.4},${cy - 1.6} Q ${cx},${cy - 2.2} ${cx + 2.4},${cy - 1.6}`} />
-          <path d={`M ${cx - 2},${cy - 0.5} L ${cx + 2},${cy - 0.5}`} />
-          <path d={`M ${cx - 1.4},${cy - 1.7} L ${cx - 1.4},${cy + 1.9}`} />
-          <path d={`M ${cx + 1.4},${cy - 1.7} L ${cx + 1.4},${cy + 1.9}`} />
+        <g className="pointer-events-none" stroke="#ffffff" strokeWidth="2.1" strokeLinecap="round" fill="none">
+          <path d={`M ${cx - 7.2},${cy - 4.8} Q ${cx},${cy - 6.6} ${cx + 7.2},${cy - 4.8}`} />
+          <path d={`M ${cx - 6},${cy - 1.5} L ${cx + 6},${cy - 1.5}`} />
+          <path d={`M ${cx - 4.2},${cy - 5.1} L ${cx - 4.2},${cy + 5.7}`} />
+          <path d={`M ${cx + 4.2},${cy - 5.1} L ${cx + 4.2},${cy + 5.7}`} />
         </g>
       ) : node.type === 'goal' ? (
         <g className="pointer-events-none">
-          <path d={`M ${cx - 1.7},${cy - 2.1} L ${cx - 1.7},${cy + 2.1}`} stroke="#ffffff" strokeWidth="0.6" strokeLinecap="round" fill="none" />
-          <path d={`M ${cx - 1.7},${cy - 2.1} L ${cx + 1.9},${cy - 1.3} L ${cx - 1.7},${cy - 0.4} Z`} fill="#f1d893" stroke="#b8862f" strokeWidth="0.3" />
+          <path d={`M ${cx - 5.1},${cy - 6.3} L ${cx - 5.1},${cy + 6.3}`} stroke="#ffffff" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+          <path d={`M ${cx - 5.1},${cy - 6.3} L ${cx + 5.7},${cy - 3.9} L ${cx - 5.1},${cy - 1.2} Z`} fill="#f1d893" stroke="#b8862f" strokeWidth="0.9" />
         </g>
       ) : isRoute ? (
-        // 街道テーマ別の小グラフィック（道なりの記号）
+        // 街道テーマ別の小グラフィック
         <g className="pointer-events-none">
           {node.routeTheme === 'mountain' && (
-            // ▲ 山型（峠）
-            <path d={`M ${cx - 1.2},${cy + 0.7} L ${cx},${cy - 1.1} L ${cx + 1.2},${cy + 0.7} Z`} fill="#fff" opacity="0.85" />
+            <path d={`M ${cx - 3.6},${cy + 2.1} L ${cx},${cy - 3.3} L ${cx + 3.6},${cy + 2.1} Z`} fill="#fff" opacity="0.85" />
           )}
           {node.routeTheme === 'sea' && (
-            // 〜 海路（波線）
-            <path d={`M ${cx - 1.4},${cy} Q ${cx - 0.7},${cy - 0.8} ${cx},${cy} T ${cx + 1.4},${cy}`} fill="none" stroke="#ffffff" strokeWidth="0.55" strokeLinecap="round" opacity="0.9" />
+            <path d={`M ${cx - 4.2},${cy} Q ${cx - 2.1},${cy - 2.4} ${cx},${cy} T ${cx + 4.2},${cy}`} fill="none" stroke="#ffffff" strokeWidth="1.65" strokeLinecap="round" opacity="0.9" />
           )}
           {node.routeTheme === 'river' && (
-            // = 河川（細い二重線）
-            <g stroke="#ffffff" strokeWidth="0.45" strokeLinecap="round" opacity="0.85">
-              <path d={`M ${cx - 1.3},${cy - 0.5} Q ${cx},${cy - 0.9} ${cx + 1.3},${cy - 0.4}`} fill="none" />
-              <path d={`M ${cx - 1.3},${cy + 0.4} Q ${cx},${cy + 0.9} ${cx + 1.3},${cy + 0.5}`} fill="none" />
+            <g stroke="#ffffff" strokeWidth="1.35" strokeLinecap="round" opacity="0.85">
+              <path d={`M ${cx - 3.9},${cy - 1.5} Q ${cx},${cy - 2.7} ${cx + 3.9},${cy - 1.2}`} fill="none" />
+              <path d={`M ${cx - 3.9},${cy + 1.2} Q ${cx},${cy + 2.7} ${cx + 3.9},${cy + 1.5}`} fill="none" />
             </g>
           )}
           {node.routeTheme === 'town' && (
-            // ▢ 街道沿いの宿（小さな四角）
-            <rect x={cx - 1.1} y={cy - 0.9} width="2.2" height="1.8" rx="0.3" fill="#fff" opacity="0.85" />
+            <rect x={cx - 3.3} y={cy - 2.7} width="6.6" height="5.4" rx="0.9" fill="#fff" opacity="0.85" />
           )}
           {!node.routeTheme && (
-            // フォールバック（旧データ用）
-            <circle cx={cx} cy={cy} r="0.6" fill="#fff" opacity="0.7" />
+            <circle cx={cx} cy={cy} r="1.8" fill="#fff" opacity="0.7" />
           )}
         </g>
       ) : (
@@ -174,8 +170,8 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
       {/* 歩数バッジ */}
       {isReachable && steps !== undefined && (
         <>
-          <circle cx={cx + R + 1} cy={cy - R - 1} r="2" fill="#f1d893" stroke="#6b4e16" strokeWidth="0.3" className="pointer-events-none" />
-          <text x={cx + R + 1} y={cy - R - 0.4} textAnchor="middle" fontSize="2.2" fill="#3a2a0e" fontWeight="bold" className="pointer-events-none select-none">
+          <circle cx={cx + R + 3} cy={cy - R - 3} r="6" fill="#f1d893" stroke="#6b4e16" strokeWidth="0.9" className="pointer-events-none" />
+          <text x={cx + R + 3} y={cy - R - 1.2} textAnchor="middle" fontSize="6.6" fill="#3a2a0e" fontWeight="bold" className="pointer-events-none select-none">
             {steps}
           </text>
         </>

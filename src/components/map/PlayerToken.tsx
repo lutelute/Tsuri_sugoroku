@@ -11,10 +11,10 @@ export default function PlayerToken({ player, index, totalPlayers }: PlayerToken
   const node = NODE_MAP.get(player.currentNode);
   if (!node) return null;
 
-  // 複数プレイヤーが同じノードにいる場合のオフセット
-  const offset = totalPlayers > 1 ? (index - (totalPlayers - 1) / 2) * 3.5 : 0;
+  // 複数プレイヤーが同じノードにいる場合のオフセット (v3: ×3)
+  const offset = totalPlayers > 1 ? (index - (totalPlayers - 1) / 2) * 10.5 : 0;
   const x = node.x + offset;
-  const y = node.y - 5.5;
+  const y = node.y - 16.5;
 
   return (
     <g
@@ -24,28 +24,28 @@ export default function PlayerToken({ player, index, totalPlayers }: PlayerToken
         transition: 'transform 0.7s ease-in-out',
       }}
     >
-      {/* 接地影（マスの上） */}
-      <ellipse cx={0} cy={6} rx={2.1} ry={0.7} fill="rgba(6,18,31,0.45)" />
+      {/* 接地影（マスの上） v3: ×3 */}
+      <ellipse cx={0} cy={18} rx={6.3} ry={2.1} fill="rgba(6,18,31,0.45)" />
 
       {/* ピン本体（先端がマスを指す） */}
       <path
-        d="M 0,6 L -2.2,0.6 A 2.9 2.9 0 1 1 2.2,0.6 Z"
+        d="M 0,18 L -6.6,1.8 A 8.7 8.7 0 1 1 6.6,1.8 Z"
         fill={player.color}
         stroke="#f1d893"
-        strokeWidth="0.55"
+        strokeWidth="1.65"
         strokeLinejoin="round"
       />
       {/* 上面の照り */}
-      <ellipse cx={-0.7} cy={-1.8} rx={1} ry={0.7} fill="#ffffff" opacity="0.35" />
+      <ellipse cx={-2.1} cy={-5.4} rx={3} ry={2.1} fill="#ffffff" opacity="0.35" />
 
       {/* 番号の白丸 */}
-      <circle cx={0} cy={-1} r={1.7} fill="#fbf6e8" />
+      <circle cx={0} cy={-3} r={5.1} fill="#fbf6e8" />
       <text
         x={0}
-        y={-0.95}
+        y={-2.85}
         textAnchor="middle"
         dominantBaseline="middle"
-        fontSize="2.3"
+        fontSize="6.9"
         fill={player.color}
         fontWeight="bold"
         fontFamily='"Shippori Mincho", serif'
