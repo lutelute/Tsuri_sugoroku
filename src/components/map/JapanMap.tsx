@@ -43,6 +43,7 @@ export default function JapanMap() {
   const { players, currentPlayerIndex, turnPhase, reachableNodes, selectPath } = useGameStore();
   const [viewBox, setViewBox] = useState(DEFAULT_VIEWBOX);
   const [infoNodeId, setInfoNodeId] = useState<string | null>(null);
+  const [showLegend, setShowLegend] = useState(false);
   const infoNode = infoNodeId ? NODE_MAP.get(infoNodeId) ?? null : null;
 
   const svgRef = useRef<SVGSVGElement>(null);
@@ -399,13 +400,14 @@ export default function JapanMap() {
           })}
         </g>
 
-        {/* プレイヤートークン */}
+        {/* プレイヤートークン (現在プレイヤーは脈動アニメで強調) */}
         {players.map((player, i) => (
           <PlayerToken
             key={player.id}
             player={player}
             index={i}
             totalPlayers={players.length}
+            isCurrent={i === currentPlayerIndex}
           />
         ))}
       </svg>
@@ -434,6 +436,31 @@ export default function JapanMap() {
           ↺ リセット
         </button>
       )}
+
+      {/* 地方凡例 (開閉式) */}
+      <div className={`absolute ${isDefaultView ? 'top-2' : 'top-9'} right-2 z-10`}>
+        <button
+          onClick={() => setShowLegend(v => !v)}
+          className="bg-ai-900/75 hover:bg-ai-700/85 backdrop-blur-sm border border-kin-500/35 text-washi text-[10px] px-2 py-1 rounded shadow transition cursor-pointer flex items-center gap-1"
+          title="地方の色"
+        >
+          <span>{showLegend ? '▲' : '▼'}</span>
+          <Ruby>地方</Ruby>
+        </button>
+        {showLegend && (
+          <div className="mt-1 bg-ai-900/85 backdrop-blur-sm border border-kin-500/30 rounded shadow-lg p-1.5 space-y-0.5">
+            {REGION_FILLS.map(r => (
+              <div key={r.id} className="flex items-center gap-1.5 text-[10px] text-washi/90 leading-tight">
+                <span
+                  className="w-3 h-3 rounded-sm border border-white/30 shrink-0"
+                  style={{ backgroundColor: r.color }}
+                />
+                <span className="font-mincho whitespace-nowrap"><Ruby>{r.name}</Ruby></span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* パス選択の代替操作: 行き先ボタン群（モバイルの小さなノードを押せない場合や
           キーボード/スクリーンリーダー利用者のための大きなタップ領域） */}

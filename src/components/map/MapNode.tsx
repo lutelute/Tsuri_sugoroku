@@ -34,6 +34,25 @@ const ROUTE_THEME_COLORS: Record<RouteTheme, string> = {
   town: '#8a7a64',      // 茶白系（街道宿）
 };
 
+// 地方連想色 (landmass.tsのREGION_COLORSと同期。ノードの外枠 rim に使う)
+const REGION_RIM_COLORS: Record<string, string> = {
+  hokkaido: '#5e8aa8',
+  tohoku:   '#8a5a6a',
+  kanto:    '#7a7a8a',
+  chubu:    '#6a8a5a',
+  kinki:    '#a08660',
+  chugoku:  '#5e8a8a',
+  shikoku:  '#7e5a8a',
+  kyushu:   '#a05a3a',
+};
+
+function regionRim(node: { region: string; id: string }): string {
+  // 南西諸島(沖縄/種子島)はkyushuだが個別に色を当てる
+  if (['amami', 'tokunoshima', 'naha', 'goal'].includes(node.id)) return '#6a8aa0'; // 沖縄・奄美
+  if (['tanegashima', 'yakushima'].includes(node.id)) return '#4a7a5a'; // 種子島・屋久島
+  return REGION_RIM_COLORS[node.region] ?? 'rgba(212,168,67,0.85)';
+}
+
 // 絵文字をやめ、明朝の漢字記号で種別を表す
 const NODE_GLYPH: Record<NodeType, string> = {
   start: '',   // 鳥居グラフィック
@@ -70,7 +89,16 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
   // タップ判定は別途大きいまま（押しやすさは維持）。
   const R = isCapital ? 9.5 : isRoute ? 3.8 : special ? 8.5 : 6;
   const dist = distanceToGoal.get(node.id);
-  const rim = isCurrentPlayer ? '#ffffff' : isCapital ? '#fff4cf' : 'rgba(212,168,67,0.85)';
+  // 地方の連想色を rim(外枠)に使い、ノード単体でも地方が認識できるように。
+  // start/goal/capital/currentPlayerは特別色を維持。
+  const isStartGoal = node.type === 'start' || node.type === 'goal';
+  const rim = isCurrentPlayer
+    ? '#ffffff'
+    : isCapital
+    ? '#fff4cf'
+    : isStartGoal
+    ? 'rgba(212,168,67,0.85)'
+    : regionRim(node);
   const cx = node.x;
   const cy = node.y;
 
@@ -114,8 +142,8 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
       {/* 影 */}
       <circle cx={cx} cy={cy + 1.5} r={R} fill="rgba(6,18,31,0.5)" className="pointer-events-none" />
 
-      {/* 本体ディスク */}
-      <circle cx={cx} cy={cy} r={R} fill={color} stroke={rim} strokeWidth={isCurrentPlayer ? 2.1 : 1.5} className="pointer-events-none" />
+      {/* 本体ディスク (地方連想色のrimで地方識別) */}
+      <circle cx={cx} cy={cy} r={R} fill={color} stroke={rim} strokeWidth={isCurrentPlayer ? 2.4 : 2.0} className="pointer-events-none" />
       {/* 内側の陰 */}
       <circle cx={cx} cy={cy} r={R} fill="none" stroke={darken(color, 0.35)} strokeWidth="0.9" opacity="0.6" className="pointer-events-none" />
       {/* 上面の照り */}

@@ -5,14 +5,13 @@ interface PlayerTokenProps {
   player: Player;
   index: number;
   totalPlayers: number;
+  isCurrent?: boolean;
 }
 
-export default function PlayerToken({ player, index, totalPlayers }: PlayerTokenProps) {
+export default function PlayerToken({ player, index, totalPlayers, isCurrent }: PlayerTokenProps) {
   const node = NODE_MAP.get(player.currentNode);
   if (!node) return null;
 
-  // 複数プレイヤーが同じノードにいる場合のオフセット。
-  // v3.1.x: ノード(R=12) を隠さない位置 (マスの右斜め上) に配置する。
   const offset = totalPlayers > 1 ? (index - (totalPlayers - 1) / 2) * 12 : 0;
   const x = node.x + 14 + offset;
   const y = node.y - 26;
@@ -25,15 +24,28 @@ export default function PlayerToken({ player, index, totalPlayers }: PlayerToken
         transition: 'transform 0.7s ease-in-out',
       }}
     >
-      {/* 接地影（マスの上） v3: ×3 */}
+      {/* 現在プレイヤーの強調オーラ (脈動) */}
+      {isCurrent && (
+        <>
+          <circle cx={0} cy={2} r={14} fill="none" stroke={player.color} strokeWidth="1.8" opacity="0.7">
+            <animate attributeName="r" values="14;22;14" dur="1.6s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.8;0.2;0.8" dur="1.6s" repeatCount="indefinite" />
+          </circle>
+          <circle cx={0} cy={2} r={11} fill={player.color} opacity="0.18">
+            <animate attributeName="opacity" values="0.30;0.10;0.30" dur="1.6s" repeatCount="indefinite" />
+          </circle>
+        </>
+      )}
+
+      {/* 接地影 */}
       <ellipse cx={0} cy={18} rx={6.3} ry={2.1} fill="rgba(6,18,31,0.45)" />
 
       {/* ピン本体（先端がマスを指す） */}
       <path
         d="M 0,18 L -6.6,1.8 A 8.7 8.7 0 1 1 6.6,1.8 Z"
         fill={player.color}
-        stroke="#f1d893"
-        strokeWidth="1.65"
+        stroke={isCurrent ? '#ffffff' : '#f1d893'}
+        strokeWidth={isCurrent ? 2.2 : 1.65}
         strokeLinejoin="round"
       />
       {/* 上面の照り */}
@@ -54,6 +66,18 @@ export default function PlayerToken({ player, index, totalPlayers }: PlayerToken
       >
         {player.id + 1}
       </text>
+
+      {/* 現在プレイヤーの上に小さな矢印インジケーター */}
+      {isCurrent && (
+        <path
+          d="M 0,-14 L -3,-9 L 3,-9 Z"
+          fill="#ffffff"
+          stroke={player.color}
+          strokeWidth="0.6"
+        >
+          <animate attributeName="opacity" values="1;0.5;1" dur="1.0s" repeatCount="indefinite" />
+        </path>
+      )}
     </g>
   );
 }
