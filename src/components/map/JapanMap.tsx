@@ -9,11 +9,11 @@ import NodeInfoOverlay from './NodeInfoOverlay';
 import { LAND_PATHS, ISLANDS, REGION_LABELS } from './landmass';
 import Ruby from '../shared/Ruby';
 
-// v3.1.x: 密集解消のため座標を×1.5×1.4 (合計×6.3)。
-// 座標範囲: x ~ 76..1033, y ~ 38..1260。
-const DEFAULT_VIEWBOX = { x: -60, y: -60, width: 1160, height: 1416 };
-const MIN_WIDTH = 350;
-const MAX_WIDTH = 1700;
+// v3.2.x: 全体×1.2追加(関東密集対策, 合計×7.6)。
+// 座標範囲: x ~ 84..1240, y ~ 46..1512。
+const DEFAULT_VIEWBOX = { x: -80, y: -80, width: 1400, height: 1708 };
+const MIN_WIDTH = 400;
+const MAX_WIDTH = 2200;
 const DRAG_THRESHOLD = 5; // px on screen
 
 interface DragState {
@@ -78,24 +78,11 @@ export default function JapanMap() {
   }, [viewBox.width]);
 
   const clampViewBox = useCallback((vb: typeof DEFAULT_VIEWBOX) => {
+    // 無限キャンバス: パン(x,y)は完全に自由。ズームのみ MIN/MAX_WIDTH で制限する。
+    // 「Reset View」ボタンで DEFAULT_VIEWBOX に戻る運用。
     const w = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, vb.width));
-    // 縦長を保つ: 高さは幅の 1.22 倍 (日本列島の縦長比率に近い)
     const h = w * 1.22;
-    // 座標範囲 x: 76..1033, y: 38..1260。
-    // viewBox の左上(x,y)が取れる範囲を、ノード範囲を完全カバーするように設定。
-    // パン境界: zoom in 時も端のノードまでカメラを寄せられるよう、
-    // 「ノード範囲をすべて含む大きな矩形 (-200..1250, -150..1450)」内であれば
-    // viewBoxの左上(x,y)はどこに置いてもよい、とする。
-    const X_MIN = -200, X_MAX = 1250;
-    const Y_MIN = -150, Y_MAX = 1450;
-    // x の最大は「右端のX_MAXからviewBox幅を引いた値」だが、
-    // 表示領域が狭い (w<<範囲) 時は x の最大を X_MAX-w に。
-    // ただし w が範囲より大きい場合は中央寄せにする。
-    const xMax = Math.max(X_MIN, X_MAX - w);
-    const yMax = Math.max(Y_MIN, Y_MAX - h);
-    const x = Math.max(X_MIN, Math.min(xMax, vb.x));
-    const y = Math.max(Y_MIN, Math.min(yMax, vb.y));
-    return { x, y, width: w, height: h };
+    return { x: vb.x, y: vb.y, width: w, height: h };
   }, []);
 
   // --- Mouse handlers ---
