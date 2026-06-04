@@ -215,6 +215,21 @@ const REGION_PADS: Record<string, number> = {
   kyushu: 34,
 };
 
+// 地方ラベルを「海上」に配置するオフセット (dx, dy)。重心からの位置調整。
+// 実際の地図で各地方の沿岸 (海側) に名前を置くイメージ。
+const LABEL_OFFSET: Record<string, { dx: number; dy: number }> = {
+  hokkaido:   { dx:  130, dy:  -50 },  // 道東のオホーツク海側
+  tohoku:     { dx:  150, dy:    0 },  // 太平洋側
+  kanto:      { dx:  140, dy:    0 },  // 太平洋側
+  chubu:      { dx:  -140, dy:   30 },  // 日本海側
+  kinki:      { dx:  130, dy:   30 },  // 紀伊水道
+  chugoku:    { dx:    0, dy:  -110 }, // 日本海側 (上)
+  shikoku:    { dx:    0, dy:  100 },  // 太平洋側 (下)
+  kyushu:     { dx: -130, dy:   30 },  // 東シナ海側 (左)
+  tanegashima:{ dx:  110, dy:    0 },  // 太平洋側
+  okinawa:    { dx:  120, dy:    0 },  // 太平洋側
+};
+
 function regionFillFor(id: string, nodes: BoardNode[]): RegionFill | null {
   if (nodes.length === 0) return null;
   const pad = REGION_PADS[id] ?? 35;
@@ -222,6 +237,7 @@ function regionFillFor(id: string, nodes: BoardNode[]): RegionFill | null {
   if (!path) return null;
   const cx = nodes.reduce((s, n) => s + n.x, 0) / nodes.length;
   const cy = nodes.reduce((s, n) => s + n.y, 0) / nodes.length;
+  const off = LABEL_OFFSET[id] ?? { dx: 0, dy: 0 };
   const nameMap: Record<string, string> = {
     hokkaido: '北海道', tohoku: '東北', kanto: '関東', chubu: '中部',
     kinki: '近畿', chugoku: '中国', shikoku: '四国', kyushu: '九州',
@@ -232,8 +248,8 @@ function regionFillFor(id: string, nodes: BoardNode[]): RegionFill | null {
     name: nameMap[id] ?? id,
     path,
     color: REGION_COLORS[id] ?? '#888',
-    labelX: cx,
-    labelY: cy,
+    labelX: cx + off.dx,
+    labelY: cy + off.dy,
   };
 }
 
