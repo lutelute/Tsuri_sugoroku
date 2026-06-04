@@ -9,9 +9,9 @@ import NodeInfoOverlay from './NodeInfoOverlay';
 import { LAND_PATHS, ISLANDS, REGION_LABELS, LAND_TONES } from './landmass';
 import Ruby from '../shared/Ruby';
 
-// v3.2.x: 全体×1.2追加(関東密集対策, 合計×7.6)。
-// 座標範囲: x ~ 84..1240, y ~ 46..1512。
-const DEFAULT_VIEWBOX = { x: -80, y: -80, width: 1400, height: 1708 };
+// v3.2.5: 経度緯度に基づく地理座標化。
+// 座標範囲: x ~ 84..1213, y ~ -79..1512 (稚内が緯度45.4で y=-79)。
+const DEFAULT_VIEWBOX = { x: -80, y: -150, width: 1400, height: 1730 };
 const MIN_WIDTH = 400;
 const MAX_WIDTH = 2200;
 const DRAG_THRESHOLD = 5; // px on screen
