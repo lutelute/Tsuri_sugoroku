@@ -5,7 +5,8 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { PLAYER_DEFAULT_NAMES, PLAYER_COLORS, DEFAULT_MAX_TURNS } from '../../game/constants';
 import { lookupUserByUsername, loadUserEquipment, loadUserMoney, loadUserEncyclopedia } from '../../lib/firestore';
 import { verifyAuth } from '../../lib/firebase';
-import type { PlayerEquipment } from '../../game/types';
+import type { PlayerEquipment, BoardType } from '../../game/types';
+import { getActiveBoardType, setActiveBoardType, BOARD_TYPE_LABEL, BOARD_TYPE_DESC } from '../../data/boards/boardType';
 import Button from '../shared/Button';
 import Ruby from '../shared/Ruby';
 
@@ -30,6 +31,7 @@ export default function SetupScreen() {
 
   const [starting, setStarting] = useState(false);
   const [carryOver, setCarryOver] = useState(true); // 引き継ぎモード
+  const [boardType, setBoardType] = useState<BoardType>(getActiveBoardType());
 
   // ログイン中ならプレイヤー1に自動紐付け（ゲストは共有アカウントのため紐付けしない）
   useEffect(() => {
@@ -49,6 +51,14 @@ export default function SetupScreen() {
 
   const handleStart = async () => {
     setStarting(true);
+    // ボードタイプ変更時はリロードして反映（モジュール初期化時に1度だけ評価する設計のため）
+    if (boardType !== getActiveBoardType()) {
+      setActiveBoardType(boardType);
+      // 開始フラグを保存してリロード後に自動的にゲーム開始する手もあるが、
+      // 紐付けやプレイヤー設定の整合性を保つため、ここではリロードのみ → セットアップ画面を再表示する。
+      window.location.reload();
+      return;
+    }
     try {
       // 紐付けユーザーのデータ(users/{uid})はFirestoreルール上「認証必須」で読み書きする。
       // 未ログインのままだと紐付け相手の図鑑/装備が読み込めず保存もできないため、
@@ -366,7 +376,7 @@ export default function SetupScreen() {
         )}
 
         {/* ターン数設定 */}
-        <div className="mb-8">
+        <div className="mb-6">
           <label className="block text-sm text-white/60 mb-2"><Ruby>最大ターン数</Ruby></label>
           <div className="flex gap-2">
             {[50, 80, 120, 0].map(n => (
@@ -383,6 +393,37 @@ export default function SetupScreen() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* ボード(盤面)選択 */}
+        <div className="mb-8">
+          <label className="block text-sm text-white/60 mb-2"><Ruby>盤面のレイアウト</Ruby></label>
+          <div className="space-y-2">
+            {(['realistic', 'snake', 'islands'] as BoardType[]).map(t => (
+              <button
+                key={t}
+                onClick={() => setBoardType(t)}
+                className={`w-full text-left px-3 py-2 rounded-lg border transition cursor-pointer
+                  ${boardType === t
+                    ? 'bg-ai-700/60 border-kin-500/50 text-washi shadow-lg'
+                    : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80'
+                  }`}
+              >
+                <div className="font-mincho text-sm font-bold flex items-center gap-2">
+                  <span className={`inline-block w-1.5 h-1.5 rounded-full ${boardType === t ? 'bg-kin-300' : 'bg-white/30'}`} />
+                  <Ruby>{BOARD_TYPE_LABEL[t]}</Ruby>
+                </div>
+                <div className="text-[11px] text-white/55 mt-0.5 pl-3.5 leading-snug">
+                  <Ruby>{BOARD_TYPE_DESC[t]}</Ruby>
+                </div>
+              </button>
+            ))}
+          </div>
+          {boardType !== getActiveBoardType() && (
+            <div className="mt-2 text-[11px] text-shu-300/85">
+              <Ruby>※ 盤面を変更すると、開始時にページを再読み込みします。</Ruby>
+            </div>
+          )}
         </div>
 
         {/* ボタン */}

@@ -63,8 +63,9 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
   // routeはrouteThemeに応じて色を上書き
   const color = isRoute && node.routeTheme ? ROUTE_THEME_COLORS[node.routeTheme] : NODE_COLORS[node.type];
   const special = node.type === 'start' || node.type === 'goal' || isCapital;
-  // v3.x: 座標スケール×3に合わせてサイズも×3
-  const R = isCapital ? 12 : isRoute ? 5.4 : special ? 10.8 : 7.8;
+  // v3.1.x: 座標×4.5 に対してノード半径は相対的に縮小し、視覚的な余白を確保。
+  // タップ判定は別途大きいまま（押しやすさは維持）。
+  const R = isCapital ? 9.5 : isRoute ? 3.8 : special ? 8.5 : 6;
   const dist = distanceToGoal.get(node.id);
   const rim = isCurrentPlayer ? '#ffffff' : isCapital ? '#fff4cf' : 'rgba(212,168,67,0.85)';
   const cx = node.x;

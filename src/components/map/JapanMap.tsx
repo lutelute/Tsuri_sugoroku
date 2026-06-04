@@ -9,12 +9,11 @@ import NodeInfoOverlay from './NodeInfoOverlay';
 import { LAND_PATHS, ISLANDS, REGION_LABELS } from './landmass';
 import Ruby from '../shared/Ruby';
 
-// v3.x: ノード座標を×3にスケールしたため、viewBoxも×3。
-// テキスト/ストローク等の絶対値もそれに合わせて拡大している。
-const DEFAULT_VIEWBOX = { x: -15, y: -15, width: 660, height: 660 };
-// v3.x: 座標スケール×3に追従
-const MIN_WIDTH = 150;
-const MAX_WIDTH = 800;
+// v3.1.x: 密集解消のため座標を×1.5×1.4 (合計×6.3)。
+// 座標範囲: x ~ 76..1033, y ~ 38..1260。
+const DEFAULT_VIEWBOX = { x: -60, y: -60, width: 1160, height: 1416 };
+const MIN_WIDTH = 350;
+const MAX_WIDTH = 1700;
 const DRAG_THRESHOLD = 5; // px on screen
 
 interface DragState {
@@ -80,10 +79,22 @@ export default function JapanMap() {
 
   const clampViewBox = useCallback((vb: typeof DEFAULT_VIEWBOX) => {
     const w = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, vb.width));
-    const h = w; // keep aspect ratio 1:1
-    // v3.x: 座標スケール×3。南端ゴール(y=600)まで到達できるよう境界を拡張
-    const x = Math.max(-150, Math.min(750 - w, vb.x));
-    const y = Math.max(-90, Math.min(1050 - h, vb.y));
+    // 縦長を保つ: 高さは幅の 1.22 倍 (日本列島の縦長比率に近い)
+    const h = w * 1.22;
+    // 座標範囲 x: 76..1033, y: 38..1260。
+    // viewBox の左上(x,y)が取れる範囲を、ノード範囲を完全カバーするように設定。
+    // パン境界: zoom in 時も端のノードまでカメラを寄せられるよう、
+    // 「ノード範囲をすべて含む大きな矩形 (-200..1250, -150..1450)」内であれば
+    // viewBoxの左上(x,y)はどこに置いてもよい、とする。
+    const X_MIN = -200, X_MAX = 1250;
+    const Y_MIN = -150, Y_MAX = 1450;
+    // x の最大は「右端のX_MAXからviewBox幅を引いた値」だが、
+    // 表示領域が狭い (w<<範囲) 時は x の最大を X_MAX-w に。
+    // ただし w が範囲より大きい場合は中央寄せにする。
+    const xMax = Math.max(X_MIN, X_MAX - w);
+    const yMax = Math.max(Y_MIN, Y_MAX - h);
+    const x = Math.max(X_MIN, Math.min(xMax, vb.x));
+    const y = Math.max(Y_MIN, Math.min(yMax, vb.y));
     return { x, y, width: w, height: h };
   }, []);
 
@@ -353,14 +364,14 @@ export default function JapanMap() {
             // route ノードは地名ラベルを出さない（密度を上げないため）
             if (isRoute) return null;
             const special = node.type === 'start' || node.type === 'goal' || isCapital;
-            const r = isCapital ? 12 : special ? 10.8 : 7.8;
+            const r = isCapital ? 9.5 : special ? 8.5 : 6;
             return (
               <text
                 key={`label-${node.id}`}
                 x={node.x}
-                y={node.y + r + 8.4}
+                y={node.y + r + 8}
                 textAnchor="middle"
-                fontSize={isCapital ? '8.4' : '6.6'}
+                fontSize={isCapital ? '10' : '7.5'}
                 fill={isCapital ? '#ffd97a' : reachable ? '#f1d893' : '#e9dcc0'}
                 opacity={reachable ? 1 : isCapital ? 0.95 : 0.72}
                 fontFamily='"Shippori Mincho", serif'

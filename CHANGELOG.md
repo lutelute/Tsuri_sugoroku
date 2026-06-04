@@ -2,6 +2,36 @@
 
 本ファイルは「釣りすごろく」の主要な変更を記録します。
 
+## [3.2.0] - 2026-06-04 — ボード選択(3種) + マップ拡大・操作性改善
+
+### 🎲 ボード選択機能
+- **3種類のレイアウト**を SetupScreen で選択可能に:
+  - `realistic` 日本列島（地理）— 既存の日本地図ベース
+  - `snake` ジグザグ伝統盤 — 左右に蛇行する古典的すごろくレーン
+  - `islands` 島ホップ（地方分離）— 8地方を独立した「島」として配置
+- 全ボードで既存のノードID/エッジ/capitalEvent/route/roueTheme を完全継承（座標のみ再配置）。図鑑・装備・ゲームロジックはそのまま動作。
+- 選択は `localStorage` 保存 → 「はじめる」時にボードタイプが変わっていればページリロードで反映。
+
+### 🗺 マップ密集・操作性の改善
+- 座標を更に **×1.4** 追加スケール（合計**×6.3**）。範囲 x: 76..1033, y: 38..1260。
+- viewBox を 1160×1416 に拡張、MIN/MAX_WIDTH を 350..1700 に。
+- **pan/zoom 境界を全面的に書き直し**: 端のノード(x=1033, y=1260)まで操作可能に。zoom in 時もカメラを各端まで寄せられる。
+- ノード半径を相対的に縮小（capital 12→9.5, 通常 7.8→6, route 5.4→3.8）。タップ判定は据え置きで「押しやすさは維持しつつ視覚的余白UP」。
+- PlayerToken を node の右斜め上 (x+14, y-26) に配置 → マスが隠れない。
+- 海岸線 padding を 27/24 → 40/36、地方名透かしの境界判定も追従。
+
+### 🧩 新規ファイル
+- `src/data/boards/boardType.ts` — BoardType の get/set + ラベル
+- `src/data/boards/snakeBoard.ts` — ジグザグ伝統盤の座標再配置
+- `src/data/boards/islandsBoard.ts` — 島ホップの座標再配置
+- `src/data/boardActive.ts` — アクティブボードのノード/エッジ選択
+- `src/data/realisticData_nodes.ts` / `realisticData_edges.ts` — realistic ボードの元データ（循環参照回避のため `boardNodes.ts` から分離）
+- `design-proposals/index.html` — 5案レイアウト比較資料（A/B/C/D/E）
+
+### 🛠 型
+- `BoardType = 'realistic' | 'snake' | 'islands'` を追加。
+- `boardNodes.ts` / `boardEdges.ts` は薄い再エクスポートに整理（既存 import パスは互換維持）。
+
 ## [3.1.0] - 2026-06-04 — マップ拡大 + 属性表示 + 県大物の判定実装
 
 ### 🗾 マップの押しやすさ大幅改善

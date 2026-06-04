@@ -16,6 +16,9 @@ export type NodeType =
 // 街道テーマ（route ノードの装飾用）
 export type RouteTheme = 'mountain' | 'sea' | 'river' | 'town';
 
+// ボードタイプ（盤面のレイアウト方式）
+export type BoardType = 'realistic' | 'snake' | 'islands';
+
 export type Region = 'hokkaido' | 'tohoku' | 'kanto' | 'chubu' | 'kinki' | 'chugoku' | 'shikoku' | 'kyushu';
 
 export interface BoardNode {

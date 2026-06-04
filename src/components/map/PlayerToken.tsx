@@ -11,10 +11,11 @@ export default function PlayerToken({ player, index, totalPlayers }: PlayerToken
   const node = NODE_MAP.get(player.currentNode);
   if (!node) return null;
 
-  // 複数プレイヤーが同じノードにいる場合のオフセット (v3: ×3)
-  const offset = totalPlayers > 1 ? (index - (totalPlayers - 1) / 2) * 10.5 : 0;
-  const x = node.x + offset;
-  const y = node.y - 16.5;
+  // 複数プレイヤーが同じノードにいる場合のオフセット。
+  // v3.1.x: ノード(R=12) を隠さない位置 (マスの右斜め上) に配置する。
+  const offset = totalPlayers > 1 ? (index - (totalPlayers - 1) / 2) * 12 : 0;
+  const x = node.x + 14 + offset;
+  const y = node.y - 26;
 
   return (
     <g

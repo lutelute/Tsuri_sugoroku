@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>釣りすごろく マップ改善案 5案</title>
+<style>
+  :root {
+    --ai-950: #06121f;
+    --ai-900: #0a1c2e;
+    --ai-700: #16365c;
+    --ai-500: #2e5e8c;
+    --ai-300: #6fa6d9;
+    --washi: #fbf6e8;
+    --kin-300: #f1d893;
+    --kin-500: #d4a843;
+    --kin-700: #8e6a18;
+    --shu-300: #e88f7f;
+    --shu-500: #e34a33;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: linear-gradient(180deg, var(--ai-950), var(--ai-900));
+    color: var(--washi);
+    font-family: "Shippori Mincho", "Noto Serif JP", serif;
+    min-height: 100%;
+  }
+  header {
+    text-align: center;
+    padding: 28px 16px 12px;
+    border-bottom: 1px solid rgba(241,216,147,0.18);
+  }
+  header h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    color: var(--kin-300);
+    letter-spacing: 0.1em;
+  }
+  header p {
+    margin: 0;
+    color: rgba(251,246,232,0.6);
+    font-size: 13px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 22px;
+    padding: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  .card {
+    background: rgba(10,28,46,0.55);
+    border: 1px solid rgba(241,216,147,0.22);
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .card-head {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(241,216,147,0.12);
+    background: rgba(6,18,31,0.55);
+  }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: var(--kin-300);
+    margin-bottom: 4px;
+  }
+  .card h2 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    color: var(--washi);
+  }
+  .card p.lead {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: rgba(251,246,232,0.72);
+  }
+  .svg-wrap {
+    background:
+      radial-gradient(ellipse at center, rgba(212,168,67,0.06), transparent 70%),
+      repeating-linear-gradient(
+        45deg,
+        rgba(241,216,147,0.04) 0,
+        rgba(241,216,147,0.04) 12px,
+        transparent 12px,
+        transparent 24px
+      ),
+      #0a1c2e;
+    padding: 12px;
+    aspect-ratio: 3 / 4;
+  }
+  .svg-wrap svg { width: 100%; height: 100%; display: block; }
+  .pros, .cons {
+    padding: 10px 16px;
+    font-size: 12px;
+    line-height: 1.65;
+  }
+  .pros { color: rgba(110,250,200,0.85); border-top: 1px solid rgba(241,216,147,0.08); }
+  .cons { color: rgba(255,170,130,0.8); border-top: 1px dashed rgba(241,216,147,0.08); padding-bottom: 16px; }
+  .pros::before { content: "○ "; }
+  .cons::before { content: "× "; }
+  /* SVGノード共通 */
+  .n { stroke: rgba(212,168,67,0.6); stroke-width: 0.8; }
+  .label { fill: var(--washi); font-size: 7px; font-family: "Shippori Mincho", serif; }
+  .cap { fill: #e8a23a; }
+  .fish { fill: #2e5e8c; }
+  .shop { fill: #d4a843; }
+  .rest { fill: #1aa6a0; }
+  .event { fill: #a06cc9; }
+  .route { fill: #7a8a9a; opacity: 0.7; }
+  .start { fill: #2f9e6e; }
+  .goal { fill: #e34a33; }
+  .edge { stroke: rgba(212,168,67,0.45); stroke-width: 0.6; fill: none; stroke-dasharray: 0.5 2.5; }
+  .edge-solid { stroke: rgba(96,160,210,0.55); stroke-width: 1.4; fill: none; stroke-linecap: round; }
+  .region-bg { opacity: 0.18; }
+  .grid-line { stroke: rgba(241,216,147,0.08); stroke-width: 0.5; }
+  footer {
+    text-align: center;
+    padding: 18px;
+    color: rgba(251,246,232,0.4);
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>釣りすごろく マップ改善案 5案</h1>
+    <p>密集解消・ゴール可視化・双六らしい流れの強化を狙った概念設計（v3.1.x 検討用）</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- ===================== 案 A: 等距離リフロー（現状改善） ===================== -->
+    <div class="card">
+      <div class="card-head">
+        <span class="badge">PROPOSAL A</span>
+        <h2>等距離リフロー（現状ベース）</h2>
+        <p class="lead">日本列島の輪郭を保ちつつ、近接ノードに最低距離(60px)を保証する物理シミュレーションで再配置。密集が完全になくなる最小コスト案。</p>
+      </div>
+      <div class="svg-wrap">
+        <svg viewBox="0 0 300 400" preserveAspectRatio="xMidYMid meet">
+          <!-- 日本列島シルエット -->
+          <path d="M 200,30 Q 250,60 240,110 Q 220,150 200,180 Q 170,220 150,260 Q 130,300 110,330 Q 90,350 70,360 Q 50,365 40,360"
+                fill="none" stroke="rgba(212,168,67,0.35)" stroke-width="22" stroke-linecap="round" />
+          <!-- 等距離分散されたノード -->
+          <!-- 北海道 -->
+          <circle class="n start" cx="225" cy="40" r="5"/>
+          <circle class="n route" cx="218" cy="55" r="2.5"/>
+          <circle class="n fish" cx="232" cy="58" r="3.5"/>
+          <circle class="n route" cx="225" cy="73" r="2.5"/>
+          <circle class="n cap" cx="218" cy="88" r="5.5"/>
+          <text class="label" x="232" y="92">札幌</text>
+          <!-- 東北 -->
+          <circle class="n route" cx="225" cy="105" r="2.5"/>
+          <circle class="n cap" cx="218" cy="120" r="5.5"/>
+          <text class="label" x="232" y="124">仙台</text>
+          <circle class="n route" cx="210" cy="135" r="2.5"/>
+          <circle class="n fish" cx="200" cy="148" r="3.5"/>
+          <!-- 関東 -->
+          <circle class="n route" cx="195" cy="165" r="2.5"/>
+          <circle class="n cap" cx="190" cy="183" r="5.5"/>
+          <text class="label" x="206" y="187">東京</text>
+          <circle class="n event" cx="178" cy="200" r="3.5"/>
+          <!-- 中部 -->
+          <circle class="n route" cx="170" cy="217" r="2.5"/>
+          <circle class="n cap" cx="160" cy="232" r="5.5"/>
+          <text class="label" x="176" y="236">名古屋</text>
+          <circle class="n route" cx="148" cy="250" r="2.5"/>
+          <!-- 近畿 -->
+          <circle class="n cap" cx="138" cy="268" r="5.5"/>
+          <text class="label" x="156" y="272">大阪</text>
+          <circle class="n route" cx="125" cy="285" r="2.5"/>
+          <circle class="n shop" cx="113" cy="298" r="3.5"/>
+          <!-- 四国 -->
+          <circle class="n route" cx="103" cy="312" r="2.5"/>
+          <circle class="n fish" cx="92" cy="320" r="3.5"/>
+          <!-- 九州 -->
+          <circle class="n cap" cx="80" cy="335" r="5.5"/>
+          <text class="label" x="94" y="339">福岡</text>
+          <circle class="n route" cx="68" cy="348" r="2.5"/>
+          <circle class="n fish" cx="56" cy="358" r="3.5"/>
+          <!-- ゴール（はっきり） -->
+          <circle class="n goal" cx="40" cy="380" r="7"/>
+          <text class="label" x="40" y="395" text-anchor="middle" fill="#ffb89e">ゴール</text>
+          <!-- エッジ -->
+          <path class="edge-solid" d="M 225,40 L 232,58 L 218,88 L 218,120 L 190,183 L 160,232 L 138,268 L 80,335 L 40,380" />
+        </svg>
+      </div>
+      <div class="pros">既存実装の延長で済む / 地理が直感的 / 短期で実装可能</div>
+      <div class="cons">力学リフロー導入で実装やや複雑 / 北海道〜九州の縦幅が長い</div>
+    </div>
+
+    <!-- ===================== 案 B: 北→南ジグザグ伝統盤 ===================== -->
+    <div class="card">
+      <div class="card-head">
+        <span class="badge">PROPOSAL B</span>
+        <h2>ジグザグ伝統盤（リニア）</h2>
+        <p class="lead">スタート→ゴールを左右に蛇行させた古典的すごろくの版面。地理は捨て、マスを規則的に配置。マスの中身（地名）で日本列島を感じさせる。</p>
+      </div>
+      <div class="svg-wrap">
+        <svg viewBox="0 0 300 400" preserveAspectRatio="xMidYMid meet">
+          <!-- 行ガイド -->
+          <g class="grid-line">
+            <line x1="20" y1="60" x2="280" y2="60"/>
+            <line x1="20" y1="120" x2="280" y2="120"/>
+            <line x1="20" y1="180" x2="280" y2="180"/>
+            <line x1="20" y1="240" x2="280" y2="240"/>
+            <line x1="20" y1="300" x2="280" y2="300"/>
+            <line x1="20" y1="360" x2="280" y2="360"/>
+          </g>
+          <!-- 行ラベル -->
+          <text class="label" x="14" y="63" fill="rgba(251,246,232,0.4)">北海道</text>
+          <text class="label" x="14" y="123" fill="rgba(251,246,232,0.4)">東北</text>
+          <text class="label" x="14" y="183" fill="rgba(251,246,232,0.4)">関東</text>
+          <text class="label" x="14" y="243" fill="rgba(251,246,232,0.4)">中部</text>
+          <text class="label" x="14" y="303" fill="rgba(251,246,232,0.4)">近畿/中国</text>
+          <text class="label" x="14" y="363" fill="rgba(251,246,232,0.4)">四国/九州</text>
+          <!-- スネークパス -->
+          <path class="edge-solid" d="M 40,60 L 270,60 L 270,120 L 40,120 L 40,180 L 270,180 L 270,240 L 40,240 L 40,300 L 270,300 L 270,360 L 40,360" />
+          <!-- ノード（規則的） -->
+          <!-- 行1: 左→右 -->
+          <circle class="n start" cx="40" cy="60" r="5"/><text class="label" x="40" y="48" text-anchor="middle">スタート</text>
+          <circle class="n route" cx="80" cy="60" r="2.5"/>
+          <circle class="n fish" cx="115" cy="60" r="3.5"/>
+          <circle class="n route" cx="150" cy="60" r="2.5"/>
+          <circle class="n cap" cx="185" cy="60" r="5.5"/><text class="label" x="185" y="48" text-anchor="middle">札幌</text>
+          <circle class="n route" cx="225" cy="60" r="2.5"/>
+          <circle class="n shop" cx="270" cy="60" r="3.5"/>
+          <!-- 行2: 右→左 -->
+          <circle class="n route" cx="230" cy="120" r="2.5"/>
+          <circle class="n cap" cx="190" cy="120" r="5.5"/><text class="label" x="190" y="135" text-anchor="middle">仙台</text>
+          <circle class="n event" cx="150" cy="120" r="3.5"/>
+          <circle class="n fish" cx="115" cy="120" r="3.5"/>
+          <circle class="n route" cx="80" cy="120" r="2.5"/>
+          <!-- 行3 -->
+          <circle class="n route" cx="80" cy="180" r="2.5"/>
+          <circle class="n cap" cx="115" cy="180" r="5.5"/><text class="label" x="115" y="168" text-anchor="middle">東京</text>
+          <circle class="n shop" cx="150" cy="180" r="3.5"/>
+          <circle class="n event" cx="190" cy="180" r="3.5"/>
+          <circle class="n route" cx="230" cy="180" r="2.5"/>
+          <!-- 行4 -->
+          <circle class="n route" cx="230" cy="240" r="2.5"/>
+          <circle class="n cap" cx="190" cy="240" r="5.5"/><text class="label" x="190" y="256" text-anchor="middle">名古屋</text>
+          <circle class="n fish" cx="150" cy="240" r="3.5"/>
+          <circle class="n route" cx="115" cy="240" r="2.5"/>
+          <circle class="n rest" cx="80" cy="240" r="3.5"/>
+          <!-- 行5 -->
+          <circle class="n cap" cx="115" cy="300" r="5.5"/><text class="label" x="115" y="288" text-anchor="middle">大阪</text>
+          <circle class="n route" cx="150" cy="300" r="2.5"/>
+          <circle class="n event" cx="190" cy="300" r="3.5"/>
+          <circle class="n route" cx="230" cy="300" r="2.5"/>
+          <!-- 行6 -->
+          <circle class="n route" cx="230" cy="360" r="2.5"/>
+          <circle class="n cap" cx="190" cy="360" r="5.5"/><text class="label" x="190" y="377" text-anchor="middle">福岡</text>
+          <circle class="n fish" cx="150" cy="360" r="3.5"/>
+          <circle class="n cap" cx="115" cy="360" r="5.5"/><text class="label" x="115" y="377" text-anchor="middle">那覇</text>
+          <circle class="n route" cx="80" cy="360" r="2.5"/>
+          <circle class="n goal" cx="40" cy="360" r="7"/>
+          <text class="label" x="40" y="377" text-anchor="middle" fill="#ffb89e">ゴール</text>
+        </svg>
+      </div>
+      <div class="pros">完全に重なりなし / すごろくらしい流れ / 子供にも分かりやすい / ゴールが常に見える</div>
+      <div class="cons">地理感が消える / 既存ボードグラフ(207ノード/261エッジ)の再設計が必要 / 海路・分岐の演出が落ちる</div>
+    </div>
+
+    <!-- ===================== 案 C: 環状47道府県 ===================== -->
+    <div class="card">
+      <div class="card-head">
+        <span class="badge">PROPOSAL C</span>
+        <h2>環状47道府県（リング）</h2>
+        <p class="lead">外周に都道府県を環状配置し、内側にショップ/イベント/休憩のショートカット。中央に図鑑ステータス。すべてが均等に表示され密集ゼロ。</p>
+      </div>
+      <div class="svg-wrap">
+        <svg viewBox="0 0 300 400" preserveAspectRatio="xMidYMid meet">
+          <!-- 外周リング -->
+          <circle cx="150" cy="200" r="130" fill="none" stroke="rgba(212,168,67,0.35)" stroke-width="20" />
+          <!-- 中央 -->
+          <circle cx="150" cy="200" r="48" fill="rgba(241,216,147,0.06)" stroke="rgba(241,216,147,0.25)" stroke-width="0.8"/>
+          <text class="label" x="150" y="195" text-anchor="middle" fill="#f1d893">図鑑</text>
+          <text class="label" x="150" y="208" text-anchor="middle" fill="rgba(251,246,232,0.55)">300/300</text>
+          <!-- 外周マス（24個サンプル, 12時方向=札幌, 反時計回り=東北→九州） -->
+          <g id="ring">
+            <!-- 角度ごとに配置: cx=150+130*cos, cy=200+130*sin。0°=右、-90°=上 -->
+            <!-- 北→東→南→西の順に並べる -->
+          </g>
+          <script type="text/svg">
+            // SVG内JSは描画不可、JSは静的書き出し
+          </script>
+          <!-- 静的に配置 -->
+          <g>
+            <!-- 12時: 札幌 -->
+            <circle class="n cap" cx="150" cy="70" r="5.5"/><text class="label" x="150" y="58" text-anchor="middle">札幌</text>
+            <!-- 1時 -->
+            <circle class="n route" cx="184" cy="79" r="2.5"/>
+            <circle class="n fish" cx="214" cy="98" r="3.5"/>
+            <circle class="n cap" cx="237" cy="124" r="5.5"/><text class="label" x="252" y="124">仙台</text>
+            <circle class="n route" cx="253" cy="156" r="2.5"/>
+            <!-- 3時 -->
+            <circle class="n cap" cx="280" cy="200" r="5.5"/><text class="label" x="290" y="204">東京</text>
+            <circle class="n route" cx="265" cy="232" r="2.5"/>
+            <circle class="n shop" cx="249" cy="260" r="3.5"/>
+            <!-- 4-5時 -->
+            <circle class="n cap" cx="220" cy="290" r="5.5"/><text class="label" x="235" y="295">名古屋</text>
+            <circle class="n route" cx="190" cy="310" r="2.5"/>
+            <!-- 6時 -->
+            <circle class="n cap" cx="150" cy="330" r="5.5"/><text class="label" x="150" y="345" text-anchor="middle">大阪</text>
+            <circle class="n event" cx="110" cy="312" r="3.5"/>
+            <circle class="n route" cx="80" cy="290" r="2.5"/>
+            <!-- 7-8時 -->
+            <circle class="n cap" cx="60" cy="265" r="5.5"/><text class="label" x="46" y="270" text-anchor="end">広島</text>
+            <circle class="n fish" cx="46" cy="232" r="3.5"/>
+            <!-- 9時 -->
+            <circle class="n cap" cx="20" cy="200" r="5.5"/><text class="label" x="10" y="204" text-anchor="end">福岡</text>
+            <circle class="n route" cx="34" cy="168" r="2.5"/>
+            <circle class="n event" cx="50" cy="140" r="3.5"/>
+            <!-- 10-11時 -->
+            <circle class="n start" cx="80" cy="110" r="5"/>
+            <text class="label" x="80" y="100" text-anchor="middle">スタート</text>
+            <circle class="n route" cx="116" cy="84" r="2.5"/>
+            <!-- ゴール: リング下のはみ出しではなく内側へ短絡 -->
+            <circle class="n goal" cx="150" cy="260" r="7"/>
+            <text class="label" x="150" y="276" text-anchor="middle" fill="#ffb89e">ゴール(那覇)</text>
+            <path class="edge" d="M 150,330 Q 150,295 150,260"/>
+          </g>
+        </svg>
+      </div>
+      <div class="pros">完全に均等配置 / ゴールが中央付近で常に見える / 図鑑/装備ステータスとの一体感 / ボード規模を縮小可能</div>
+      <div class="cons">日本地図のアイデンティティが弱まる / 47県全表記は文字密度が上がる / 既存edge構造を全捨て</div>
+    </div>
+
+    <!-- ===================== 案 D: 島ホップ地方分離 ===================== -->
+    <div class="card">
+      <div class="card-head">
+        <span class="badge">PROPOSAL D</span>
+        <h2>島ホップ（地方=島）</h2>
+        <p class="lead">8地方を「島」に分解し、地方内は密に、地方間は橋で疎に。タップで島にズーム、ピンチで全体に戻る。スマホ縦長との相性が良い。</p>
+      </div>
+      <div class="svg-wrap">
+        <svg viewBox="0 0 300 400" preserveAspectRatio="xMidYMid meet">
+          <!-- 島 (角丸矩形 + 内部ノード) -->
+          <!-- 北海道 -->
+          <rect x="180" y="20" width="100" height="60" rx="14" fill="rgba(46,94,140,0.18)" stroke="rgba(212,168,67,0.4)" stroke-width="0.8"/>
+          <text class="label" x="230" y="34" text-anchor="middle" fill="#f1d893">北海道</text>
+          <circle class="n start" cx="200" cy="50" r="5"/>
+          <circle class="n cap" cx="230" cy="58" r="5.5"/><text class="label" x="246" y="62">札幌</text>
+          <circle class="n fish" cx="260" cy="52" r="3.5"/>
+          <!-- 橋 -->
+          <line x1="220" y1="80" x2="200" y2="110" stroke="rgba(212,168,67,0.5)" stroke-width="1.2" stroke-dasharray="2 3"/>
+          <!-- 東北 -->
+          <rect x="140" y="110" width="100" height="55" rx="14" fill="rgba(46,94,140,0.18)" stroke="rgba(212,168,67,0.4)" stroke-width="0.8"/>
+          <text class="label" x="190" y="124" text-anchor="middle" fill="#f1d893">東北</text>
+          <circle class="n cap" cx="170" cy="148" r="5.5"/><text class="label" x="170" y="160" text-anchor="middle">仙台</text>
+          <circle class="n cap" cx="215" cy="148" r="5.5"/><text class="label" x="215" y="160" text-anchor="middle">青森</text>
+          <line x1="180" y1="165" x2="160" y2="190" stroke="rgba(212,168,67,0.5)" stroke-width="1.2" stroke-dasharray="2 3"/>
+          <!-- 関東+中部 -->
+          <rect x="100" y="190" width="120" height="60" rx="14" fill="rgba(46,94,140,0.18)" stroke="rgba(212,168,67,0.4)" stroke-width="0.8"/>
+          <text class="label" x="160" y="204" text-anchor="middle" fill="#f1d893">関東/中部</text>
+          <circle class="n cap" cx="130" cy="226" r="5.5"/><text class="label" x="130" y="240" text-anchor="middle">東京</text>
+          <circle class="n cap" cx="170" cy="226" r="5.5"/><text class="label" x="170" y="240" text-anchor="middle">名古屋</text>
+          <circle class="n shop" cx="205" cy="222" r="3.5"/>
+          <line x1="140" y1="250" x2="115" y2="275" stroke="rgba(212,168,67,0.5)" stroke-width="1.2" stroke-dasharray="2 3"/>
+          <!-- 近畿+中国 -->
+          <rect x="60" y="275" width="120" height="55" rx="14" fill="rgba(46,94,140,0.18)" stroke="rgba(212,168,67,0.4)" stroke-width="0.8"/>
+          <text class="label" x="120" y="289" text-anchor="middle" fill="#f1d893">近畿/中国</text>
+          <circle class="n cap" cx="100" cy="310" r="5.5"/><text class="label" x="100" y="324" text-anchor="middle">大阪</text>
+          <circle class="n cap" cx="155" cy="310" r="5.5"/><text class="label" x="155" y="324" text-anchor="middle">広島</text>
+          <line x1="100" y1="330" x2="85" y2="345" stroke="rgba(212,168,67,0.5)" stroke-width="1.2" stroke-dasharray="2 3"/>
+          <!-- 九州 -->
+          <rect x="30" y="345" width="120" height="48" rx="14" fill="rgba(46,94,140,0.18)" stroke="rgba(212,168,67,0.4)" stroke-width="0.8"/>
+          <text class="label" x="90" y="358" text-anchor="middle" fill="#f1d893">九州/沖縄</text>
+          <circle class="n cap" cx="55" cy="375" r="5.5"/><text class="label" x="55" y="389" text-anchor="middle">福岡</text>
+          <circle class="n cap" cx="100" cy="378" r="5.5"/><text class="label" x="100" y="389" text-anchor="middle">那覇</text>
+          <circle class="n goal" cx="135" cy="378" r="7"/>
+          <text class="label" x="135" y="389" text-anchor="middle" fill="#ffb89e">ゴール</text>
+        </svg>
+      </div>
+      <div class="pros">各地方が独立した「ステージ」になり没入感UP / スマホズームと相性◎ / 密集ゼロ / 全体ビューでも全島見渡せる</div>
+      <div class="cons">地方間移動の演出を作る必要 / 既存ナビゲーション(横断地名検索など)が壊れる / 開発工数大</div>
+    </div>
+
+    <!-- ===================== 案 E: グリッド人生ゲーム風 ===================== -->
+    <div class="card">
+      <div class="card-head">
+        <span class="badge">PROPOSAL E</span>
+        <h2>グリッド人生ゲーム風</h2>
+        <p class="lead">縦方向のレーンに沿った1マス40pxの規則的グリッド。マスの種類を色とアイコンで識別、分岐は左右ジャンプで表現。ゴールはレーン下端で必ず可視。</p>
+      </div>
+      <div class="svg-wrap">
+        <svg viewBox="0 0 300 400" preserveAspectRatio="xMidYMid meet">
+          <!-- グリッド -->
+          <g class="grid-line">
+            <line x1="90" y1="20" x2="90" y2="380"/>
+            <line x1="150" y1="20" x2="150" y2="380"/>
+            <line x1="210" y1="20" x2="210" y2="380"/>
+          </g>
+          <!-- マス（縦に階段配置） -->
+          <!-- レーン2(中央)が主道、左右は分岐 -->
+          <!-- スタート -->
+          <circle class="n start" cx="150" cy="35" r="6"/><text class="label" x="150" y="22" text-anchor="middle">スタート</text>
+          <path class="edge-solid" d="M 150,35 L 150,75 L 210,105 L 150,135 L 90,165 L 150,195 L 150,235 L 210,265 L 150,295 L 90,325 L 150,355 L 150,385"/>
+          <!-- 各マス -->
+          <circle class="n route" cx="150" cy="75" r="3"/>
+          <circle class="n fish" cx="210" cy="105" r="4"/><text class="label" x="226" y="108">釧路</text>
+          <circle class="n cap" cx="150" cy="135" r="6"/><text class="label" x="166" y="139">札幌</text>
+          <circle class="n event" cx="90" cy="165" r="4"/>
+          <circle class="n cap" cx="150" cy="195" r="6"/><text class="label" x="166" y="199">仙台</text>
+          <circle class="n route" cx="150" cy="235" r="3"/>
+          <circle class="n shop" cx="210" cy="265" r="4"/>
+          <circle class="n cap" cx="150" cy="295" r="6"/><text class="label" x="166" y="299">東京</text>
+          <circle class="n rest" cx="90" cy="325" r="4"/>
+          <circle class="n cap" cx="150" cy="355" r="6"/><text class="label" x="166" y="359">大阪</text>
+          <!-- 下にゴール -->
+          <circle class="n goal" cx="150" cy="385" r="7"/>
+          <text class="label" x="150" y="398" text-anchor="middle" fill="#ffb89e">ゴール</text>
+          <!-- レーンラベル -->
+          <text class="label" x="90" y="14" text-anchor="middle" fill="rgba(241,216,147,0.5)">寄り道</text>
+          <text class="label" x="150" y="14" text-anchor="middle" fill="rgba(241,216,147,0.5)">本道</text>
+          <text class="label" x="210" y="14" text-anchor="middle" fill="rgba(241,216,147,0.5)">脇道</text>
+        </svg>
+      </div>
+      <div class="pros">完全に重なりなし / 3レーン構造で戦略性UP（最短/寄り道/イベント狙い） / ゴールが常に最下端で明確 / スマホ縦長と完全合致</div>
+      <div class="cons">地理が完全に抽象化 / 日本らしさは地名のみ / 既存全エッジを再設計 / 海/山の演出が線形ガイドに置換</div>
+    </div>
+
+  </div>
+
+  <footer>
+    釣りすごろく v3.1.x 検討用 — 案AはCSS/座標調整のみ短期適用可能、B〜Eはボードグラフ再設計が必要。
+  </footer>
+</body>
+</html>
