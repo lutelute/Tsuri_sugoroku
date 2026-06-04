@@ -46,8 +46,11 @@ const NODE_GLYPH: Record<NodeType, string> = {
   event_random: '籤',
   rest: '湯',
   route: '道',
-  capital: '都',
+  capital: '祭',   // 県メインイベント=祭り（東京・京都は「都」で別途上書き）
 };
+
+// 「都」と書くノード（実際に首都/旧都）
+const CAPITAL_TO_KYO = new Set(['tokyo', 'kyoto']);
 
 function darken(hex: string, a: number): string {
   const n = parseInt(hex.replace('#', ''), 16);
@@ -164,7 +167,7 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
           fontFamily='"Shippori Mincho", serif'
           className="pointer-events-none select-none"
         >
-          {NODE_GLYPH[node.type]}
+          {isCapital && CAPITAL_TO_KYO.has(node.id) ? '都' : NODE_GLYPH[node.type]}
         </text>
       )}
 

@@ -6,7 +6,7 @@ import MapNode from './MapNode';
 import MapEdge from './MapEdge';
 import PlayerToken from './PlayerToken';
 import NodeInfoOverlay from './NodeInfoOverlay';
-import { LAND_PATHS, ISLANDS, REGION_LABELS } from './landmass';
+import { LAND_PATHS, ISLANDS, REGION_LABELS, MAP_AREAS } from './landmass';
 import Ruby from '../shared/Ruby';
 
 // v3.2.x: 全体×1.2追加(関東密集対策, 合計×7.6)。
@@ -273,19 +273,32 @@ export default function JapanMap() {
         </defs>
         <rect x={viewBox.x - 60} y={viewBox.y - 60} width={viewBox.width + 120} height={viewBox.height + 120} fill="url(#ocean-glow)" />
 
-        {/* 陸地シルエット（v3: ×3スケール） */}
+        {/* 10エリア分割: 各エリアを独立した凸包で描画。toneで微差の色付け */}
         <g filter="url(#land-shadow)" aria-hidden="true">
-          {LAND_PATHS.map((d, i) => (
-            <path key={`land-${i}`} d={d} fill="url(#land-grad)" stroke="rgba(212,168,67,0.42)" strokeWidth="2.55" strokeLinejoin="round" />
-          ))}
+          {LAND_PATHS.map((d, i) => {
+            const area = MAP_AREAS[i];
+            // tone (0..1) から hue を回転させて10エリアを識別
+            // 和モダンの範囲内で: 茶系ベース 38° → 金 50° → 緑がかった金 65°
+            const hue = 38 + (area?.tone ?? 0) * 28;
+            return (
+              <path
+                key={`land-${i}`}
+                d={d}
+                fill={`hsla(${hue}, 28%, 58%, 0.18)`}
+                stroke="rgba(212,168,67,0.55)"
+                strokeWidth="2.8"
+                strokeLinejoin="round"
+              />
+            );
+          })}
           {ISLANDS.map((is, i) => (
             <ellipse key={`isle-${i}`} cx={is.cx} cy={is.cy} rx={is.rx} ry={is.ry} fill="url(#land-grad)" stroke="rgba(212,168,67,0.42)" strokeWidth="2.1" />
           ))}
         </g>
-        {/* 海岸線の内側ハイライト */}
+        {/* エリア境界の内側ハイライト */}
         <g aria-hidden="true" className="pointer-events-none">
           {LAND_PATHS.map((d, i) => (
-            <path key={`coast-${i}`} d={d} fill="none" stroke="rgba(251,246,232,0.14)" strokeWidth="0.9" strokeLinejoin="round" />
+            <path key={`coast-${i}`} d={d} fill="none" stroke="rgba(251,246,232,0.18)" strokeWidth="1.1" strokeLinejoin="round" />
           ))}
         </g>
 

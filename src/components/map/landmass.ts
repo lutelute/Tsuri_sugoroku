@@ -1,9 +1,11 @@
 import { BOARD_NODES } from '../../data/boardNodes';
 import type { BoardNode } from '../../game/types';
 
-// ノード座標を内包する「陸地」シルエットを生成する。
-// 各島ごとにノード点群の凸包を取り、外側へ膨らませて Catmull-Rom で平滑化し、
-// 海岸線らしい有機的な閉曲線（SVGパス）を作る。これで盤面が「日本地図」に見える。
+// ノード座標を内包する「エリア」シルエットを生成する。
+// v3.2.x: 10エリア分割
+//   1. 北海道 / 2. 東北 / 3. 関東 / 4. 中部 / 5. 近畿
+//   6. 中国 / 7. 四国 / 8. 九州本島 / 9. 種子島・屋久島 / 10. 沖縄・奄美
+// 各エリアは独立した凸包(or 楕円)で描画し、地域境界が視覚的に分かるようにする。
 
 type Pt = { x: number; y: number };
 
@@ -58,36 +60,73 @@ function smoothClosedPath(pts: Pt[]): string {
   return d + 'Z';
 }
 
-function landPath(nodes: BoardNode[], pad: number): string {
-  const pts = nodes.map(n => ({ x: n.x, y: n.y }));
-  return smoothClosedPath(expand(convexHull(pts), pad));
+// 沖縄・奄美エリアのノードID（kyushu領域から南西諸島だけを切り出す）
+const OKINAWA_IDS = new Set(['amami', 'tokunoshima', 'naha', 'goal', 'r_amami_tokunoshima', 'r_yakushima_amami', 'r_naha_goal']);
+// 種子島・屋久島エリアのノードID
+const TANEGASHIMA_IDS = new Set(['tanegashima', 'yakushima', 'r_tanegashima_yakushima', 'r_kagoshima_tanegashima', 'r_kagoshima_yakushima']);
+
+// === 10エリアの定義 ===
+export interface MapArea {
+  id: string;
+  name: string;
+  nodes: BoardNode[];
+  pad: number;
+  tone: number; // 0..1, 微妙な色相シフト（10エリアの識別性を上げる）
 }
 
-const inRegions = (regions: string[]) => BOARD_NODES.filter(n => regions.includes(n.region));
+const byRegion = (r: string, exclude?: Set<string>) =>
+  BOARD_NODES.filter(n => n.region === r && (!exclude || !exclude.has(n.id)));
 
-// 4つの主要な島（本州は複数地域を結合）
-// v3.2.x: 座標スケール×7.6 (3×1.5×1.4×1.2) に追従
-export const LAND_PATHS: string[] = [
-  landPath(inRegions(['hokkaido']), 48),
-  landPath(inRegions(['tohoku', 'kanto', 'chubu', 'kinki', 'chugoku']), 44),
-  landPath(inRegions(['shikoku']), 44),
-  landPath(BOARD_NODES.filter(n => n.region === 'kyushu' && n.y < 864), 44),
+const kyushuMain = BOARD_NODES.filter(n =>
+  n.region === 'kyushu' && !OKINAWA_IDS.has(n.id) && !TANEGASHIMA_IDS.has(n.id)
+);
+
+export const MAP_AREAS: MapArea[] = [
+  { id: 'hokkaido', name: '北海道', nodes: byRegion('hokkaido'), pad: 58, tone: 0.0 },
+  { id: 'tohoku', name: '東北', nodes: byRegion('tohoku'), pad: 52, tone: 0.1 },
+  { id: 'kanto', name: '関東', nodes: byRegion('kanto'), pad: 50, tone: 0.2 },
+  { id: 'chubu', name: '中部', nodes: byRegion('chubu'), pad: 52, tone: 0.3 },
+  { id: 'kinki', name: '近畿', nodes: byRegion('kinki'), pad: 50, tone: 0.4 },
+  { id: 'chugoku', name: '中国', nodes: byRegion('chugoku'), pad: 50, tone: 0.5 },
+  { id: 'shikoku', name: '四国', nodes: byRegion('shikoku'), pad: 46, tone: 0.6 },
+  { id: 'kyushu_main', name: '九州', nodes: kyushuMain, pad: 50, tone: 0.7 },
+  { id: 'tanegashima', name: '種子島・屋久島', nodes: BOARD_NODES.filter(n => TANEGASHIMA_IDS.has(n.id)), pad: 28, tone: 0.85 },
+  { id: 'okinawa', name: '沖縄・奄美', nodes: BOARD_NODES.filter(n => OKINAWA_IDS.has(n.id)), pad: 32, tone: 1.0 },
 ];
 
-// 南西諸島（種子島〜那覇・ゴール）は小さな島として個別に描く
-export const ISLANDS = BOARD_NODES
-  .filter(n => n.region === 'kyushu' && n.y >= 864)
-  .map(n => ({ cx: n.x, cy: n.y, rx: 36, ry: 32 }));
+// 各エリアのパス。3点以上なら凸包の平滑パス、それ未満なら楕円風の閉曲線。
+function areaPath(area: MapArea): string {
+  if (area.nodes.length === 0) return '';
+  if (area.nodes.length === 1) {
+    const n = area.nodes[0];
+    return `M ${n.x - area.pad},${n.y} A ${area.pad},${area.pad * 0.85} 0 1,0 ${n.x + area.pad},${n.y} A ${area.pad},${area.pad * 0.85} 0 1,0 ${n.x - area.pad},${n.y} Z`;
+  }
+  if (area.nodes.length === 2) {
+    // 2点を内包する楕円
+    const a = area.nodes[0], b = area.nodes[1];
+    const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const rx = len / 2 + area.pad;
+    const ry = area.pad * 0.9;
+    const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+    // 楕円パス（angle 0で水平 → rotate(ang) で傾ける）
+    return `M ${cx - rx},${cy} A ${rx},${ry} ${ang} 1,0 ${cx + rx},${cy} A ${rx},${ry} ${ang} 1,0 ${cx - rx},${cy} Z`;
+  }
+  const pts = area.nodes.map(n => ({ x: n.x, y: n.y }));
+  return smoothClosedPath(expand(convexHull(pts), area.pad));
+}
 
-// 地方名の透かしラベル（各地域ノードの重心に配置）
-const REGION_NAMES: Record<string, string> = {
-  hokkaido: '北海道', tohoku: '東北', kanto: '関東', chubu: '中部',
-  kinki: '近畿', chugoku: '中国', shikoku: '四国', kyushu: '九州',
-};
-export const REGION_LABELS = Object.entries(REGION_NAMES).map(([region, name]) => {
-  const ns = BOARD_NODES.filter(n => n.region === region && n.y < 864);
-  const src = ns.length ? ns : BOARD_NODES.filter(n => n.region === region);
-  const cx = src.reduce((s, n) => s + n.x, 0) / src.length;
-  const cy = src.reduce((s, n) => s + n.y, 0) / src.length;
-  return { name, x: cx, y: cy };
-});
+export const LAND_PATHS: string[] = MAP_AREAS.map(areaPath);
+
+// ISLANDS は廃止 (沖縄・種子島はエリアに統合した)
+export const ISLANDS: { cx: number; cy: number; rx: number; ry: number }[] = [];
+
+// 地方名の透かしラベル（各エリア重心）
+export const REGION_LABELS = MAP_AREAS
+  .filter(a => a.nodes.length > 0)
+  .map(a => {
+    const cx = a.nodes.reduce((s, n) => s + n.x, 0) / a.nodes.length;
+    const cy = a.nodes.reduce((s, n) => s + n.y, 0) / a.nodes.length;
+    return { name: a.name, x: cx, y: cy };
+  });
