@@ -273,32 +273,25 @@ export default function JapanMap() {
         </defs>
         <rect x={viewBox.x - 60} y={viewBox.y - 60} width={viewBox.width + 120} height={viewBox.height + 120} fill="url(#ocean-glow)" />
 
-        {/* 10エリア分割: 各エリアを独立した凸包で描画。toneで微差の色付け */}
-        <g filter="url(#land-shadow)" aria-hidden="true">
+        {/* 10エリア分割: 地方シルエットを「背景」として描画。
+            塗りは薄く(0.12) 線は実線で適度に(0.45)、視線はマスに集中させつつ地方形が分かる */}
+        <g aria-hidden="true" className="pointer-events-none">
           {LAND_PATHS.map((d, i) => {
             const area = MAP_AREAS[i];
-            // tone (0..1) から hue を回転させて10エリアを識別
-            // 和モダンの範囲内で: 茶系ベース 38° → 金 50° → 緑がかった金 65°
             const hue = 38 + (area?.tone ?? 0) * 28;
             return (
-              <path
-                key={`land-${i}`}
-                d={d}
-                fill={`hsla(${hue}, 28%, 58%, 0.18)`}
-                stroke="rgba(212,168,67,0.55)"
-                strokeWidth="2.8"
-                strokeLinejoin="round"
-              />
+              <g key={`land-${i}`}>
+                {/* 塗り (背景としての地方の存在感) */}
+                <path d={d} fill={`hsla(${hue}, 28%, 56%, 0.12)`} />
+                {/* 縁取り (海岸線らしさ、控えめ) */}
+                <path d={d} fill="none" stroke="rgba(241,216,147,0.45)" strokeWidth="1.6" strokeLinejoin="round" />
+                {/* 内側のハイライト (奥行き) */}
+                <path d={d} fill="none" stroke="rgba(251,246,232,0.12)" strokeWidth="0.6" strokeLinejoin="round" />
+              </g>
             );
           })}
           {ISLANDS.map((is, i) => (
-            <ellipse key={`isle-${i}`} cx={is.cx} cy={is.cy} rx={is.rx} ry={is.ry} fill="url(#land-grad)" stroke="rgba(212,168,67,0.42)" strokeWidth="2.1" />
-          ))}
-        </g>
-        {/* エリア境界の内側ハイライト */}
-        <g aria-hidden="true" className="pointer-events-none">
-          {LAND_PATHS.map((d, i) => (
-            <path key={`coast-${i}`} d={d} fill="none" stroke="rgba(251,246,232,0.18)" strokeWidth="1.1" strokeLinejoin="round" />
+            <ellipse key={`isle-${i}`} cx={is.cx} cy={is.cy} rx={is.rx} ry={is.ry} fill="rgba(241,216,147,0.10)" stroke="rgba(241,216,147,0.4)" strokeWidth="1.2" />
           ))}
         </g>
 
