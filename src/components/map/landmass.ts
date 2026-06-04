@@ -217,17 +217,30 @@ const REGION_PADS: Record<string, number> = {
 
 // 地方ラベルを「海上」に配置するオフセット (dx, dy)。重心からの位置調整。
 // 実際の地図で各地方の沿岸 (海側) に名前を置くイメージ。
+// v3.2.8: 本州内 (東北/関東/中部/近畿/中国) の密集を避けるため、各地方を別方向の海に配置。
+// 座標範囲: x:84..1213, y:-79..1512 (那覇x=84..稚内y=-79..沖縄y=1512)
+// 各地方重心の概略:
+//   hokkaido:  (~1010, ~150)  → 道東のオホーツク海(右上)
+//   tohoku:    (~960, ~520)   → 三陸沖(右)
+//   kanto:     (~890, ~720)   → 房総沖(右)
+//   chubu:     (~710, ~730)   → 能登沖(左)
+//   kinki:     (~610, ~770)   → 紀伊半島南(下)
+//   chugoku:   (~400, ~800)   → 山陰沖(上)
+//   shikoku:   (~510, ~810)   → 土佐湾(下)
+//   kyushu:    (~270, ~870)   → 東シナ海(左)
+//   tanegashima:(~270, ~1100) → 太平洋(右)
+//   okinawa:   (~100, ~1400)  → 太平洋(右)
 const LABEL_OFFSET: Record<string, { dx: number; dy: number }> = {
-  hokkaido:   { dx:  130, dy:  -50 },  // 道東のオホーツク海側
-  tohoku:     { dx:  150, dy:    0 },  // 太平洋側
-  kanto:      { dx:  140, dy:    0 },  // 太平洋側
-  chubu:      { dx:  -140, dy:   30 },  // 日本海側
-  kinki:      { dx:  130, dy:   30 },  // 紀伊水道
-  chugoku:    { dx:    0, dy:  -110 }, // 日本海側 (上)
-  shikoku:    { dx:    0, dy:  100 },  // 太平洋側 (下)
-  kyushu:     { dx: -130, dy:   30 },  // 東シナ海側 (左)
-  tanegashima:{ dx:  110, dy:    0 },  // 太平洋側
-  okinawa:    { dx:  120, dy:    0 },  // 太平洋側
+  hokkaido:   { dx:  180, dy:  -80 },  // 道東のオホーツク (x≈1190, y≈70)
+  tohoku:     { dx:  220, dy:  -30 },  // 三陸沖深め (x≈1180, y≈490)
+  kanto:      { dx:  240, dy:   60 },  // 房総沖深め (x≈1130, y≈780)
+  chubu:      { dx: -200, dy:    0 },  // 能登沖 (x≈510, y≈730)
+  kinki:      { dx:   60, dy:  180 },  // 紀伊半島南の太平洋 (x≈670, y≈950)
+  chugoku:    { dx:  -50, dy: -160 },  // 山陰沖 (x≈350, y≈640)
+  shikoku:    { dx:    0, dy:  140 },  // 土佐湾 (x≈510, y≈950)
+  kyushu:     { dx: -180, dy:   40 },  // 東シナ海 (x≈90, y≈910)
+  tanegashima:{ dx:  140, dy:   20 },  // 太平洋(右)
+  okinawa:    { dx:  150, dy:   30 },  // 太平洋(右)
 };
 
 function regionFillFor(id: string, nodes: BoardNode[]): RegionFill | null {

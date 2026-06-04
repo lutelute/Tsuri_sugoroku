@@ -278,11 +278,11 @@ export default function JapanMap() {
           {REGION_FILLS.map(r => (
             <g key={`region-${r.id}`}>
               {/* 地方の塗り (連想色) */}
-              <path d={r.path} fill={r.color} opacity="0.36" />
+              <path d={r.path} fill={r.color} opacity="0.42" />
               {/* 地方の境界線 (連想色を明確に) */}
-              <path d={r.path} fill="none" stroke={r.color} strokeWidth="2.8" opacity="0.95" strokeLinejoin="round" />
+              <path d={r.path} fill="none" stroke={r.color} strokeWidth="3.2" opacity="1" strokeLinejoin="round" />
               {/* 内側のハイライト (奥行き) */}
-              <path d={r.path} fill="none" stroke="rgba(251,246,232,0.18)" strokeWidth="1.0" strokeLinejoin="round" />
+              <path d={r.path} fill="none" stroke="rgba(251,246,232,0.22)" strokeWidth="1.2" strokeLinejoin="round" />
             </g>
           ))}
         </g>
@@ -306,11 +306,12 @@ export default function JapanMap() {
           ))}
         </g>
 
-        {/* === レイヤー3: 地方名 (大きく半透明、地方の中心に) === */}
+        {/* === レイヤー3: 地方名 (フル表記、海上配置) === */}
         <g aria-hidden="true" className="pointer-events-none select-none">
           {REGION_FILLS.map(r => {
-            const shortName = r.name.length > 4 ? r.name.slice(0, 2) : r.name;
-            const size = shortName.length === 2 ? 50 : 38;
+            // 文字数で size を可変 (2文字=大、3-4文字=中、5+=小)
+            const len = r.name.length;
+            const size = len <= 2 ? 44 : len <= 4 ? 32 : 24;
             return (
               <text
                 key={`label-${r.id}`}
@@ -319,15 +320,15 @@ export default function JapanMap() {
                 textAnchor="middle"
                 fontSize={size}
                 fill="#fbf6e8"
-                opacity="0.72"
+                opacity="0.78"
                 fontFamily='"Shippori Mincho", serif'
                 fontWeight="800"
-                letterSpacing="4"
+                letterSpacing={len <= 2 ? 4 : 2}
                 stroke="rgba(10,28,46,0.95)"
-                strokeWidth={size * 0.18}
+                strokeWidth={size * 0.20}
                 paintOrder="stroke"
               >
-                {shortName}
+                {r.name}
               </text>
             );
           })}
