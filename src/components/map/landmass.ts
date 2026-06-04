@@ -1,246 +1,192 @@
 import { BOARD_NODES } from '../../data/boardNodes';
 import type { BoardNode } from '../../game/types';
 
-// v3.2.3: 10エリア枠を実際の地方形状に近似した手書きSVGパスに変更。
-// 凸包 + padding ではなく、各地方の bounding box にフィットする「目で見た地方シルエット」を描く。
-// 各 builder は { x, y, w, h } を受け取り、その bbox に内接する形状のパスを返す。
+// v3.2.4: 教材レベルの地理正確性を優先。
+// 塗り分けは「実際の島の輪郭」だけにする(誤接続を防ぐ)。
+//   1. 北海道
+//   2. 本州 (東北+関東+中部+近畿+中国 を1島として描く — 全て陸続き)
+//   3. 四国 (本州・九州とは海峡で分離)
+//   4. 九州本島
+//   5. 種子島・屋久島
+//   6. 沖縄・奄美 (各島は独立)
+// 各地方(8地方)の認識は文字ラベルだけで担保し、地方境界線は描かない。
 
 type Pt = { x: number; y: number };
 
-// === 10エリアの定義 ===
-export interface MapArea {
-  id: string;
-  name: string;
-  nodes: BoardNode[];
-  pad: number;
-  tone: number; // 0..1
+// === 凸包 + 平滑化 (元の実装) ===
+function convexHull(points: Pt[]): Pt[] {
+  if (points.length < 3) return points.slice();
+  const pts = points.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+  const cross = (o: Pt, a: Pt, b: Pt) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lower: Pt[] = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper: Pt[] = [];
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  lower.pop();
+  upper.pop();
+  return lower.concat(upper);
 }
 
+function expand(hull: Pt[], pad: number): Pt[] {
+  const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length;
+  const cy = hull.reduce((s, p) => s + p.y, 0) / hull.length;
+  return hull.map(p => {
+    const dx = p.x - cx;
+    const dy = p.y - cy;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: p.x + (dx / len) * pad, y: p.y + (dy / len) * pad };
+  });
+}
+
+function smoothClosedPath(pts: Pt[]): string {
+  const n = pts.length;
+  if (n < 3) return '';
+  const f = (v: number) => Math.round(v * 100) / 100;
+  let d = `M ${f(pts[0].x)},${f(pts[0].y)} `;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n];
+    const p1 = pts[i];
+    const p2 = pts[(i + 1) % n];
+    const p3 = pts[(i + 2) % n];
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += `C ${f(c1x)},${f(c1y)} ${f(c2x)},${f(c2y)} ${f(p2.x)},${f(p2.y)} `;
+  }
+  return d + 'Z';
+}
+
+function landPath(nodes: BoardNode[], pad: number): string {
+  if (nodes.length === 0) return '';
+  if (nodes.length === 1) {
+    const n = nodes[0];
+    return `M ${n.x - pad},${n.y} A ${pad},${pad * 0.85} 0 1,0 ${n.x + pad},${n.y} A ${pad},${pad * 0.85} 0 1,0 ${n.x - pad},${n.y} Z`;
+  }
+  if (nodes.length === 2) {
+    const a = nodes[0], b = nodes[1];
+    const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const rx = len / 2 + pad;
+    const ry = pad * 0.9;
+    const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+    return `M ${cx - rx},${cy} A ${rx},${ry} ${ang} 1,0 ${cx + rx},${cy} A ${rx},${ry} ${ang} 1,0 ${cx - rx},${cy} Z`;
+  }
+  const pts = nodes.map(n => ({ x: n.x, y: n.y }));
+  return smoothClosedPath(expand(convexHull(pts), pad));
+}
+
+// === ノード分類 (誤接続防止) ===
+// 沖縄・奄美 (本土から離れた南西諸島の主要島)
 const OKINAWA_IDS = new Set(['amami', 'tokunoshima', 'naha', 'goal', 'r_amami_tokunoshima', 'r_yakushima_amami', 'r_naha_goal']);
+// 種子島・屋久島
 const TANEGASHIMA_IDS = new Set(['tanegashima', 'yakushima', 'r_tanegashima_yakushima', 'r_kagoshima_tanegashima', 'r_kagoshima_yakushima']);
 
 const byRegion = (r: string) => BOARD_NODES.filter(n => n.region === r);
 const kyushuMain = BOARD_NODES.filter(n =>
   n.region === 'kyushu' && !OKINAWA_IDS.has(n.id) && !TANEGASHIMA_IDS.has(n.id)
 );
+const honshuNodes = BOARD_NODES.filter(n =>
+  ['tohoku', 'kanto', 'chubu', 'kinki', 'chugoku'].includes(n.region)
+);
 
-export const MAP_AREAS: MapArea[] = [
-  { id: 'hokkaido', name: '北海道', nodes: byRegion('hokkaido'), pad: 60, tone: 0.0 },
-  { id: 'tohoku', name: '東北', nodes: byRegion('tohoku'), pad: 52, tone: 0.1 },
-  { id: 'kanto', name: '関東', nodes: byRegion('kanto'), pad: 52, tone: 0.2 },
-  { id: 'chubu', name: '中部', nodes: byRegion('chubu'), pad: 52, tone: 0.3 },
-  { id: 'kinki', name: '近畿', nodes: byRegion('kinki'), pad: 50, tone: 0.4 },
-  { id: 'chugoku', name: '中国', nodes: byRegion('chugoku'), pad: 48, tone: 0.5 },
-  { id: 'shikoku', name: '四国', nodes: byRegion('shikoku'), pad: 46, tone: 0.6 },
-  { id: 'kyushu_main', name: '九州', nodes: kyushuMain, pad: 50, tone: 0.7 },
-  { id: 'tanegashima', name: '種子島・屋久島', nodes: BOARD_NODES.filter(n => TANEGASHIMA_IDS.has(n.id)), pad: 30, tone: 0.85 },
-  { id: 'okinawa', name: '沖縄・奄美', nodes: BOARD_NODES.filter(n => OKINAWA_IDS.has(n.id)), pad: 36, tone: 1.0 },
+// 個別の小島 (沖縄諸島は1ノードずつバラバラの島なので個別に楕円で描く)
+function buildOkinawaIslands(): string[] {
+  // 主要な「島」となるノードだけを個別に描き、route ノードは描かない
+  const mainOkinawa = BOARD_NODES.filter(n =>
+    ['amami', 'tokunoshima', 'naha'].includes(n.id)
+  );
+  return mainOkinawa.map(n => {
+    const r = 40;
+    return `M ${n.x - r},${n.y} A ${r},${r * 0.8} 0 1,0 ${n.x + r},${n.y} A ${r},${r * 0.8} 0 1,0 ${n.x - r},${n.y} Z`;
+  });
+}
+
+function buildTanegashimaIslands(): string[] {
+  const main = BOARD_NODES.filter(n => ['tanegashima', 'yakushima'].includes(n.id));
+  return main.map(n => {
+    const r = 32;
+    return `M ${n.x - r},${n.y} A ${r},${r * 0.8} 0 1,0 ${n.x + r},${n.y} A ${r},${r * 0.8} 0 1,0 ${n.x - r},${n.y} Z`;
+  });
+}
+
+// === メイン: 4つの主要島 + 南西諸島 ===
+// 「四国-九州」「四国-中国」「本州-九州」「本州-四国」が誤接続しないよう、各島は独立した凸包で描く。
+const tanegashimaPaths = buildTanegashimaIslands();
+const okinawaPaths = buildOkinawaIslands();
+
+// pad は隣接島との誤接続を避けるため絞る
+//   本州: 35 (関東/中部内陸まで含む)
+//   北海道: 45 (孤立島なので余裕)
+//   四国: 24 (中国/九州との海峡を確保)
+//   九州: 30 (四国との豊後水道を確保)
+export const LAND_PATHS: string[] = [
+  landPath(byRegion('hokkaido'), 45),
+  landPath(honshuNodes, 35),
+  landPath(byRegion('shikoku'), 24),
+  landPath(kyushuMain, 30),
+  ...tanegashimaPaths,
+  ...okinawaPaths,
 ];
 
-// === bounding box ===
-interface Bounds { x: number; y: number; w: number; h: number; cx: number; cy: number }
+// 各path に対応する tone (色相シフト用)
+export const LAND_TONES: number[] = [
+  0.0,        // 北海道
+  0.3,        // 本州
+  0.6,        // 四国
+  0.7,        // 九州本島
+  ...tanegashimaPaths.map(() => 0.85),  // 種子島・屋久島
+  ...okinawaPaths.map(() => 1.0),       // 奄美・徳之島・那覇
+];
 
-function getBounds(nodes: BoardNode[], pad: number): Bounds | null {
-  if (nodes.length === 0) return null;
-  const xs = nodes.map(n => n.x);
-  const ys = nodes.map(n => n.y);
-  const minX = Math.min(...xs) - pad;
-  const maxX = Math.max(...xs) + pad;
-  const minY = Math.min(...ys) - pad;
-  const maxY = Math.max(...ys) + pad;
-  return {
-    x: minX, y: minY,
-    w: maxX - minX, h: maxY - minY,
-    cx: (minX + maxX) / 2, cy: (minY + maxY) / 2,
-  };
-}
-
-const f = (v: number) => Math.round(v * 10) / 10;
-const P = (p: Pt) => `${f(p.x)},${f(p.y)}`;
-
-// 正規化座標(0..1)をbbox座標へ
-function np(b: Bounds, ux: number, uy: number): Pt {
-  return { x: b.x + b.w * ux, y: b.y + b.h * uy };
-}
-
-// === 各地方の手描きシルエット（bbox にフィット）===
-
-// 北海道: 卵型 + 南端に渡島半島(下方向に張り出し)
-function buildHokkaido(b: Bounds): string {
-  const p = (ux: number, uy: number) => np(b, ux, uy);
-  return [
-    `M ${P(p(0.10, 0.40))}`,
-    `C ${P(p(0.05, 0.18))} ${P(p(0.20, 0.00))} ${P(p(0.45, 0.05))}`,
-    `C ${P(p(0.70, 0.00))} ${P(p(0.95, 0.10))} ${P(p(0.98, 0.35))}`,
-    `C ${P(p(1.00, 0.55))} ${P(p(0.90, 0.70))} ${P(p(0.70, 0.72))}`,
-    `C ${P(p(0.55, 0.78))} ${P(p(0.45, 0.85))} ${P(p(0.35, 0.78))}`,
-    `C ${P(p(0.20, 0.95))} ${P(p(0.05, 1.00))} ${P(p(0.05, 0.90))}`,
-    `C ${P(p(0.00, 0.75))} ${P(p(0.05, 0.55))} ${P(p(0.10, 0.40))}`,
-    'Z',
-  ].join(' ');
-}
-
-// 東北: 南北に長い、太平洋側(東)に出っ張り(下北・三陸)
-function buildTohoku(b: Bounds): string {
-  const p = (ux: number, uy: number) => np(b, ux, uy);
-  return [
-    `M ${P(p(0.30, 0.02))}`,
-    `C ${P(p(0.45, 0.00))} ${P(p(0.65, 0.05))} ${P(p(0.70, 0.10))}`,
-    `C ${P(p(0.95, 0.10))} ${P(p(0.95, 0.20))} ${P(p(0.85, 0.30))}`,
-    `C ${P(p(0.95, 0.45))} ${P(p(1.00, 0.60))} ${P(p(0.90, 0.75))}`,
-    `C ${P(p(0.85, 0.90))} ${P(p(0.65, 1.00))} ${P(p(0.50, 0.98))}`,
-    `C ${P(p(0.30, 1.00))} ${P(p(0.10, 0.90))} ${P(p(0.10, 0.75))}`,
-    `C ${P(p(0.00, 0.55))} ${P(p(0.05, 0.35))} ${P(p(0.15, 0.20))}`,
-    `C ${P(p(0.18, 0.10))} ${P(p(0.22, 0.05))} ${P(p(0.30, 0.02))}`,
-    'Z',
-  ].join(' ');
-}
-
-// 関東: 角丸四角 + 南東に房総半島(右下に張り出し)
-function buildKanto(b: Bounds): string {
-  const p = (ux: number, uy: number) => np(b, ux, uy);
-  return [
-    `M ${P(p(0.20, 0.08))}`,
-    `C ${P(p(0.40, 0.00))} ${P(p(0.65, 0.00))} ${P(p(0.80, 0.10))}`,
-    `C ${P(p(0.95, 0.20))} ${P(p(1.00, 0.40))} ${P(p(0.95, 0.55))}`,
-    // 房総半島
-    `C ${P(p(1.05, 0.65))} ${P(p(1.05, 0.85))} ${P(p(0.85, 0.92))}`,
-    `C ${P(p(0.65, 1.00))} ${P(p(0.40, 1.00))} ${P(p(0.25, 0.90))}`,
-    `C ${P(p(0.05, 0.80))} ${P(p(0.00, 0.55))} ${P(p(0.05, 0.35))}`,
-    `C ${P(p(0.05, 0.20))} ${P(p(0.10, 0.12))} ${P(p(0.20, 0.08))}`,
-    'Z',
-  ].join(' ');
-}
-
-// 中部: 北日本海と南太平洋を斜めに結ぶ、北中部の山(中央高地)
-function buildChubu(b: Bounds): string {
-  const p = (ux: number, uy: number) => np(b, ux, uy);
-  return [
-    `M ${P(p(0.10, 0.20))}`,
-    `C ${P(p(0.20, 0.05))} ${P(p(0.45, 0.00))} ${P(p(0.65, 0.05))}`,
-    `C ${P(p(0.90, 0.10))} ${P(p(1.00, 0.30))} ${P(p(0.95, 0.50))}`,
-    `C ${P(p(1.00, 0.70))} ${P(p(0.85, 0.95))} ${P(p(0.70, 0.98))}`,
-    `C ${P(p(0.50, 1.00))} ${P(p(0.30, 0.95))} ${P(p(0.15, 0.85))}`,
-    `C ${P(p(0.00, 0.70))} ${P(p(0.00, 0.45))} ${P(p(0.05, 0.30))}`,
-    `C ${P(p(0.05, 0.25))} ${P(p(0.08, 0.22))} ${P(p(0.10, 0.20))}`,
-    'Z',
-  ].join(' ');
-}
-
-// 近畿: 紀伊半島が南に張り出す、北側は丸い
-function buildKinki(b: Bounds): string {
-  const p = (ux: number, uy: number) => np(b, ux, uy);
-  return [
-    `M ${P(p(0.20, 0.10))}`,
-    `C ${P(p(0.40, 0.00))} ${P(p(0.65, 0.00))} ${P(p(0.85, 0.10))}`,
-    `C ${P(p(1.00, 0.20))} ${P(p(1.00, 0.40))} ${P(p(0.90, 0.50))}`,
-    // 紀伊半島南端
-    `C ${P(p(0.95, 0.65))} ${P(p(0.85, 0.95))} ${P(p(0.65, 1.00))}`,
-    `C ${P(p(0.50, 1.05))} ${P(p(0.40, 1.00))} ${P(p(0.30, 0.85))}`,
-    `C ${P(p(0.10, 0.75))} ${P(p(0.00, 0.55))} ${P(p(0.05, 0.35))}`,
-    `C ${P(p(0.08, 0.20))} ${P(p(0.15, 0.12))} ${P(p(0.20, 0.10))}`,
-    'Z',
-  ].join(' ');
-}
-
-// 中国: 横長の細い島型
-function buildChugoku(b: Bounds): string {
-  const p = (ux: number, uy: number) => np(b, ux, uy);
-  return [
-    `M ${P(p(0.05, 0.30))}`,
-    `C ${P(p(0.10, 0.10))} ${P(p(0.25, 0.00))} ${P(p(0.45, 0.05))}`,
-    `C ${P(p(0.65, 0.00))} ${P(p(0.85, 0.05))} ${P(p(0.95, 0.25))}`,
-    `C ${P(p(1.00, 0.45))} ${P(p(0.95, 0.65))} ${P(p(0.85, 0.85))}`,
-    `C ${P(p(0.70, 1.00))} ${P(p(0.45, 1.00))} ${P(p(0.30, 0.90))}`,
-    `C ${P(p(0.10, 0.85))} ${P(p(0.00, 0.65))} ${P(p(0.05, 0.45))}`,
-    `C ${P(p(0.03, 0.38))} ${P(p(0.03, 0.32))} ${P(p(0.05, 0.30))}`,
-    'Z',
-  ].join(' ');
-}
-
-// 四国: ひし形気味の島
-function buildShikoku(b: Bounds): string {
-  const p = (ux: number, uy: number) => np(b, ux, uy);
-  return [
-    `M ${P(p(0.50, 0.05))}`,
-    `C ${P(p(0.75, 0.05))} ${P(p(0.95, 0.20))} ${P(p(1.00, 0.45))}`,
-    `C ${P(p(0.98, 0.70))} ${P(p(0.80, 0.95))} ${P(p(0.55, 1.00))}`,
-    `C ${P(p(0.30, 1.00))} ${P(p(0.05, 0.85))} ${P(p(0.00, 0.60))}`,
-    `C ${P(p(0.00, 0.35))} ${P(p(0.20, 0.10))} ${P(p(0.50, 0.05))}`,
-    'Z',
-  ].join(' ');
-}
-
-// 九州本島: 縦長、東(右)に少し膨らむ、南端は薩摩半島
-function buildKyushu(b: Bounds): string {
-  const p = (ux: number, uy: number) => np(b, ux, uy);
-  return [
-    `M ${P(p(0.30, 0.05))}`,
-    `C ${P(p(0.55, 0.00))} ${P(p(0.75, 0.05))} ${P(p(0.85, 0.20))}`,
-    `C ${P(p(1.00, 0.35))} ${P(p(1.00, 0.55))} ${P(p(0.90, 0.70))}`,
-    `C ${P(p(0.85, 0.85))} ${P(p(0.65, 0.95))} ${P(p(0.50, 1.00))}`,
-    // 薩摩半島(南端)
-    `C ${P(p(0.30, 1.05))} ${P(p(0.15, 0.95))} ${P(p(0.10, 0.80))}`,
-    `C ${P(p(0.00, 0.65))} ${P(p(0.00, 0.40))} ${P(p(0.10, 0.25))}`,
-    `C ${P(p(0.18, 0.12))} ${P(p(0.25, 0.07))} ${P(p(0.30, 0.05))}`,
-    'Z',
-  ].join(' ');
-}
-
-// 種子島・屋久島: 2つの円
-function buildTanegashima(b: Bounds): string {
-  if (b.w < 5 && b.h < 5) {
-    return `M ${b.cx - 25},${b.cy} A 25,22 0 1,0 ${b.cx + 25},${b.cy} A 25,22 0 1,0 ${b.cx - 25},${b.cy} Z`;
-  }
-  // 2点それぞれを楕円で
-  return `M ${b.x},${b.cy} A ${b.w/2},${b.h*0.65} 0 1,0 ${b.x + b.w},${b.cy} A ${b.w/2},${b.h*0.65} 0 1,0 ${b.x},${b.cy} Z`;
-}
-
-// 沖縄・奄美: 南北に細長い島列
-function buildOkinawa(b: Bounds): string {
-  const p = (ux: number, uy: number) => np(b, ux, uy);
-  return [
-    `M ${P(p(0.30, 0.05))}`,
-    `C ${P(p(0.55, 0.00))} ${P(p(0.85, 0.10))} ${P(p(0.95, 0.30))}`,
-    `C ${P(p(1.00, 0.55))} ${P(p(0.85, 0.80))} ${P(p(0.65, 0.95))}`,
-    `C ${P(p(0.45, 1.05))} ${P(p(0.20, 0.95))} ${P(p(0.10, 0.75))}`,
-    `C ${P(p(0.00, 0.55))} ${P(p(0.05, 0.30))} ${P(p(0.20, 0.10))}`,
-    `C ${P(p(0.25, 0.07))} ${P(p(0.28, 0.06))} ${P(p(0.30, 0.05))}`,
-    'Z',
-  ].join(' ');
-}
-
-const SHAPE_BUILDERS: Record<string, (b: Bounds) => string> = {
-  hokkaido: buildHokkaido,
-  tohoku: buildTohoku,
-  kanto: buildKanto,
-  chubu: buildChubu,
-  kinki: buildKinki,
-  chugoku: buildChugoku,
-  shikoku: buildShikoku,
-  kyushu_main: buildKyushu,
-  tanegashima: buildTanegashima,
-  okinawa: buildOkinawa,
-};
-
-function buildAreaPath(area: MapArea): string {
-  const b = getBounds(area.nodes, area.pad);
-  if (!b) return '';
-  const builder = SHAPE_BUILDERS[area.id];
-  if (!builder) return '';
-  return builder(b);
-}
-
-export const LAND_PATHS: string[] = MAP_AREAS.map(buildAreaPath);
-
-// ISLANDS は廃止 (エリアに統合済み)
 export const ISLANDS: { cx: number; cy: number; rx: number; ry: number }[] = [];
 
-// 地方名の透かしラベル（各エリア重心）
-export const REGION_LABELS = MAP_AREAS
-  .filter(a => a.nodes.length > 0)
-  .map(a => {
-    const cx = a.nodes.reduce((s, n) => s + n.x, 0) / a.nodes.length;
-    const cy = a.nodes.reduce((s, n) => s + n.y, 0) / a.nodes.length;
-    return { name: a.name, x: cx, y: cy };
-  });
+// === 10地方ラベル (誤接続のない正しい位置に) ===
+// 8地方 + 種子島屋久 + 沖縄奄美 で 10。すべて文字ラベルだけ。
+export interface AreaLabel { name: string; x: number; y: number }
+
+const labelCenter = (nodes: BoardNode[]) => {
+  if (nodes.length === 0) return null;
+  const cx = nodes.reduce((s, n) => s + n.x, 0) / nodes.length;
+  const cy = nodes.reduce((s, n) => s + n.y, 0) / nodes.length;
+  return { x: cx, y: cy };
+};
+
+export const REGION_LABELS: AreaLabel[] = [
+  { name: '北海道', ...(labelCenter(byRegion('hokkaido')) ?? { x: 0, y: 0 }) },
+  { name: '東北', ...(labelCenter(byRegion('tohoku')) ?? { x: 0, y: 0 }) },
+  { name: '関東', ...(labelCenter(byRegion('kanto')) ?? { x: 0, y: 0 }) },
+  { name: '中部', ...(labelCenter(byRegion('chubu')) ?? { x: 0, y: 0 }) },
+  { name: '近畿', ...(labelCenter(byRegion('kinki')) ?? { x: 0, y: 0 }) },
+  { name: '中国', ...(labelCenter(byRegion('chugoku')) ?? { x: 0, y: 0 }) },
+  { name: '四国', ...(labelCenter(byRegion('shikoku')) ?? { x: 0, y: 0 }) },
+  { name: '九州', ...(labelCenter(kyushuMain) ?? { x: 0, y: 0 }) },
+  { name: '種子島・屋久島', ...(labelCenter(BOARD_NODES.filter(n => TANEGASHIMA_IDS.has(n.id) && ['tanegashima','yakushima'].includes(n.id))) ?? { x: 0, y: 0 }) },
+  { name: '沖縄・奄美', ...(labelCenter(BOARD_NODES.filter(n => ['amami','tokunoshima','naha'].includes(n.id))) ?? { x: 0, y: 0 }) },
+];
+
+// MAP_AREAS は後方互換のため、JapanMap が tone を参照するのに使われる
+export interface MapArea {
+  id: string;
+  name: string;
+  nodes: BoardNode[];
+  pad: number;
+  tone: number;
+}
+
+export const MAP_AREAS: MapArea[] = [
+  { id: 'hokkaido', name: '北海道', nodes: byRegion('hokkaido'), pad: 55, tone: 0.0 },
+  { id: 'honshu', name: '本州', nodes: honshuNodes, pad: 50, tone: 0.3 },
+  { id: 'shikoku', name: '四国', nodes: byRegion('shikoku'), pad: 42, tone: 0.6 },
+  { id: 'kyushu_main', name: '九州', nodes: kyushuMain, pad: 48, tone: 0.7 },
+  { id: 'tanegashima', name: '種子島・屋久島', nodes: BOARD_NODES.filter(n => TANEGASHIMA_IDS.has(n.id)), pad: 32, tone: 0.85 },
+  { id: 'okinawa', name: '沖縄・奄美', nodes: BOARD_NODES.filter(n => OKINAWA_IDS.has(n.id)), pad: 40, tone: 1.0 },
+];

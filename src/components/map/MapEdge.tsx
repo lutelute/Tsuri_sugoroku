@@ -5,9 +5,24 @@ interface MapEdgeProps {
   to: BoardNode;
 }
 
+// ノードがどの「島」に属するか (誤接続防止)
+const OKINAWA_IDS = new Set(['amami', 'tokunoshima', 'naha', 'goal', 'r_amami_tokunoshima', 'r_yakushima_amami', 'r_naha_goal']);
+const TANEGASHIMA_IDS = new Set(['tanegashima', 'yakushima', 'r_tanegashima_yakushima', 'r_kagoshima_tanegashima', 'r_kagoshima_yakushima']);
+function islandOf(n: BoardNode): string {
+  if (OKINAWA_IDS.has(n.id)) return 'okinawa';
+  if (TANEGASHIMA_IDS.has(n.id)) return 'tanegashima';
+  if (n.region === 'hokkaido') return 'hokkaido';
+  if (n.region === 'shikoku') return 'shikoku';
+  if (n.region === 'kyushu') return 'kyushu';
+  return 'honshu';
+}
+
 // 両端が同じ routeTheme なら、テーマに合った色の連続線を描く。
 // それ以外（混在/異種）は既定の金色点線（街道）。
+// 例外: from と to が異なる島に属する場合は、必ず 'sea'(海路) として描く。
 function sharedTheme(from: BoardNode, to: BoardNode): RouteTheme | null {
+  // 島跨ぎは強制 sea
+  if (islandOf(from) !== islandOf(to)) return 'sea';
   if (from.routeTheme && from.routeTheme === to.routeTheme) return from.routeTheme;
   // 一方が route で他方が capital/fishing 等の固定マスのとき、route 側のテーマで描く
   if (from.type === 'route' && from.routeTheme && to.type !== 'route') return from.routeTheme;

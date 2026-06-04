@@ -6,7 +6,7 @@ import MapNode from './MapNode';
 import MapEdge from './MapEdge';
 import PlayerToken from './PlayerToken';
 import NodeInfoOverlay from './NodeInfoOverlay';
-import { LAND_PATHS, ISLANDS, REGION_LABELS, MAP_AREAS } from './landmass';
+import { LAND_PATHS, ISLANDS, REGION_LABELS, LAND_TONES } from './landmass';
 import Ruby from '../shared/Ruby';
 
 // v3.2.x: 全体×1.2追加(関東密集対策, 合計×7.6)。
@@ -277,16 +277,16 @@ export default function JapanMap() {
             塗りは薄く(0.12) 線は実線で適度に(0.45)、視線はマスに集中させつつ地方形が分かる */}
         <g aria-hidden="true" className="pointer-events-none">
           {LAND_PATHS.map((d, i) => {
-            const area = MAP_AREAS[i];
-            const hue = 38 + (area?.tone ?? 0) * 28;
+            const tone = LAND_TONES[i] ?? 0.3;
+            const hue = 38 + tone * 28;
             return (
               <g key={`land-${i}`}>
-                {/* 塗り (背景としての地方の存在感) */}
-                <path d={d} fill={`hsla(${hue}, 28%, 56%, 0.12)`} />
-                {/* 縁取り (海岸線らしさ、控えめ) */}
-                <path d={d} fill="none" stroke="rgba(241,216,147,0.45)" strokeWidth="1.6" strokeLinejoin="round" />
+                {/* 塗り (実際の島の輪郭、控えめな存在感) */}
+                <path d={d} fill={`hsla(${hue}, 28%, 56%, 0.13)`} />
+                {/* 縁取り (海岸線) */}
+                <path d={d} fill="none" stroke="rgba(241,216,147,0.5)" strokeWidth="1.8" strokeLinejoin="round" />
                 {/* 内側のハイライト (奥行き) */}
-                <path d={d} fill="none" stroke="rgba(251,246,232,0.12)" strokeWidth="0.6" strokeLinejoin="round" />
+                <path d={d} fill="none" stroke="rgba(251,246,232,0.14)" strokeWidth="0.7" strokeLinejoin="round" />
               </g>
             );
           })}
