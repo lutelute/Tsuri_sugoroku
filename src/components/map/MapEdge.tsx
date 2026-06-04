@@ -39,21 +39,28 @@ const THEME_STROKE: Record<RouteTheme, string> = {
 
 export default function MapEdge({ from, to }: MapEdgeProps) {
   const theme = sharedTheme(from, to);
+  // 両端が主要マス(capital/fishing_special/start/goal)のエッジは「幹線」として太く
+  const isMainBoth =
+    (from.type === 'capital' || from.type === 'fishing_special' || from.type === 'start' || from.type === 'goal') &&
+    (to.type === 'capital' || to.type === 'fishing_special' || to.type === 'start' || to.type === 'goal');
+  const shadowW = isMainBoth ? 7.0 : 5.6;
+  const mainW = isMainBoth ? 4.0 : 3.2;
+  const dashW = isMainBoth ? 3.6 : 2.8;
   if (theme) {
     const color = THEME_STROKE[theme];
     return (
       <g aria-hidden="true">
         {/* 影 */}
-        <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="rgba(6,18,31,0.55)" strokeWidth="5.6" strokeLinecap="round" />
+        <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="rgba(6,18,31,0.55)" strokeWidth={shadowW} strokeLinecap="round" />
         {theme === 'sea' || theme === 'river' ? (
           // 波打つ連続線（海路/河川）
-          <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={color} strokeWidth="3.2" strokeLinecap="round" />
+          <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={color} strokeWidth={mainW} strokeLinecap="round" />
         ) : theme === 'mountain' ? (
           // 峠: 茶系の長点線（峠道）
-          <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={color} strokeWidth="2.8" strokeDasharray="4,3" strokeLinecap="round" />
+          <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={color} strokeWidth={dashW} strokeDasharray="4,3" strokeLinecap="round" />
         ) : (
           // 街道宿: ベージュの実線
-          <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={color} strokeWidth="2.8" strokeLinecap="round" />
+          <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={color} strokeWidth={dashW} strokeLinecap="round" />
         )}
       </g>
     );

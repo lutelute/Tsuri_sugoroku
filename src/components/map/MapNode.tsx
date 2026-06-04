@@ -87,7 +87,7 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
   const special = node.type === 'start' || node.type === 'goal' || isCapital;
   // v3.1.x: 座標×4.5 に対してノード半径は相対的に縮小し、視覚的な余白を確保。
   // タップ判定は別途大きいまま（押しやすさは維持）。
-  const R = isCapital ? 9.5 : isRoute ? 3.8 : special ? 8.5 : 6;
+  const R = isCapital ? 11 : isRoute ? 4.2 : special ? 9.5 : 7.5;
   const dist = distanceToGoal.get(node.id);
   // 地方の連想色を rim(外枠)に使い、ノード単体でも地方が認識できるように。
   // start/goal/capital/currentPlayerは特別色を維持。
@@ -189,9 +189,12 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
           x={cx}
           y={cy + R * 0.36}
           textAnchor="middle"
-          fontSize={R * 1.35}
+          fontSize={R * 1.4}
           fill="#ffffff"
-          fontWeight="700"
+          stroke="rgba(0,0,0,0.7)"
+          strokeWidth={R * 0.12}
+          paintOrder="stroke"
+          fontWeight="900"
           fontFamily='"Shippori Mincho", serif'
           className="pointer-events-none select-none"
         >

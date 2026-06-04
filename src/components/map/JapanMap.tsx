@@ -377,7 +377,7 @@ export default function JapanMap() {
             // route ノードは地名ラベルを出さない（密度を上げないため）
             if (isRoute) return null;
             const special = node.type === 'start' || node.type === 'goal' || isCapital;
-            const r = isCapital ? 9.5 : special ? 8.5 : 6;
+            const r = isCapital ? 11 : special ? 9.5 : 7.5;
             return (
               <text
                 key={`label-${node.id}`}
