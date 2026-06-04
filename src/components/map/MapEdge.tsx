@@ -37,6 +37,26 @@ const THEME_STROKE: Record<RouteTheme, string> = {
   town: 'rgba(220,200,150,0.7)',     // 街道: ベージュ (明瞭化)
 };
 
+// エッジを二次ベジェ曲線として描く (視覚的な交差を緩和)。
+// from→to の方向に対して、決定論的な向きに少し膨らませる。
+// from.id と to.id の辞書順を比較して、from < to なら左に、from > to なら右にカーブ。
+// これで同じ2点間のエッジは常に同じ向きにカーブする。
+function curvePath(from: BoardNode, to: BoardNode): string {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) return `M ${from.x},${from.y} L ${to.x},${to.y}`;
+  // 法線
+  const px = -dy / len, py = dx / len;
+  // 膨らみは長さに応じて (短いエッジは控えめ、長いエッジは大きく)
+  const bow = Math.min(len * 0.12, 28);
+  // from.id と to.id の辞書順で向きを決定論的に
+  const dir = from.id < to.id ? 1 : -1;
+  const mx = (from.x + to.x) / 2 + px * bow * dir;
+  const my = (from.y + to.y) / 2 + py * bow * dir;
+  return `M ${from.x},${from.y} Q ${mx},${my} ${to.x},${to.y}`;
+}
+
 export default function MapEdge({ from, to }: MapEdgeProps) {
   const theme = sharedTheme(from, to);
   // 両端が主要マス(capital/fishing_special/start/goal)のエッジは「幹線」として太く
@@ -46,21 +66,20 @@ export default function MapEdge({ from, to }: MapEdgeProps) {
   const shadowW = isMainBoth ? 7.0 : 5.6;
   const mainW = isMainBoth ? 4.0 : 3.2;
   const dashW = isMainBoth ? 3.6 : 2.8;
+  const d = curvePath(from, to);
+
   if (theme) {
     const color = THEME_STROKE[theme];
     return (
       <g aria-hidden="true">
         {/* 影 */}
-        <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="rgba(6,18,31,0.55)" strokeWidth={shadowW} strokeLinecap="round" />
+        <path d={d} fill="none" stroke="rgba(6,18,31,0.55)" strokeWidth={shadowW} strokeLinecap="round" />
         {theme === 'sea' || theme === 'river' ? (
-          // 波打つ連続線（海路/河川）
-          <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={color} strokeWidth={mainW} strokeLinecap="round" />
+          <path d={d} fill="none" stroke={color} strokeWidth={mainW} strokeLinecap="round" />
         ) : theme === 'mountain' ? (
-          // 峠: 茶系の長点線（峠道）
-          <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={color} strokeWidth={dashW} strokeDasharray="4,3" strokeLinecap="round" />
+          <path d={d} fill="none" stroke={color} strokeWidth={dashW} strokeDasharray="4,3" strokeLinecap="round" />
         ) : (
-          // 街道宿: ベージュの実線
-          <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={color} strokeWidth={dashW} strokeLinecap="round" />
+          <path d={d} fill="none" stroke={color} strokeWidth={dashW} strokeLinecap="round" />
         )}
       </g>
     );
@@ -68,17 +87,8 @@ export default function MapEdge({ from, to }: MapEdgeProps) {
   // 既定: 金の点線航路
   return (
     <g aria-hidden="true">
-      <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="rgba(6,18,31,0.55)" strokeWidth="5.6" strokeLinecap="round" />
-      <line
-        x1={from.x}
-        y1={from.y}
-        x2={to.x}
-        y2={to.y}
-        stroke="rgba(212,168,67,0.6)"
-        strokeWidth="2.6"
-        strokeDasharray="1.6,7.5"
-        strokeLinecap="round"
-      />
+      <path d={d} fill="none" stroke="rgba(6,18,31,0.55)" strokeWidth="5.6" strokeLinecap="round" />
+      <path d={d} fill="none" stroke="rgba(212,168,67,0.6)" strokeWidth="2.6" strokeDasharray="1.6,7.5" strokeLinecap="round" />
     </g>
   );
 }
