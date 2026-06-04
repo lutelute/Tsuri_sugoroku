@@ -6,7 +6,7 @@ import MapNode from './MapNode';
 import MapEdge from './MapEdge';
 import PlayerToken from './PlayerToken';
 import NodeInfoOverlay from './NodeInfoOverlay';
-import { LAND_PATHS, ISLANDS, REGION_LABELS, LAND_TONES } from './landmass';
+import { LAND_PATHS, ISLANDS, REGION_LABELS, LAND_TONES, REGION_FILLS } from './landmass';
 import Ruby from '../shared/Ruby';
 
 // v3.2.5: 経度緯度に基づく地理座標化。
@@ -273,20 +273,31 @@ export default function JapanMap() {
         </defs>
         <rect x={viewBox.x - 60} y={viewBox.y - 60} width={viewBox.width + 120} height={viewBox.height + 120} fill="url(#ocean-glow)" />
 
-        {/* 10エリア分割: 地方シルエットを「背景」として描画。
-            塗りは薄く(0.12) 線は実線で適度に(0.45)、視線はマスに集中させつつ地方形が分かる */}
+        {/* === レイヤー1: 8地方の連想色塗り分け (明確に見えるレベル) === */}
+        <g aria-hidden="true" className="pointer-events-none">
+          {REGION_FILLS.map(r => (
+            <g key={`region-${r.id}`}>
+              {/* 地方の塗り (連想色) */}
+              <path d={r.path} fill={r.color} opacity="0.36" />
+              {/* 地方の境界線 (連想色を明確に) */}
+              <path d={r.path} fill="none" stroke={r.color} strokeWidth="2.8" opacity="0.95" strokeLinejoin="round" />
+              {/* 内側のハイライト (奥行き) */}
+              <path d={r.path} fill="none" stroke="rgba(251,246,232,0.18)" strokeWidth="1.0" strokeLinejoin="round" />
+            </g>
+          ))}
+        </g>
+
+        {/* === レイヤー2: 6島の輪郭線 (海岸線を強調、エリア分離を明確に) === */}
         <g aria-hidden="true" className="pointer-events-none">
           {LAND_PATHS.map((d, i) => {
             const tone = LAND_TONES[i] ?? 0.3;
             const hue = 38 + tone * 28;
             return (
               <g key={`land-${i}`}>
-                {/* 塗り (実際の島の輪郭、控えめな存在感) */}
-                <path d={d} fill={`hsla(${hue}, 28%, 56%, 0.13)`} />
-                {/* 縁取り (海岸線) */}
-                <path d={d} fill="none" stroke="rgba(241,216,147,0.5)" strokeWidth="1.8" strokeLinejoin="round" />
-                {/* 内側のハイライト (奥行き) */}
-                <path d={d} fill="none" stroke="rgba(251,246,232,0.14)" strokeWidth="0.7" strokeLinejoin="round" />
+                {/* 縁取り (海岸線 — 連続線で太め) */}
+                <path d={d} fill="none" stroke={`hsla(${hue}, 35%, 70%, 0.7)`} strokeWidth="2.4" strokeLinejoin="round" />
+                {/* 内側のハイライト */}
+                <path d={d} fill="none" stroke="rgba(251,246,232,0.2)" strokeWidth="0.8" strokeLinejoin="round" />
               </g>
             );
           })}
@@ -295,24 +306,31 @@ export default function JapanMap() {
           ))}
         </g>
 
-        {/* 地方名の透かし */}
-        <g aria-hidden="true" className="pointer-events-none">
-          {REGION_LABELS.map((r, i) => (
-            <text
-              key={`reg-${i}`}
-              x={r.x}
-              y={r.y}
-              textAnchor="middle"
-              fontSize="16.5"
-              fill="#fbf6e8"
-              opacity="0.1"
-              fontFamily='"Shippori Mincho", serif'
-              fontWeight="700"
-              letterSpacing="1"
-            >
-              {r.name}
-            </text>
-          ))}
+        {/* === レイヤー3: 地方名 (大きく半透明、地方の中心に) === */}
+        <g aria-hidden="true" className="pointer-events-none select-none">
+          {REGION_FILLS.map(r => {
+            const shortName = r.name.length > 4 ? r.name.slice(0, 2) : r.name;
+            const size = shortName.length === 2 ? 50 : 38;
+            return (
+              <text
+                key={`label-${r.id}`}
+                x={r.labelX}
+                y={r.labelY + size * 0.32}
+                textAnchor="middle"
+                fontSize={size}
+                fill="#fbf6e8"
+                opacity="0.72"
+                fontFamily='"Shippori Mincho", serif'
+                fontWeight="800"
+                letterSpacing="4"
+                stroke="rgba(10,28,46,0.95)"
+                strokeWidth={size * 0.18}
+                paintOrder="stroke"
+              >
+                {shortName}
+              </text>
+            );
+          })}
         </g>
 
         {/* エッジ（海路） */}

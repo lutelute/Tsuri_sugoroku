@@ -173,6 +173,83 @@ export const REGION_LABELS: AreaLabel[] = [
   { name: '沖縄・奄美', ...(labelCenter(BOARD_NODES.filter(n => ['amami','tokunoshima','naha'].includes(n.id))) ?? { x: 0, y: 0 }) },
 ];
 
+// === 8地方の塗り分けパス (REGION_FILLS) ===
+// 各地方の凸包+pad を独立して描き、地方別の連想色で塗る。
+// 本州内の5地方は重なってOK (本州は陸続きなので地方間がつながっていても自然)。
+// 北海道/四国/九州は他島と分離した状態を保つ (pad控えめ)。
+export interface RegionFill {
+  id: string;
+  name: string;
+  path: string;
+  color: string;      // メインの塗り色 (連想色)
+  labelX: number;
+  labelY: number;
+}
+
+// 各地方の連想色 (彩度・明度を抑えた和モダンパレット)
+const REGION_COLORS: Record<string, string> = {
+  hokkaido: '#5e8aa8',   // 雪と海 (寒色)
+  tohoku:   '#9a5a4a',   // 紅葉と銅
+  kanto:    '#7a7a8a',   // 都市の灰
+  chubu:    '#6a8a5a',   // 山の緑
+  kinki:    '#a08660',   // 古都の金茶
+  chugoku:  '#5e8a8a',   // 瀬戸内の藍緑
+  shikoku:  '#7e5a8a',   // 阿波の藍紫
+  kyushu:   '#9a5a4a',   // 火山の赤褐 → 東北と同じはダメなので変更
+};
+// 重複を解消
+REGION_COLORS.kyushu = '#a05a3a';     // 阿蘇/桜島の赤褐
+REGION_COLORS.tohoku = '#8a5a6a';     // 紅葉の濃紅
+REGION_COLORS.tanegashima = '#4a7a5a';// 屋久杉
+REGION_COLORS.okinawa = '#6a8aa0';    // 珊瑚海
+
+// 地方ごとの追加 pad (本州内地方は緩め、海峡を持つ島は厳しめ)
+const REGION_PADS: Record<string, number> = {
+  hokkaido: 50,
+  tohoku: 38,
+  kanto: 38,
+  chubu: 38,
+  kinki: 38,
+  chugoku: 36,
+  shikoku: 28,
+  kyushu: 34,
+};
+
+function regionFillFor(id: string, nodes: BoardNode[]): RegionFill | null {
+  if (nodes.length === 0) return null;
+  const pad = REGION_PADS[id] ?? 35;
+  const path = landPath(nodes, pad);
+  if (!path) return null;
+  const cx = nodes.reduce((s, n) => s + n.x, 0) / nodes.length;
+  const cy = nodes.reduce((s, n) => s + n.y, 0) / nodes.length;
+  const nameMap: Record<string, string> = {
+    hokkaido: '北海道', tohoku: '東北', kanto: '関東', chubu: '中部',
+    kinki: '近畿', chugoku: '中国', shikoku: '四国', kyushu: '九州',
+    tanegashima: '種子島・屋久島', okinawa: '沖縄・奄美',
+  };
+  return {
+    id,
+    name: nameMap[id] ?? id,
+    path,
+    color: REGION_COLORS[id] ?? '#888',
+    labelX: cx,
+    labelY: cy,
+  };
+}
+
+export const REGION_FILLS: RegionFill[] = [
+  regionFillFor('hokkaido', byRegion('hokkaido')),
+  regionFillFor('tohoku', byRegion('tohoku')),
+  regionFillFor('kanto', byRegion('kanto')),
+  regionFillFor('chubu', byRegion('chubu')),
+  regionFillFor('kinki', byRegion('kinki')),
+  regionFillFor('chugoku', byRegion('chugoku')),
+  regionFillFor('shikoku', byRegion('shikoku')),
+  regionFillFor('kyushu', kyushuMain),
+  regionFillFor('tanegashima', BOARD_NODES.filter(n => ['tanegashima', 'yakushima'].includes(n.id))),
+  regionFillFor('okinawa', BOARD_NODES.filter(n => ['amami', 'tokunoshima', 'naha'].includes(n.id))),
+].filter((x): x is RegionFill => x !== null);
+
 // MAP_AREAS は後方互換のため、JapanMap が tone を参照するのに使われる
 export interface MapArea {
   id: string;
