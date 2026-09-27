@@ -9,6 +9,7 @@ import { curvePath } from './edgeGeometry';
 import MapTerrain from './MapTerrain';
 import LegacyTerrain from './LegacyTerrain';
 import PlayerToken from './PlayerToken';
+import { useDisplayedBinbo } from './useDisplayedBinbo';
 import NodeInfoOverlay from './NodeInfoOverlay';
 import { REGION_FILLS } from './landmass';
 import { REGION_ACCENT, REGION_LAND, REGION_NAME, MAP_BOUNDS } from './mapTheme';
@@ -20,6 +21,7 @@ import { DATA_MAP_LABEL, DATA_MAP_ORDER } from './cityMapModes';
 import type { DataMapMode } from './cityMapModes';
 import type { Bounds } from './useMapCamera';
 import Ruby from '../shared/Ruby';
+import GuideMapLayer from './GuideMapLayer';
 
 const IS_REAL_MAP = getActiveBoardType() === 'realistic';
 
@@ -140,6 +142,8 @@ function JapanMapImpl() {
       city: s.city,
     })),
   );
+  // 貧乏神の人形は、動いた駒が移り先のマスに着いてから付け替える（ストアより少し遅れる見た目だけの値）
+  const shownBinbo = useDisplayedBinbo(city?.binbo, players, lastMove);
   const [dataMap, setDataMap] = useState<DataMapMode>('none');
   const playerColors = useMemo(() => players.map(p => p.color), [players]);
   const [infoNodeId, setInfoNodeId] = useState<string | null>(null);
@@ -259,6 +263,8 @@ function JapanMapImpl() {
         <MapEdges />
         {city && <CityDataLayer city={city} mode={dataMap} />}
         {isPathSelection && <ReachableRoutes paths={reachableNodes} />}
+        {/* 案内役: 分かれ道に流れる光・目的地への矢印（地図の座標で描くのでカメラに追従する） */}
+        <GuideMapLayer layer="under" />
         <NodesLayer reachableSteps={reachableSteps} currentNode={curNodeId} />
         {city && <CitySkyline city={city} colors={playerColors} />}
         {city && <SpecialtyMarks owners={city.specialties} colors={playerColors} />}
@@ -274,9 +280,10 @@ function JapanMapImpl() {
             move={lastMove}
             stackIndex={stackInfo[i].stackIndex}
             stackSize={stackInfo[i].stackSize}
-            binbo={city?.binbo?.playerIndex === i ? (city.binbo.months >= 12 ? 'great' : 'normal') : null}
+            binbo={city && shownBinbo.holder === i ? (shownBinbo.great ? 'great' : 'normal') : null}
           />
         ))}
+        <GuideMapLayer layer="over" />
       </svg>
 
       {/* 地図操作ボタン */}
@@ -380,6 +387,7 @@ function PathList({ paths, onSelect }: { paths: string[][]; onSelect: (i: number
       )}
       <button
         onClick={() => setOpen(v => !v)}
+        data-guide="path-list"
         className="bg-amber-600/90 hover:bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg backdrop-blur-sm transition-colors cursor-pointer"
       >
         {open ? '▼ 一覧を閉じる' : `▲ 行き先を一覧から選ぶ（${items.length}）`}

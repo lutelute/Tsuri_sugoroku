@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, lazy, Suspense } from 'react';
 import { useGameStore, hasSavedGame } from '../../store/useGameStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { loadUserEncyclopedia, resetUserEncyclopedia } from '../../lib/firestore';
@@ -8,6 +8,8 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
+import { TitleGuideControls } from '../guide/GuideButtons';
+import { useGuideStore } from '../../store/useGuideStore';
 import RankingOverlay from '../ranking/RankingOverlay';
 import EncyclopediaOverlay from '../encyclopedia/EncyclopediaOverlay';
 import UserListOverlay from '../users/UserListOverlay';
@@ -92,8 +94,13 @@ function CityArt() {
   );
 }
 
+// 遊び方の画面は開いたときに読み込む（図解が町や地図のデータを使うので、タイトルの初回表示に含めない）
+const HowToPlayOverlay = lazy(() => import('../guide/HowToPlayOverlay'));
+
 export default function TitleScreen() {
   const setScreen = useGameStore(s => s.setScreen);
+  const openHowTo = useGuideStore(s => s.openHowTo);
+  const howToOpen = useGuideStore(s => s.howTo !== null);
   const resumeGame = useGameStore(s => s.resumeGame);
   const savedExists = hasSavedGame();
 
@@ -299,8 +306,14 @@ export default function TitleScreen() {
         )}
       </div>
 
-      {/* サブボタン（ランキング・図鑑・ユーザー一覧） */}
+      {/* サブボタン（遊び方・ランキング・図鑑・ユーザー一覧） */}
       <div className="flex gap-3 mt-5 w-full max-w-xs">
+        <button
+          onClick={() => openHowTo('fishing')}
+          className="flex-1 py-2.5 rounded-xl bg-ai-800/50 border border-kin-500/25 text-sm text-washi/75 hover:bg-ai-700/60 hover:text-washi transition cursor-pointer flex flex-col items-center gap-1"
+        >
+          <Icon name="info" size={20} className="text-kin-300" /> <Ruby>遊び方</Ruby>
+        </button>
         <button
           onClick={() => setShowRanking(true)}
           className="flex-1 py-2.5 rounded-xl bg-ai-800/50 border border-kin-500/25 text-sm text-washi/75 hover:bg-ai-700/60 hover:text-washi transition cursor-pointer flex flex-col items-center gap-1"
@@ -321,6 +334,9 @@ export default function TitleScreen() {
         </button>
       </div>
 
+      {/* 案内役: 遊んでいる途中の指差し案内の ON/OFF と、はじめから */}
+      <TitleGuideControls />
+
       {/* フッター */}
       <p className="absolute bottom-4 text-xs text-washi/35 font-mincho tracking-wider">
         <Ruby>稚内から那覇まで、釣って・建てて・日本一へ</Ruby>
@@ -328,6 +344,12 @@ export default function TitleScreen() {
 
       {/* 開発用チートパネル（DEVビルドのみ） */}
       {import.meta.env.DEV && <DevPanel />}
+
+      {howToOpen && (
+        <Suspense fallback={null}>
+          <HowToPlayOverlay />
+        </Suspense>
+      )}
     </div>
   );
 }

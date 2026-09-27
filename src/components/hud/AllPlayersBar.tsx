@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { calculateScore } from '../../game/scoring';
@@ -8,6 +8,8 @@ import type { CityScore } from '../../game/city';
 import { getEquippedLevel } from '../../game/equipment';
 import type { Player, TurnPhase } from '../../game/types';
 import { useMoneyDelta } from '../fx/useMoneyDelta';
+import { useReducedMotion } from '../fx/useReducedMotion';
+import { CardIcon } from '../city/CardHand';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
 
@@ -19,6 +21,44 @@ const COVERED_PHASES = new Set<TurnPhase>([
   // ゴールの祝い（全面）で隠れる。ふだんの turn_end は短いので、ため込んでも次の手番の頭で見える
   'turn_end',
 ]);
+
+/** 人口・建物の小さな印（絵文字の代わり。和紙色の線画） */
+function PeopleIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true" className="shrink-0">
+      <circle cx="4.2" cy="3.4" r="1.9" fill="currentColor" />
+      <path d="M0.8 11c0-2.4 1.5-4 3.4-4s3.4 1.6 3.4 4Z" fill="currentColor" />
+      <circle cx="8.6" cy="4.2" r="1.5" fill="currentColor" opacity="0.7" />
+      <path d="M6.6 11c0.2-2 1-3.2 2-3.2s2.6 1 2.6 3.2Z" fill="currentColor" opacity="0.7" />
+    </svg>
+  );
+}
+function HouseIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true" className="shrink-0">
+      <path d="M1 6.2 6 1.8l5 4.4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M2.6 5.6V11h6.8V5.6" fill="currentColor" opacity="0.8" />
+    </svg>
+  );
+}
+
+/** 状態の小札（貧乏神・牛歩・ゴール）。付いた瞬間に判子のように押す */
+function StatusChip({ children, tone, title }: { children: string; tone: 'binbo' | 'great' | 'gyuho'; title: string }) {
+  const bg = tone === 'great'
+    ? 'linear-gradient(135deg, #3b1f5a, #6d3a9c)'
+    : tone === 'binbo'
+      ? 'radial-gradient(circle at 35% 30%, #5a5048, #2a231c 70%)'
+      : 'radial-gradient(circle at 35% 30%, #ef6a52, #a92e1d 75%)';
+  return (
+    <span
+      title={title}
+      className="animate-seal-stamp shrink-0 inline-flex items-center justify-center h-4 min-w-4 px-0.5 rounded-[3px] font-mincho font-bold text-[9.5px] leading-none border"
+      style={{ background: bg, color: tone === 'great' ? '#f1d893' : '#fbf6e8', borderColor: 'rgba(255,255,255,0.45)' }}
+    >
+      <Ruby>{children}</Ruby>
+    </span>
+  );
+}
 
 interface PlayerCardProps {
   player: Player;
@@ -39,7 +79,9 @@ const PlayerCard = memo(function PlayerCard({ player: p, active, hold, turnKey, 
   const { shown, pops, removePop, last } = useMoneyDelta(p.money, hold, undefined, 'gain');
   return (
     <div
-      className={`relative min-w-[150px] flex-1 rounded-lg px-2.5 py-1.5 border transition-all ${active ? 'bg-ai-700/70 shadow-lg' : 'bg-ai-900/45 opacity-75'}`}
+      data-active={active || undefined}
+      data-guide={binbo ? 'binbo-card' : undefined}
+      className={`relative ${city ? 'min-w-[172px]' : 'min-w-[150px]'} flex-1 rounded-lg px-2.5 py-1.5 border transition-all ${active ? 'bg-ai-700/70 shadow-lg' : 'bg-ai-900/45 opacity-75'}`}
       style={{ borderColor: active ? p.color : 'rgba(212,168,67,0.15)' }}
     >
       {/* 手番が来たら一度だけ光が横切る / 所持金が動いたらカードがふわっと光る */}
@@ -48,9 +90,19 @@ const PlayerCard = memo(function PlayerCard({ player: p, active, hold, turnKey, 
 
       <div className="flex items-center gap-1.5">
         <span className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white/30" style={{ backgroundColor: p.color }} />
-        <span className="font-bold font-mincho text-[13px] truncate text-washi">{p.name}</span>
-        {p.hasFinished && <span className="seal animate-seal-stamp text-[8px] w-4 h-4 rounded-[3px] leading-none"><Ruby>着</Ruby></span>}
-        <span className="relative ml-auto text-[12px] text-kin-300 tabular-nums flex items-center gap-0.5">
+        <span className="font-bold font-mincho text-[13px] truncate min-w-0 text-washi">{p.name}</span>
+        {p.hasFinished && <span className="seal animate-seal-stamp shrink-0 text-[8px] w-4 h-4 rounded-[3px] leading-none"><Ruby>着</Ruby></span>}
+        {binbo && (
+          <StatusChip
+            key={binbo.great ? 'great' : 'binbo'}
+            tone={binbo.great ? 'great' : 'binbo'}
+            title={binbo.great ? '大貧乏神がとりついている' : `貧乏神がとりついている${binbo.monthsLeft !== null ? `（大貧乏神まであと${binbo.monthsLeft}か月）` : ''}`}
+          >
+            {binbo.great ? '大貧' : '貧'}
+          </StatusChip>
+        )}
+        {slowed && <StatusChip tone="gyuho" title="牛歩（出目は2まで）">牛歩</StatusChip>}
+        <span className="relative ml-auto shrink-0 text-[12px] text-kin-300 tabular-nums flex items-center gap-0.5">
           <Icon name="coin" size={12} />¥{shown.toLocaleString()}
           {pops.map(pop => (
             <span
@@ -65,21 +117,15 @@ const PlayerCard = memo(function PlayerCard({ player: p, active, hold, turnKey, 
           ))}
         </span>
       </div>
-      <div className="flex items-center gap-2.5 text-[11px] text-washi/70 mt-0.5">
+      {/* 2段目: 狭いときは折り返す（隣のカードにはみ出さない） */}
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-washi/70 mt-0.5">
         {city ? (
           <>
-            <span title="総資産（所持金＋建物）"><Ruby>総資産</Ruby> <b className="text-washi tabular-nums">¥{city.assets.toLocaleString()}</b></span>
-            <span title="人口"><Ruby>人口</Ruby> <b className="text-emerald-300 tabular-nums">{city.population.toLocaleString()}</b></span>
-            <span title="建物の数" className="text-washi/50">🏠{city.buildings}</span>
-            {(handSize ?? 0) > 0 && <span title="カードの手札" className="text-kin-300/80">🎴{handSize}</span>}
-            {slowed && <span title="牛歩（出目は2まで）" className="text-shu-300 font-mincho"><Ruby>牛歩</Ruby></span>}
-            {binbo && (
-              <span
-                title={binbo.great ? '大貧乏神がとりついている' : `貧乏神がとりついている${binbo.monthsLeft !== null ? `（大貧乏神まであと${binbo.monthsLeft}か月）` : ''}`}
-                className={`font-mincho font-bold px-1 rounded ${binbo.great ? 'bg-purple-900/80 text-purple-100' : 'bg-sumi/70 text-washi'}`}
-              >
-                {binbo.great ? '大貧' : '貧'}
-              </span>
+            <span title="総資産（所持金＋建物）" className="whitespace-nowrap"><Ruby>総資産</Ruby> <b className="text-washi tabular-nums">¥{city.assets.toLocaleString()}</b></span>
+            <span title="人口" className="inline-flex items-center gap-0.5 text-emerald-300"><PeopleIcon /><b className="tabular-nums">{city.population.toLocaleString()}</b></span>
+            <span title="建物の数" className="inline-flex items-center gap-0.5 text-washi/55"><HouseIcon /><span className="tabular-nums">{city.buildings}</span></span>
+            {(handSize ?? 0) > 0 && (
+              <span key={handSize} title="カードの手札" className="fx-pop inline-flex items-center gap-0.5 text-kin-300/90"><CardIcon size={12} /><span className="tabular-nums">{handSize}</span></span>
             )}
           </>
         ) : (
@@ -89,7 +135,7 @@ const PlayerCard = memo(function PlayerCard({ player: p, active, hold, turnKey, 
           </>
         )}
         {active && (
-          <span className="ml-auto flex items-center gap-1.5 text-washi/60" title="装着中の装備レベル（竿/リール/ルアー）">
+          <span className={`ml-auto items-center gap-1.5 text-washi/60 ${city ? 'hidden sm:flex' : 'flex'}`} title="装着中の装備レベル（竿/リール/ルアー）">
             <span className="flex items-center"><Icon name="rod" size={11} />{getEquippedLevel(p.equipment, 'rod') || '×'}</span>
             <span className="flex items-center"><Icon name="reel" size={11} />{getEquippedLevel(p.equipment, 'reel') || '×'}</span>
             <span className="flex items-center"><Icon name="lure" size={11} />{getEquippedLevel(p.equipment, 'lure') || '×'}</span>
@@ -114,6 +160,19 @@ export default function AllPlayersBar() {
     })),
   );
   const hold = COVERED_PHASES.has(turnPhase);
+  const reduced = useReducedMotion();
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // 手番の人のカードが欄の外（横スクロールの先）にあれば、見える位置まで寄せる
+  useEffect(() => {
+    const bar = barRef.current;
+    const el = bar?.querySelector<HTMLElement>('[data-active="true"]');
+    if (!bar || !el) return;
+    const b = bar.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    if (r.left < b.left) bar.scrollBy({ left: r.left - b.left - 8, behavior: reduced ? 'auto' : 'smooth' });
+    else if (r.right > b.right) bar.scrollBy({ left: r.right - b.right + 8, behavior: reduced ? 'auto' : 'smooth' });
+  }, [currentPlayerIndex, reduced]);
 
   const scores = useMemo(
     () => players.map((p, i) => (city ? null : calculateScore(p, encyclopedias[i] ?? {}).total)),
@@ -122,7 +181,7 @@ export default function AllPlayersBar() {
   const citySc = useMemo(() => (city ? players.map((p, i) => cityScore(city, i, p.money)) : null), [players, city]);
 
   return (
-    <div className="flex gap-1.5 px-2 py-1.5 overflow-x-auto">
+    <div ref={barRef} data-guide="players-bar" className="flex gap-1.5 px-2 py-1.5 overflow-x-auto overscroll-x-contain">
       {players.map((p, i) => (
         <PlayerCard
           key={p.id}

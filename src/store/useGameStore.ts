@@ -38,6 +38,8 @@ import { buySpecialty } from '../game/citySpecialties';
 import type { CityDisasterReport } from '../game/city';
 import { calendarLabel } from '../game/city';
 import { getEquippedItem } from '../game/equipment';
+import { pushNotice, isNotableMonth, showBinboFullScreen } from '../game/tempo';
+import type { Notice } from '../game/tempo';
 
 const MAX_FISHING_PER_TURN = 3;
 
@@ -91,6 +93,8 @@ interface GameActions {
   acknowledgeCityReport: () => void;
   acknowledgeCityYearEnd: () => void;
   dismissCityToast: () => void;
+  /** 月末の全画面（決算・年度末・貧乏神の悪さ）をまとめて閉じる。貧乏神の悪さは上部のお知らせに回す */
+  skipMonthEnd: () => void;
   devCityCheat: (kind: 'money' | 'simulate' | 'quake' | 'kaiju' | 'yearend' | 'cards' | 'binbo' | 'binboAct' | 'dest') => void;
   /** CPU: ミニゲームを遊ばずに確率で1回釣る */
   cpuFish: () => void;
@@ -98,7 +102,12 @@ interface GameActions {
   announce: (title: string, body: string) => void;
 }
 
-type GameStore = GameState & GameActions;
+/** お知らせ（瓦版・貧乏神）の順番待ち。見せている1件は cityToast / cityBinboToast */
+interface NoticeState {
+  noticeQueue: Notice[];
+}
+
+type GameStore = GameState & NoticeState & GameActions;
 
 function createInitialPlayers(
   settings: GameSettings,
@@ -208,6 +217,42 @@ function applyInsurance(
   return { city, disasters: out, cards: cs, protectedPlayers: [...new Set(saved)] };
 }
 
+/** お知らせの通し番号（表示の key と演出のやり直しに使う。閉じても戻さない） */
+let noticeSeq = 0;
+
+/** お知らせ1件を「見せている」状態にする差分 */
+function showNotice(n: Notice): Partial<GameStore> {
+  noticeSeq++;
+  if (n.kind === 'city') return { cityToast: { title: n.title, body: n.body, seq: noticeSeq } };
+  return { cityBinboToast: { reason: n.reason, playerIndex: n.playerIndex, fromIndex: n.fromIndex, great: n.great, seq: noticeSeq } };
+}
+
+/** お知らせを出す。何も出ていなければすぐ出し、出ていれば順番待ちに積む（重ねて出さない・上書きしない） */
+function queueNotice(n: Notice) {
+  const st = useGameStore.getState();
+  if (!st.cityToast && !st.cityBinboToast && st.noticeQueue.length === 0) {
+    useGameStore.setState(showNotice(n));
+  } else if (n.kind === 'city' && st.cityToast?.title === n.title && st.noticeQueue.length === 0) {
+    // いま見せている瓦版と同じ見出し（CPU が同じ町で続けて建てた等）は、本文をつないで見せ続ける
+    if (!st.cityToast.body.split('／').includes(n.body)) useGameStore.setState({ cityToast: { ...st.cityToast, body: `${st.cityToast.body}／${n.body}` } });
+  } else {
+    useGameStore.setState({ noticeQueue: pushNotice(st.noticeQueue, n) });
+  }
+}
+
+/** 見せていたお知らせを閉じ（cleared）、何も出ていなければ順番待ちの先頭を出す */
+function nextNotice(st: GameStore, cleared: Partial<GameStore>): Partial<GameStore> {
+  const after = { ...st, ...cleared };
+  if (after.cityToast || after.cityBinboToast) return cleared;
+  const [head, ...rest] = st.noticeQueue;
+  return head ? { ...cleared, ...showNotice(head), noticeQueue: rest } : cleared;
+}
+
+/** 貧乏神の月末の悪さを上部のお知らせで流すときの文面 */
+function binboNotice(ev: NonNullable<GameState['cityBinboEvent']>, players: Player[], important = false): Notice {
+  return { kind: 'city', title: `${ev.great ? '大貧乏神' : '貧乏神'}の悪さ（${players[ev.playerIndex]?.name ?? ''}）`, body: ev.message, important };
+}
+
 /** まちづくり: 移動経路が決まったら、貧乏神が他の駒へ移るかを判定する */
 function binboAfterMove(path: string[]) {
   const st = useGameStore.getState();
@@ -215,10 +260,8 @@ function binboAfterMove(path: string[]) {
   if (!city?.binbo || city.binbo.playerIndex === null || st.settings.mode !== 'city') return;
   const r = transferOnMove(city.binbo, st.currentPlayerIndex, path, st.players.map(p => p.currentNode));
   if (r.to === null) return;
-  useGameStore.setState({
-    city: { ...city, binbo: r.binbo },
-    cityBinboToast: { reason: 'pass', playerIndex: r.to, fromIndex: st.currentPlayerIndex, great: isGreat(r.binbo), seq: (st.cityBinboToast?.seq ?? 0) + 1 },
-  });
+  useGameStore.setState({ city: { ...city, binbo: r.binbo } });
+  queueNotice({ kind: 'binbo', reason: 'pass', playerIndex: r.to, fromIndex: st.currentPlayerIndex, great: isGreat(r.binbo) });
 }
 
 /** 手番の切り替え時に毎回リセットする値 */
@@ -243,6 +286,7 @@ function isCityMode(settings: GameSettings): boolean {
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...initialState,
+  noticeQueue: [],
 
   setScreen: (screen) => set({ screen }),
 
@@ -295,6 +339,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       pendingDiceCap: null,
       cityBinboToast: null,
       cityBinboEvent: null,
+      noticeQueue: [],
     });
   },
 
@@ -984,6 +1029,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     let yearEnd: YearEndResult | null = null;
     let titleHistory = get().cityTitleHistory;
     let binboEvent: GameState['cityBinboEvent'] = null;
+    let binboBecame = false;
     if (city && isCityMode(settings) && newTurn > turn) {
       for (let t = turn; t < newTurn; t++) {
         const before = cityNext!;
@@ -1011,6 +1057,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           cityNext = { ...mm.city, binbo: b };
           const became = becameGreat(prevB, b);
           if (mm.kind !== 'none' || became) {
+            // 月が2つ以上進んでも、見せる悪さ（最後の月）が化けた月のものかで寸劇にするかを決める
+            binboBecame = became;
             binboEvent = { playerIndex: who, kind: mm.kind, message: became ? `貧乏神が大貧乏神に化けた！ ${mm.message}` : mm.message, great: isGreat(b), moneyDelta: mm.moneyDeltas[who] ?? 0, giveTo: mm.giveTo };
           }
         }
@@ -1041,12 +1089,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    // 月末決算の見せ方: 年度末は大決算、災害や発展/衰退があった月だけ全画面、それ以外は上部のお知らせで流す
-    const notable = !!cityReport && (
-      cityReport.disasters.length > 0
-      || cityReport.players.some(r => r.grown > 0 || r.declined > 0 || (r.vacated ?? 0) > 0)
-      || (cityReport.tierChanges ?? []).some(c => c.to > c.from)
-    );
+    // 月末決算の見せ方: 年度末は大決算、災害で壊れた建物がある月と人の建物が衰退・空き家になった月だけ全画面、
+    // それ以外（成長・発展度の上昇だけ）は上部のお知らせで流す（tempo.ts の isNotableMonth）
+    const humans = workingPlayers.map((p, i) => (p.isCpu ? -1 : i)).filter(i => i >= 0);
+    const notable = isNotableMonth(cityReport, humans);
+    // 貧乏神の悪さ: 人がとりつかれた月・大貧乏神に化けた月は寸劇、CPU の普通の月はお知らせで流す
+    const binboFull = !!binboEvent && showBinboFullScreen(!!workingPlayers[binboEvent.playerIndex]?.isCpu, binboBecame, humans.length > 0);
     const phase: TurnPhase = yearEnd ? 'city_yearend' : notable ? 'city_report' : 'idle';
     set({
       players: workingPlayers,
@@ -1060,28 +1108,34 @@ export const useGameStore = create<GameStore>((set, get) => ({
       cityTitleHistory: titleHistory,
       cityCards: cards,
       pendingDiceCap: cards ? diceCap(cards, nextIndex) : null,
-      cityBinboEvent: binboEvent ?? get().cityBinboEvent,
+      cityBinboEvent: binboFull ? binboEvent : get().cityBinboEvent,
     });
     const ups = (cityReport?.tierChanges ?? []).filter(c => c.to > c.from);
     if (ups.length && (notable || yearEnd)) {
       // 決算画面の見出しにも出るが、地図に戻ったときに分かるよう短く知らせる
       get().announce('町が発展した', ups.map(c => `${getTownInfo(c.nodeId)?.name}が発展度${TIER_LABEL[c.to]}に`).join('・'));
     }
-    if (cityReport && !notable && !yearEnd) {
+    // 全画面の決算を出さない月（年度末の3月は大決算が決算の代わり）は、月の決算を上部のお知らせで流す。
+    // 成長（▲）・衰退（▼）・空き家と災害もここで分かるようにする
+    if (cityReport && (!notable || yearEnd)) {
       const cal = calendarLabel(cityReport.turn);
       const summary = cityReport.players
-        .map((r, i) => `${workingPlayers[i]?.name} ${r.net >= 0 ? '+' : '−'}¥${Math.abs(r.net).toLocaleString()}`)
+        .map((r, i) => `${workingPlayers[i]?.name} ${r.net >= 0 ? '+' : '−'}¥${Math.abs(r.net).toLocaleString()}${r.grown > 0 ? ` ▲${r.grown}` : ''}${r.declined > 0 ? ` ▼${r.declined}` : ''}${(r.vacated ?? 0) > 0 ? ` 空${r.vacated}` : ''}`)
         .join(' ／ ');
-      const upText = ups.length ? ` ／ ${ups.map(c => `${getTownInfo(c.nodeId)?.name}が発展度${TIER_LABEL[c.to]}に`).join('・')}` : '';
-      get().announce(`${cal.month}月の決算`, summary + upText);
+      const upText = ups.length && !yearEnd ? ` ／ ${ups.map(c => `${getTownInfo(c.nodeId)?.name}が発展度${TIER_LABEL[c.to]}に`).join('・')}` : '';
+      const disasterText = cityReport.disasters.length
+        ? ` ／ ${cityReport.disasters.map(d => `${d.title}（${d.damages.length ? `${d.damages.length}軒に被害` : '被害なし'}）`).join('・')}`
+        : '';
+      get().announce(`${cal.month}月の決算`, summary + upText + disasterText);
     }
+    if (binboEvent && !binboFull) queueNotice(binboNotice(binboEvent, workingPlayers));
 
     saveGameState(get());
   },
 
   setTurnPhase: (phase) => set({ turnPhase: phase }),
 
-  resetGame: () => set({ ...initialState, encyclopedias: [loadEncyclopedia()], initialEncyclopedias: [] }),
+  resetGame: () => set({ ...initialState, noticeQueue: [], encyclopedias: [loadEncyclopedia()], initialEncyclopedias: [] }),
 
   warpCurrentPlayerTo: (nodeId) => {
     // 開発用: 現在のプレイヤーを任意のノードへ瞬間移動。アクション選択フェーズへ進める。
@@ -1147,6 +1201,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       pendingDiceCap: saved.pendingDiceCap ?? null,
       cityBinboToast: null,
       cityBinboEvent: saved.cityBinboEvent ?? null,
+      noticeQueue: [],
     });
   },
 
@@ -1334,7 +1389,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return null;
   },
 
-  dismissBinboToast: () => set({ cityBinboToast: null }),
+  dismissBinboToast: () => set(st => nextNotice(st, { cityBinboToast: null })),
   acknowledgeBinboEvent: () => set({ cityBinboEvent: null }),
 
   applyCityEventCard: () => {
@@ -1370,11 +1425,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ turnPhase: 'idle', cityYearEnd: null });
   },
 
-  dismissCityToast: () => set({ cityToast: null }),
+  dismissCityToast: () => set(st => nextNotice(st, { cityToast: null })),
 
-  announce: (title, body) => {
-    set({ cityToast: { title, body, seq: (get().cityToast?.seq ?? 0) + 1 } });
+  skipMonthEnd: () => {
+    const st = get();
+    const ev = st.cityBinboEvent;
+    const phase = st.turnPhase;
+    set({
+      cityBinboEvent: null,
+      ...(phase === 'city_report' || phase === 'city_yearend' ? { turnPhase: 'idle' as TurnPhase } : {}),
+      ...(phase === 'city_yearend' ? { cityYearEnd: null } : {}),
+    });
+    if (ev) queueNotice(binboNotice(ev, st.players, true));
   },
+
+  announce: (title, body) => queueNotice({ kind: 'city', title, body }),
 
   cpuFish: () => {
     const { players, currentPlayerIndex, turn } = get();
@@ -1455,16 +1520,18 @@ function executeCityNodeAction(nodeId: string) {
   const newPlayers = [...players];
   const p = { ...player };
   let nextCity = city;
-  let toast: { title: string; body: string } | null = null;
+  // この到着で起きたことは全部お知らせの順番待ちに積む（人の手番のものは溢れても捨てない）
+  const notices: Notice[] = [];
+  // 見出しには誰の話かを付ける（CPU の手番や、何人かで遊ぶときに取り違えないように）
+  const say = (title: string, body: string) => notices.push({ kind: 'city', title: `${player.name}：${title}`, body, important: !player.isCpu });
 
   // 目的地に一番乗り → 賞金 + 次の目的地
   let bonusActions = st.cityBonusActions;
-  let binboToast = st.cityBinboToast;
   if (city.destination === nodeId) {
     p.money += city.destinationReward;
     const nd = pickDestination(nodeId, nodeId, st.turn);
     const nextName = NODE_MAP.get(nd.nodeId)?.name ?? '';
-    toast = { title: `目的地「${node.name}」に一番乗り！`, body: `賞金 ¥${city.destinationReward.toLocaleString()} 獲得。この町に特需が起き、工事が1回多くできる。次の目的地は「${nextName}」（¥${nd.reward.toLocaleString()}）` };
+    say(`目的地「${node.name}」に一番乗り！`, `賞金 ¥${city.destinationReward.toLocaleString()} 獲得。この町に特需が起き、工事が1回多くできる。次の目的地は「${nextName}」（¥${nd.reward.toLocaleString()}）`);
     nextCity = startBoom({ ...city, destination: nd.nodeId, destinationReward: nd.reward }, nodeId);
     bonusActions += CITY_ECONOMY.destinationBonusActions;
     // 貧乏神: 目的地から一番遠い人にとりつく（1人プレイでは出ない）
@@ -1472,7 +1539,7 @@ function executeCityNodeAction(nodeId: string) {
     const nb = attachOnDestination(prevB, currentPlayerIndex, players.map(pl => pl.currentNode), nodeId, players.length, players.map(pl => pl.money));
     nextCity = { ...nextCity, binbo: nb };
     if (nb.playerIndex !== null && nb.playerIndex !== (prevB?.playerIndex ?? null)) {
-      binboToast = { reason: 'destination', playerIndex: nb.playerIndex, great: isGreat(nb), seq: (st.cityBinboToast?.seq ?? 0) + 1 };
+      notices.push({ kind: 'binbo', reason: 'destination', playerIndex: nb.playerIndex, great: isGreat(nb) });
     }
   }
 
@@ -1486,14 +1553,14 @@ function executeCityNodeAction(nodeId: string) {
       }
     }
     const who = fees.payments.map(x => players[x.owner]?.name).filter(Boolean).join('・');
-    toast = toast ?? { title: `${node.name}で買い物`, body: `¥${fees.total.toLocaleString()} を${who}の店へ（他人の商業地・観光名所がある町）` };
+    say(`${node.name}で買い物`, `¥${fees.total.toLocaleString()} を${who}の店へ（他人の商業地・観光名所がある町）`);
   }
 
   // 視察: 自分の建物がある町に止まると、次の月末にその町の自分の建物が発展しやすくなる
   const insp = recordInspection(nextCity, nodeId, currentPlayerIndex);
   if (insp.inspected && insp.state !== nextCity) {
     nextCity = insp.state;
-    toast = toast ?? { title: `${node.name}を視察`, body: '次の月末、この町のあなたの建物は発展しやすくなる' };
+    say(`${node.name}を視察`, `次の月末、この町の${player.name}の建物は発展しやすくなる`);
   }
 
   let phase: TurnPhase = 'action_choice';
@@ -1520,7 +1587,7 @@ function executeCityNodeAction(nodeId: string) {
       if (random() < 0.3) {
         const ev = ROAD_EVENTS[Math.floor(random() * ROAD_EVENTS.length)];
         p.money = Math.max(0, p.money + ev.amount);
-        toast = toast ?? { title: `道中: ${ev.title}`, body: `${ev.body}（${ev.amount >= 0 ? '+' : '−'}¥${Math.abs(ev.amount).toLocaleString()}）` };
+        say(`道中: ${ev.title}`, `${ev.body}（${ev.amount >= 0 ? '+' : '−'}¥${Math.abs(ev.amount).toLocaleString()}）`);
       }
       break;
     }
@@ -1532,9 +1599,8 @@ function executeCityNodeAction(nodeId: string) {
       const g = claimCityGoal(st.cityGoalClaims, currentPlayerIndex);
       goalClaims = g.claims;
       p.money += g.reward;
-      toast = toast ?? (g.order !== null
-        ? { title: `南の果てに${g.order + 1}番目に到達！`, body: `着順賞金 ¥${g.reward.toLocaleString()}（賞金は1人1回）。まちづくりはまだまだ続く` }
-        : { title: '南の果てに再訪', body: 'ゴール賞金はもう受け取り済み。町へ戻って稼ごう' });
+      if (g.order !== null) say(`南の果てに${g.order + 1}番目に到達！`, `着順賞金 ¥${g.reward.toLocaleString()}（賞金は1人1回）。まちづくりはまだまだ続く`);
+      else say('南の果てに再訪', 'ゴール賞金はもう受け取り済み。町へ戻って稼ごう');
       break;
     }
     case 'start':
@@ -1550,7 +1616,7 @@ function executeCityNodeAction(nodeId: string) {
     const added = addCard(cards, currentPlayerIndex, card);
     cards = added.cs;
     const extra = added.discarded ? `（手札がいっぱいなので「${CARD_INFO[added.discarded].name}」を捨てた）` : '';
-    toast = toast ?? { title: `カード「${CARD_INFO[card].name}」を手に入れた`, body: `${CARD_INFO[card].desc}${extra}` };
+    say(`カード「${CARD_INFO[card].name}」を手に入れた`, `${CARD_INFO[card].desc}${extra}`);
   }
 
   newPlayers[currentPlayerIndex] = p;
@@ -1562,11 +1628,10 @@ function executeCityNodeAction(nodeId: string) {
     currentEvent,
     currentCityEvent,
     lastCityEventOutcome: null,
-    cityToast: toast ? { ...toast, seq: (st.cityToast?.seq ?? 0) + 1 } : st.cityToast,
     cityGoalClaims: goalClaims,
     cityBonusActions: bonusActions,
-    cityBinboToast: binboToast,
   });
+  notices.forEach(queueNotice);
 }
 
 export { MAX_FISHING_PER_TURN };

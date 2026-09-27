@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import { setSoundConfig } from '../utils/sound';
+import { CPU_SPEEDS, tempoScale } from '../game/tempo';
+import type { CpuSpeed } from '../game/tempo';
 
 // 子供向けの「ふりがな（ルビ）」表示や効果音など、ゲーム外の設定。localStorage に永続化する。
 const FURIGANA_KEY = 'tsuri_furigana_enabled';
 const SOUND_KEY = 'tsuri_sound_enabled';
 const VOLUME_KEY = 'tsuri_sound_volume';
+const CPU_SPEED_KEY = 'tsuri_cpu_speed';
 
 /** 効果音の音量の既定値（控えめ） */
 export const DEFAULT_SOUND_VOLUME = 0.3;
@@ -40,6 +43,15 @@ function loadVolume(): number {
   }
 }
 
+function loadCpuSpeed(): CpuSpeed {
+  try {
+    const v = localStorage.getItem(CPU_SPEED_KEY);
+    return CPU_SPEEDS.includes(v as CpuSpeed) ? (v as CpuSpeed) : 'normal';
+  } catch {
+    return 'normal';
+  }
+}
+
 interface SettingsState {
   furiganaEnabled: boolean;
   setFurigana: (enabled: boolean) => void;
@@ -51,6 +63,14 @@ interface SettingsState {
   setSoundEnabled: (enabled: boolean) => void;
   toggleSound: () => void;
   setSoundVolume: (volume: number) => void;
+  /** CPU の手番の速さ（ゆっくり／ふつう／はやい） */
+  cpuSpeed: CpuSpeed;
+  setCpuSpeed: (speed: CpuSpeed) => void;
+  /** ゆっくり → ふつう → はやい → ゆっくり… */
+  cycleCpuSpeed: () => void;
+  /** CPU の手番を早送り中か（保存しない。人の手番になったら戻す） */
+  cpuSkipping: boolean;
+  setCpuSkipping: (skipping: boolean) => void;
 }
 
 const initialSound = loadSound();
@@ -79,4 +99,27 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     setSoundConfig({ volume: v });
     set({ soundVolume: v });
   },
+
+  cpuSpeed: loadCpuSpeed(),
+  setCpuSpeed: (speed) => {
+    try { localStorage.setItem(CPU_SPEED_KEY, speed); } catch { /* ignore */ }
+    set({ cpuSpeed: speed });
+  },
+  cycleCpuSpeed: () => {
+    const i = CPU_SPEEDS.indexOf(get().cpuSpeed);
+    get().setCpuSpeed(CPU_SPEEDS[(i + 1) % CPU_SPEEDS.length]);
+  },
+  cpuSkipping: false,
+  setCpuSkipping: (skipping) => set({ cpuSkipping: skipping }),
 }));
+
+/** いまの手番の待ち時間に掛ける倍率（React の外から読むとき用） */
+export function currentTempoScale(isCpuTurn: boolean): number {
+  const st = useSettingsStore.getState();
+  return tempoScale(isCpuTurn, st.cpuSpeed, st.cpuSkipping);
+}
+
+/** 手番の待ち時間に掛ける倍率を購読する（速さを変える・早送りするとすぐ効く） */
+export function useTempoScale(isCpuTurn: boolean): number {
+  return useSettingsStore(st => tempoScale(isCpuTurn, st.cpuSpeed, st.cpuSkipping));
+}

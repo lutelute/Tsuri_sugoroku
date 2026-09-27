@@ -12,17 +12,19 @@ interface ArrivalBannerProps {
   label: string;
   /** 駒が着くまでの待ち(ms)。その瞬間に巻物がひらき、判子が押される */
   delayMs: number;
+  /** CPU の手番: 上部の「思案中」の札と重ならないよう、一段下に出す */
+  lowered?: boolean;
 }
 
 /** 到着したマスを巻物＋判子で見せる。 */
-export default function ArrivalBanner({ name, glyph, tone, label, delayMs }: ArrivalBannerProps) {
+export default function ArrivalBanner({ name, glyph, tone, label, delayMs, lowered = false }: ArrivalBannerProps) {
   // 駒が着いた瞬間に柝「カ、カン」（続けて判子の「ポン」が鳴る）
   useEffect(() => {
     const t = window.setTimeout(playArrive, delayMs);
     return () => clearTimeout(t);
   }, [delayMs]);
   return (
-    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none" role="status">
+    <div className={`absolute ${lowered ? 'top-[4.75rem]' : 'top-2'} left-1/2 -translate-x-1/2 z-20 pointer-events-none`} role="status">
       <div
         className="fx-scroll-open washi-card rounded-md pl-3 pr-5 py-2 flex items-center gap-3 shadow-2xl"
         style={{

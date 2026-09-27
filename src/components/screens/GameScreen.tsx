@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useSettingsStore } from '../../store/useSettingsStore';
+import { useSettingsStore, useTempoScale } from '../../store/useSettingsStore';
 import { useGameStore, MAX_FISHING_PER_TURN } from '../../store/useGameStore';
-import { MOVE_STEP_MS } from '../map/PlayerToken';
+import {
+  ARRIVAL_PAUSE_MS, AUTO_END_MS, CPU_SPEED_LABEL, GOAL_CELEBRATION_MS, MOVE_STEP_MS, TURN_END_MS,
+  hasActionChoices, noticeDurationMs, scaled,
+} from '../../game/tempo';
 import { NODE_MAP } from '../../data/boardNodes';
 import { GOAL_MONEY_REWARD } from '../../game/constants';
 import JapanMap from '../map/JapanMap';
@@ -34,16 +37,14 @@ import GoalCelebration from '../fx/GoalCelebration';
 import CityToastCard from '../fx/CityToastCard';
 import MiniDie from '../fx/MiniDie';
 import { NODE_STAMP } from '../fx/nodeStyle';
+import { useReducedMotion } from '../fx/useReducedMotion';
+import { binboSwapDelayMs } from '../map/binboDisplay';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
-
-/** 駒が着いてからマスの処理に移るまでの間（到着の巻物と判子を見せる） */
-const ARRIVAL_PAUSE_MS = 900;
-/** ターン終了から次の手番までの間 */
-const TURN_END_MS = 1200;
-/** ゴールの祝いを見せる時間（タップで早送りできる） */
-const GOAL_CELEBRATION_MS = 4200;
+import GuideLayer from '../guide/GuideLayer';
+import HowToPlayOverlay from '../guide/HowToPlayOverlay';
+import { HowToButton } from '../guide/GuideButtons';
 
 export default function GameScreen() {
   // 釣りミニゲーム中の高頻度更新(fishingState)で画面全体が再描画されないよう、必要な値だけ購読する
@@ -51,9 +52,12 @@ export default function GameScreen() {
     turnPhase, players, currentPlayerIndex, nodeActionsThisTurn,
     setTurnPhase, executeNodeAction, endTurn, doActionAgain, rouletteResult,
     setScreen, endGame, lastMove, isCity, cityToast, dismissCityToast, pendingDiceCount, pendingDiceCap,
-    binboToast, binboEvent, dismissBinboToast, acknowledgeBinboEvent, turn,
+    binboToast, binboEvent, dismissBinboToast, acknowledgeBinboEvent, turn, noticeWaiting, skipMonthEnd, anyCpu,
   } = useGameStore(useShallow(s => ({
     turn: s.turn,
+    noticeWaiting: s.noticeQueue.length,
+    skipMonthEnd: s.skipMonthEnd,
+    anyCpu: s.players.some(p => p.isCpu),
     isCity: s.settings.mode === 'city',
     pendingDiceCount: s.pendingDiceCount,
     pendingDiceCap: s.pendingDiceCap,
@@ -84,15 +88,18 @@ export default function GameScreen() {
 
   const player = players[currentPlayerIndex];
   const node = NODE_MAP.get(player?.currentNode || '');
+  // CPU の手番は速さの設定（と早送り）で間を縮める。人の手番は常に 1
+  const scale = useTempoScale(!!player?.isCpu);
+  const stepMs = scaled(MOVE_STEP_MS, scale);
 
   // node_action: 駒が1マスずつ進む演出を待ってからアクション実行
   const moveSteps = lastMove && lastMove.playerIndex === currentPlayerIndex ? lastMove.path.length - 1 : 0;
   useEffect(() => {
     if (turnPhase === 'node_action') {
-      const timer = setTimeout(() => executeNodeAction(), ARRIVAL_PAUSE_MS + moveSteps * MOVE_STEP_MS);
+      const timer = setTimeout(() => executeNodeAction(), scaled(ARRIVAL_PAUSE_MS, scale) + moveSteps * stepMs);
       return () => clearTimeout(timer);
     }
-  }, [turnPhase, executeNodeAction, moveSteps]);
+  }, [turnPhase, executeNodeAction, moveSteps, scale, stepMs]);
 
   // ゴール到達の祝い（釣り旅のみ）。この間は次の手番へ進むのを少し待つ
   const showGoal = turnPhase === 'turn_end' && node?.type === 'goal' && !!player?.hasFinished;
@@ -103,36 +110,70 @@ export default function GameScreen() {
   }, [endTurn]);
   useEffect(() => {
     if (turnPhase === 'turn_end') {
-      const timer = setTimeout(proceedTurnEnd, showGoal ? GOAL_CELEBRATION_MS : TURN_END_MS);
+      // CPU のゴールの祝いも速さに合わせて縮める（ただし着順と賞金が読めるよう2秒は見せる）
+      const goalMs = scale < 1 ? Math.max(2000, scaled(GOAL_CELEBRATION_MS, scale)) : GOAL_CELEBRATION_MS;
+      const timer = setTimeout(proceedTurnEnd, showGoal ? goalMs : scaled(TURN_END_MS, scale));
       return () => clearTimeout(timer);
     }
-  }, [turnPhase, proceedTurnEnd, showGoal]);
+  }, [turnPhase, proceedTurnEnd, showGoal, scale]);
 
-  // 目的地到着などのお知らせは数秒で自動的に閉じる
+  // 瓦版のお知らせは順番待ち（ストアの noticeQueue）から1件ずつ出し、数秒で自動的に閉じる。
+  // 後ろに待ちがあれば短く、CPU の手番なら速さに合わせる。本文が継ぎ足されたら（同じ見出しの続報）見せ直す
+  const toastShown = useRef({ key: '', at: 0 });
   useEffect(() => {
     if (!cityToast) return;
-    const t = setTimeout(() => dismissCityToast(), 4200);
+    const key = `${cityToast.seq}|${cityToast.body}`;
+    if (toastShown.current.key !== key) toastShown.current = { key, at: Date.now() };
+    const left = noticeDurationMs('city', noticeWaiting, scale) - (Date.now() - toastShown.current.at);
+    const t = setTimeout(() => dismissCityToast(), Math.max(0, left));
     return () => clearTimeout(t);
-  }, [cityToast, dismissCityToast]);
+  }, [cityToast, noticeWaiting, scale, dismissCityToast]);
 
-  // 現在のノードで再アクション可能か
+  // 貧乏神が「移った！」のお知らせは、地図の人形が移り先の駒に付け替わってから出す（binboSwapDelayMs と同じ待ち）。
+  // 起点は移動の確定（lastMove.seq が変わった時）。順番待ちで遅れて出るときは、そのぶん待ちを減らす
+  const reduced = useReducedMotion();
+  const moveAt = useRef({ seq: -1, at: 0 });
+  useEffect(() => {
+    if (lastMove && moveAt.current.seq !== lastMove.seq) moveAt.current = { seq: lastMove.seq, at: Date.now() };
+  }, [lastMove]);
+  const [binboReadySeq, setBinboReadySeq] = useState(-1);
+  const binboHolderNode = binboToast ? players[binboToast.playerIndex]?.currentNode : undefined;
+  useEffect(() => {
+    if (!binboToast) return;
+    let wait = 0;
+    const moved = lastMove && binboToast.reason === 'pass' && lastMove.playerIndex === binboToast.fromIndex;
+    if (!reduced && moved && binboHolderNode) {
+      const at = moveAt.current.seq === lastMove.seq ? moveAt.current.at : Date.now();
+      wait = Math.max(0, at + binboSwapDelayMs(lastMove.path, binboHolderNode, stepMs) - Date.now());
+    }
+    const seq = binboToast.seq;
+    const t = window.setTimeout(() => setBinboReadySeq(seq), wait);
+    return () => clearTimeout(t);
+    // 同じお知らせ（seq）の間は待ち直さない
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [binboToast?.seq]);
+
+  // 現在のノードで再アクション可能か（店は出たら終わり。もう一度入り直す選択肢は出さない）
   const canDoActionAgain = (() => {
     if (!node) return false;
     if (node.type === 'fishing' || node.type === 'fishing_special') {
       return nodeActionsThisTurn < MAX_FISHING_PER_TURN;
     }
-    if (node.type === 'shop') return true;
     return false;
   })();
 
-  const actionLabel = (() => {
-    if (!node) return '';
-    if (node.type === 'fishing' || node.type === 'fishing_special') {
-      return `もう一度釣る (${nodeActionsThisTurn}/${MAX_FISHING_PER_TURN})`;
-    }
-    if (node.type === 'shop') return 'もう一度ショップへ';
-    return '';
-  })();
+  const actionLabel = canDoActionAgain ? `もう一度釣る (${nodeActionsThisTurn}/${MAX_FISHING_PER_TURN})` : '';
+
+  // 「ターンを終了する」しか選べないときは押させずに終える（町の画面を開き直せる・もう一度釣れるときは選んでもらう）
+  const autoEndTurn = turnPhase === 'action_choice' && !!player && !player.isCpu
+    && !hasActionChoices({ isCity, inTown: isCity && isTown(node), fishingNode: canDoActionAgain, fishingLeft: canDoActionAgain });
+  useEffect(() => {
+    if (!autoEndTurn) return;
+    const t = setTimeout(() => {
+      if (useGameStore.getState().turnPhase === 'action_choice') setTurnPhase('turn_end');
+    }, AUTO_END_MS);
+    return () => clearTimeout(t);
+  }, [autoEndTurn, setTurnPhase]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -164,14 +205,15 @@ export default function GameScreen() {
         {/* 移動中は残りマスを数え、着いたら巻物＋判子で到着を知らせる */}
         {turnPhase === 'node_action' && node && (
           <>
-            {moveSteps > 0 && <StepCountdown key={`cd-${lastMove?.seq ?? 0}`} steps={moveSteps} stepMs={MOVE_STEP_MS} />}
+            {moveSteps > 0 && <StepCountdown key={`cd-${lastMove?.seq ?? 0}`} steps={moveSteps} stepMs={stepMs} />}
             <ArrivalBanner
               key={`ar-${lastMove?.seq ?? 0}`}
               name={node.name}
               glyph={isCity && isTown(node) && node.type !== 'capital' ? '町' : node.id === 'tokyo' || node.id === 'kyoto' ? '都' : NODE_STAMP[node.type].glyph}
               tone={NODE_STAMP[node.type].tone}
               label={isCity && isTown(node) ? 'まち' : NODE_STAMP[node.type].label}
-              delayMs={moveSteps * MOVE_STEP_MS}
+              delayMs={moveSteps * stepMs}
+              lowered={!!player?.isCpu}
             />
           </>
         )}
@@ -187,7 +229,7 @@ export default function GameScreen() {
             {isCity && pendingDiceCap !== null && (
               <span className="text-xs font-bold text-shu-200 bg-ai-900/85 border border-shu-500/40 rounded-full px-3 py-0.5"><Ruby>牛歩中</Ruby>：<Ruby>出目は</Ruby>{pendingDiceCap}<Ruby>まで</Ruby></span>
             )}
-            <div className="w-full max-w-xs">
+            <div className="w-full max-w-xs" data-guide="roll">
             <Button
               onClick={() => setTurnPhase('roulette')}
               variant="gold"
@@ -201,8 +243,8 @@ export default function GameScreen() {
         )}
 
         {/* === フローティング: アクション選択 === */}
-        {turnPhase === 'action_choice' && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-xs space-y-2">
+        {turnPhase === 'action_choice' && !autoEndTurn && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-xs space-y-2" data-guide="action-choice">
             <div className="fx-rise text-center text-xs text-washi/80 bg-ai-950/70 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-kin-500/25 font-mincho">
               <span className="text-kin-300 font-bold"><Ruby>{node?.name || '???'}</Ruby></span> — <Ruby>何をする？</Ruby>
             </div>
@@ -256,12 +298,15 @@ export default function GameScreen() {
             <Icon name="trophy" size={26} />
           </button>
           <SoundToggle />
+          {anyCpu && <CpuSpeedToggle />}
         </div>
 
         {/* 右サイドボタン群 */}
         <div className="absolute right-3 bottom-4 flex flex-col gap-2 z-20">
+          <HowToButton mode={isCity ? 'city' : 'fishing'} />
           <button
             onClick={() => setShowInventory(true)}
+            data-guide="side-tools"
             className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex items-center justify-center text-washi transition cursor-pointer"
             title="道具箱"
             aria-label="道具箱を開く"
@@ -270,6 +315,7 @@ export default function GameScreen() {
           </button>
           <button
             onClick={() => setShowCreel(true)}
+            data-guide="side-tools"
             className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex items-center justify-center text-washi transition cursor-pointer"
             title="魚籠"
             aria-label="魚籠を開く"
@@ -278,6 +324,7 @@ export default function GameScreen() {
           </button>
           <button
             onClick={() => setShowEncyclopedia(true)}
+            data-guide="side-tools"
             className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex items-center justify-center text-washi transition cursor-pointer"
             title="図鑑"
             aria-label="魚図鑑を開く"
@@ -304,6 +351,16 @@ export default function GameScreen() {
       {turnPhase === 'city_report' && <CityReportOverlay />}
       {turnPhase === 'city_yearend' && <CityYearEndOverlay />}
 
+      {/* 月末の全画面が続くとき（決算・年度末の後に貧乏神の悪さ）: 次に何が出るかを知らせ、まとめて閉じられるようにする */}
+      {(turnPhase === 'city_report' || turnPhase === 'city_yearend') && binboEvent && players[binboEvent.playerIndex] && (
+        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 whitespace-nowrap rounded-full bg-ai-900/90 border border-kin-500/40 pl-3 pr-1 py-1 text-xs text-washi font-mincho shadow-lg" role="status">
+          <span><Ruby>このあと</Ruby>：<Ruby>{`${players[binboEvent.playerIndex].name}に貧乏神の悪さ`}</Ruby></span>
+          <button type="button" onClick={skipMonthEnd} className="rounded-full border border-kin-400/60 bg-kin-500/20 px-2.5 py-0.5 text-kin-200 hover:bg-kin-500/35 cursor-pointer">
+            <Ruby>まとめて閉じる</Ruby>
+          </button>
+        </div>
+      )}
+
       {/* 貧乏神: 月末の悪さ（決算の画面を閉じた後に見せる） */}
       {binboEvent && turnPhase !== 'city_report' && turnPhase !== 'city_yearend' && players[binboEvent.playerIndex] && (
         <BinboOverlay
@@ -317,8 +374,8 @@ export default function GameScreen() {
           onClose={acknowledgeBinboEvent}
         />
       )}
-      {/* 貧乏神: とりついた・移ったお知らせ（瓦版と重ならないよう、瓦版が消えてから出す） */}
-      {binboToast && !cityToast && players[binboToast.playerIndex] && (
+      {/* 貧乏神: とりついた・移ったお知らせ（順番待ちで瓦版とは重ならない。移ったときは人形が付け替わってから） */}
+      {binboToast && binboReadySeq === binboToast.seq && !cityToast && players[binboToast.playerIndex] && (
         <BinboAttachToast
           key={`binbo-${binboToast.seq}`}
           playerName={players[binboToast.playerIndex].name}
@@ -327,6 +384,7 @@ export default function GameScreen() {
           reason={binboToast.reason}
           fromName={binboToast.fromIndex !== undefined ? players[binboToast.fromIndex]?.name : undefined}
           seq={binboToast.seq}
+          durationMs={noticeDurationMs('binbo', noticeWaiting, scale)}
           onDone={dismissBinboToast}
         />
       )}
@@ -379,6 +437,10 @@ export default function GameScreen() {
       {/* 開発用チートパネル（DEVビルドのみ） */}
       {import.meta.env.DEV && <DevPanel />}
 
+      {/* 案内役: 初めての場面の指差し案内と、遊び方の画面 */}
+      <GuideLayer />
+      <HowToPlayOverlay />
+
       {/* 途中終了の確認ダイアログ */}
       {showQuitConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
@@ -414,6 +476,25 @@ export default function GameScreen() {
         </div>
       )}
     </div>
+  );
+}
+
+/** CPU の速さ（ゆっくり → ふつう → はやい）を押すたびに切り替える。CPU がいる対局だけ出す */
+function CpuSpeedToggle() {
+  const speed = useSettingsStore(st => st.cpuSpeed);
+  const cycle = useSettingsStore(st => st.cycleCpuSpeed);
+  const label = CPU_SPEED_LABEL[speed];
+  return (
+    <button
+      onClick={cycle}
+      data-guide="cpu-speed"
+      className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex flex-col items-center justify-center text-washi transition cursor-pointer leading-none"
+      title={`CPU の速さ：${label}（押すと切り替え）`}
+      aria-label={`CPU の速さ ${label}。押すと切り替え`}
+    >
+      <span className="text-[11px] tracking-tighter text-kin-300" aria-hidden="true">{speed === 'slow' ? '▶' : speed === 'normal' ? '▶▶' : '▶▶▶'}</span>
+      <span className="text-[10px] font-mincho mt-1">{label}</span>
+    </button>
   );
 }
 

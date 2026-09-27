@@ -189,7 +189,7 @@ export default function EventOverlay() {
       {applied && currentEvent.type === 'good' && <Confetti variant="festive" mode="burst" count={40} seed={currentEvent.name.length + currentPlayerIndex} originY="40%" />}
       {applied && <ScreenFlash color={fx.flash} opacity={currentEvent.type === 'bad' ? 0.32 : 0.4} />}
 
-      <div className={`w-[90%] max-w-sm ${applied && currentEvent.type === 'bad' ? 'fx-shake' : ''}`}>
+      <div data-guide="event-card" className={`w-[90%] max-w-sm ${applied && currentEvent.type === 'bad' ? 'fx-shake' : ''}`}>
         <div className="fx-flip animate-bounce-in">
           <div className={`fx-flip-inner ${flipped ? 'is-flipped' : ''}`}>
             {/* 表（めくった面）: 高さはこちらで決まる */}

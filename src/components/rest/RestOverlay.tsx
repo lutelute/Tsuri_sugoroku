@@ -76,7 +76,7 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto">
-      <div className="panel-ai relative rounded-2xl p-6 max-w-sm w-[90%] my-4 max-h-[90vh] overflow-y-auto">
+      <div data-guide="rest" className="panel-ai relative rounded-2xl p-6 max-w-sm w-[90%] my-4 max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           aria-label="閉じる"

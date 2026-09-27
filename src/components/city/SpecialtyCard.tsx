@@ -1,6 +1,7 @@
 // まちづくり: 県庁マスの名産の札（町パネルに置く）。
 // 名産の絵・名前・価格・今月の月収（季節込み）・持ち主・地方独占の進み具合を和紙の札で見せ、買う/買収するボタンを出す。
 // 売買そのものは onBuy（ストア側）で行う。ここは表示だけの部品。
+import { useEffect, useState } from 'react';
 import { REALISTIC_NODES } from '../../data/realisticData_nodes';
 import { SPECIALTY_REGION_NAME } from '../../data/citySpecialties';
 import {
@@ -11,6 +12,10 @@ import type { SpecialtyOwners } from '../../game/citySpecialties';
 import SpecialtyIcon from './SpecialtyIcon';
 import Button from '../shared/Button';
 import Ruby from '../shared/Ruby';
+import Stamp from '../fx/Stamp';
+import Confetti from '../fx/Confetti';
+import ScreenFlash from '../fx/ScreenFlash';
+import { playGood } from '../../utils/sound';
 
 interface SpecialtyCardProps {
   nodeId: string;
@@ -45,6 +50,20 @@ function Cell({ label, children, sub }: { label: string; children: React.ReactNo
 export default function SpecialtyCard({ nodeId, owners, players, currentPlayerIndex, money, month, onBuy, disabled = false }: SpecialtyCardProps) {
   const sp = getSpecialty(nodeId);
   const region = regionOfSpecialty(nodeId);
+  const ownerNow = sp ? ownerOf(owners, nodeId) : null;
+  // 買った瞬間（持ち主が自分に替わった）だけ判子、地方独占になったら金箔も
+  const [prevOwner, setPrevOwner] = useState(ownerNow);
+  const [celebrate, setCelebrate] = useState<null | 'buy' | 'acquire' | 'monopoly'>(null);
+  const [showRegion, setShowRegion] = useState(false);
+  if (ownerNow !== prevOwner) {
+    setPrevOwner(ownerNow);
+    if (ownerNow === currentPlayerIndex && region !== null) {
+      setCelebrate(regionProgress(owners, region).monopolist === currentPlayerIndex ? 'monopoly' : prevOwner === null ? 'buy' : 'acquire');
+    }
+  }
+  useEffect(() => {
+    if (celebrate === 'monopoly') playGood();
+  }, [celebrate]);
   if (!sp || region === null) return null;
 
   const regionName = SPECIALTY_REGION_NAME[region];
@@ -66,20 +85,27 @@ export default function SpecialtyCard({ nodeId, owners, players, currentPlayerIn
   const leader = prog.leader !== null ? players[prog.leader] : undefined;
 
   return (
-    <section className="washi-card rounded-xl p-3 relative overflow-hidden" aria-label={`名産 ${sp.name}`}>
-      {/* 地方独占の朱印 */}
+    <section data-guide="specialty" className={`washi-card rounded-xl p-3 relative overflow-hidden ${celebrate ? 'fx-rise' : ''}`} aria-label={`名産 ${sp.name}`}>
+      {celebrate === 'monopoly' && <Confetti variant="kin" mode="burst" count={40} seed={nodeId.length + currentPlayerIndex} originY="35%" />}
+      {celebrate === 'monopoly' && <ScreenFlash color="#fff1c4" opacity={0.35} />}
+      {/* 地方独占の朱印（独占した瞬間だけ押す音を鳴らす） */}
       {monopolized && (
-        <div
-          className="seal absolute top-2 right-2 w-12 h-12 rounded-md rotate-6 flex flex-col items-center justify-center font-brush leading-none text-center"
+        <span
+          className="absolute top-2 right-2"
           title={`${ownerPlayer?.name ?? ''}が${regionName}の名産を独占中（名産収入${SPECIALTY_ECONOMY.monopolyMul}倍）`}
         >
-          <span className="text-[9px]">{regionName}</span>
-          <span className="text-[14px] mt-0.5">顔役</span>
-        </div>
+          <Stamp tone="shu" size={46} delay={celebrate === 'monopoly' ? 350 : 0} tilt={8} silent={celebrate !== 'monopoly'}>顔役</Stamp>
+        </span>
+      )}
+      {/* 買った印 */}
+      {(celebrate === 'buy' || celebrate === 'acquire') && !monopolized && (
+        <span className="absolute top-2 right-2 pointer-events-none">
+          <Stamp tone={celebrate === 'buy' ? 'kin' : 'shu'} size={44} delay={80} tilt={8}>{celebrate === 'buy' ? '入手' : '買収'}</Stamp>
+        </span>
       )}
 
       {/* 見出し */}
-      <div className={`flex gap-3 items-start ${monopolized ? 'pr-12' : ''}`}>
+      <div className={`flex gap-3 items-start ${monopolized || celebrate ? 'pr-12' : ''}`}>
         <div className="shrink-0 w-16 h-16 rounded-lg bg-[#fffaf0] border border-kin-600/60 shadow-inner flex items-center justify-center relative">
           <SpecialtyIcon icon={sp.icon} size={48} />
           {peak && (
@@ -137,7 +163,8 @@ export default function SpecialtyCard({ nodeId, owners, players, currentPlayerIn
             <span className="tabular-nums" style={{ color: SUMI_FAINT }}><Ruby>{`まだ誰も持っていない 0/${prog.total}`}</Ruby></span>
           )}
         </div>
-        <div className="flex gap-0.5 mt-1.5 h-1.5" aria-hidden="true">
+        <div className="flex items-center gap-2 mt-1.5">
+        <div className="flex flex-1 gap-0.5 h-1.5" aria-hidden="true">
           {prog.items.map(it => (
             <span
               key={it.nodeId}
@@ -146,7 +173,17 @@ export default function SpecialtyCard({ nodeId, owners, players, currentPlayerIn
             />
           ))}
         </div>
-        <ul className="mt-1.5 flex flex-wrap gap-1">
+          <button
+            type="button"
+            onClick={() => setShowRegion(v => !v)}
+            aria-expanded={showRegion}
+            className="shrink-0 min-h-10 px-2.5 rounded-md border border-kin-600/40 text-[11px] font-mincho text-sumi bg-[#fffaf0] hover:bg-white cursor-pointer"
+          >
+            <Ruby>{showRegion ? 'とじる' : '町を見る'}</Ruby>
+          </button>
+        </div>
+        {showRegion && (
+        <ul className="fx-rise mt-1.5 flex flex-wrap gap-1">
           {prog.items.map(it => {
             const c = it.owner !== null ? players[it.owner]?.color : undefined;
             const here = it.nodeId === nodeId;
@@ -167,6 +204,7 @@ export default function SpecialtyCard({ nodeId, owners, players, currentPlayerIn
             );
           })}
         </ul>
+        )}
       </div>
 
       {/* 買う・買収する */}
@@ -185,7 +223,7 @@ export default function SpecialtyCard({ nodeId, owners, players, currentPlayerIn
             onClick={onBuy}
             variant={owner === null ? 'gold' : 'danger'}
             size="sm"
-            className="w-full"
+            className="w-full min-h-11"
             disabled={disabled || !canAfford}
           >
             {owner === null ? (

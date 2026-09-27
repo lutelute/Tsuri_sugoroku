@@ -3,9 +3,11 @@ import type { Player } from '../../game/types';
 import { NODE_MAP } from '../../data/boardNodes';
 import BinboFigure from '../city/BinboFigure';
 import { playStep } from '../../utils/sound';
+import { useTempoScale } from '../../store/useSettingsStore';
+import { MOVE_STEP_MS, scaled } from '../../game/tempo';
 
-/** 1マス進むのにかける時間（GameScreen の到着演出待ちと共有） */
-export const MOVE_STEP_MS = 190;
+/** 1マス進むのにかける時間（GameScreen の到着演出待ちと共有。CPU は速さの設定で縮む） */
+export { MOVE_STEP_MS };
 
 export interface MoveInfo {
   playerIndex: number;
@@ -29,6 +31,15 @@ interface PlayerTokenProps {
 function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize, binbo }: PlayerTokenProps) {
   // 表示上の現在マス（移動中は経路に沿って1マスずつ進める）
   const [shownNode, setShownNode] = useState(player.currentNode);
+  const stepMs = scaled(MOVE_STEP_MS, useTempoScale(!!player.isCpu));
+  // 貧乏神がとりついた・移ってきた・大貧乏神になった瞬間だけ、人形を落として弾ませる（終わったら外す）
+  const binboNow = binbo ?? null;
+  const [prevBinbo, setPrevBinbo] = useState(binboNow);
+  const [binboEntering, setBinboEntering] = useState(false);
+  if (binboNow !== prevBinbo) {
+    setPrevBinbo(binboNow);
+    setBinboEntering(binboNow !== null);
+  }
 
   useEffect(() => {
     const timers: number[] = [];
@@ -38,7 +49,7 @@ function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize
         timers.push(window.setTimeout(() => {
           setShownNode(nid);
           playStep();
-        }, i * MOVE_STEP_MS));
+        }, i * stepMs));
       });
     } else {
       timers.push(window.setTimeout(() => setShownNode(player.currentNode), 0));
@@ -61,17 +72,15 @@ function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize
       aria-hidden="true"
       style={{
         transform: `translate(${x}px, ${y}px)`,
-        transition: `transform ${moving ? MOVE_STEP_MS - 20 : 450}ms ${moving ? 'linear' : 'ease-in-out'}`,
+        transition: `transform ${moving ? Math.max(40, stepMs - 20) : 450}ms ${moving ? 'linear' : 'ease-in-out'}`,
       }}
     >
       {/* 現在プレイヤーの強調オーラ（手番の頭に数回だけ脈打ち、以後は静止した輪。常時アニメで全体を描き直さない） */}
+      {/* 地図に後から差し込む SMIL は文書の時計基準で始まり、数秒後には動かないため CSS アニメ（fx-token-pulse）で4回 */}
       {isCurrent && (
         <>
           <circle cx={0} cy={2} r={13} fill="none" stroke={player.color} strokeWidth="1.6" opacity="0.55" />
-          <circle cx={0} cy={2} r={14} fill="none" stroke={player.color} strokeWidth="1.8" opacity="0">
-            <animate attributeName="r" values="12;22;12" dur="1.4s" repeatCount="4" />
-            <animate attributeName="opacity" values="0.85;0;0.85" dur="1.4s" repeatCount="4" fill="freeze" />
-          </circle>
+          <circle cx={0} cy={2} r={14} fill="none" stroke={player.color} strokeWidth="1.8" className="fx-token-pulse" />
         </>
       )}
 
@@ -81,9 +90,16 @@ function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize
       {/* 1マス進むごとに小さく跳ねる（key を変えてアニメを再生） */}
       <g key={moving ? shownNode : 'rest'} className={moving ? 'token-hop' : undefined}>
       {/* 取り憑いた貧乏神は自分のピンの真上に乗せる（隣の駒と見分けがつくよう中心を揃える） */}
+      {/* 外の g は地図の LOD で拡大（引いた表示でも見える）、内の g はとりついた瞬間の落下 */}
       {binbo && (() => {
         const h = binbo === 'great' ? 26 : 22;
-        return <BinboFigure size={h} great={binbo === 'great'} x={-(h * 5) / 12} y={-12.5 - h} />;
+        return (
+          <g className="token-binbo">
+            <g className={binboEntering ? 'fx-binbo-in' : undefined} onAnimationEnd={() => setBinboEntering(false)}>
+              <BinboFigure size={h} great={binbo === 'great'} x={-(h * 5) / 12} y={-12.5 - h} />
+            </g>
+          </g>
+        );
       })()}
 
       {/* ピン本体（先端がマスを指す） */}

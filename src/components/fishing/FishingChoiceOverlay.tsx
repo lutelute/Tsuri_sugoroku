@@ -118,6 +118,7 @@ export default function FishingChoiceOverlay() {
           {/* 通常釣り */}
           <button
             onClick={() => hasRod && startFishing(false)}
+            data-guide="fish-normal"
             disabled={!hasRod}
             className={`w-full border rounded-xl p-4 text-left transition
               ${hasRod

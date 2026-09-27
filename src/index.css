@@ -675,6 +675,74 @@ rt {
   100% { opacity: 0; }
 }
 
+/* --- まちづくり第2弾: 札・名産・貧乏神・季節（演出係） --- */
+/* 下から出るシート（札の説明・牛歩の相手選び）。スマホの下端の安全域も空ける */
+.fx-sheet-backdrop { animation: fx-fade-in 0.2s ease-out both; }
+.fx-sheet { animation: fx-sheet-up 0.32s cubic-bezier(0.2, 0.9, 0.3, 1) both; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+@keyframes fx-sheet-up {
+  0%   { transform: translateY(100%); }
+  100% { transform: none; }
+}
+/* 札を配られた: 上から舞い込む */
+.fx-deal { display: block; animation: fx-deal 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes fx-deal {
+  0%   { opacity: 0; transform: translateY(-26px) rotate(-10deg) scale(0.7); }
+  100% { opacity: 1; transform: none; }
+}
+/* 札を切った: 画面の中ほどで札が浮き上がり、光って消える */
+.fx-card-play { animation: fx-card-play 0.95s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+@keyframes fx-card-play {
+  0%   { opacity: 0; transform: translateY(40px) scale(0.6) rotate(-6deg); }
+  25%  { opacity: 1; transform: translateY(0) scale(1.15) rotate(0deg); }
+  70%  { opacity: 1; transform: translateY(-10px) scale(1); }
+  100% { opacity: 0; transform: translateY(-46px) scale(0.92); }
+}
+/* 地図の印が押される（名産を買った・持ち主が替わった） */
+.fx-mark-in { transform-box: fill-box; transform-origin: center; animation: fx-mark-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes fx-mark-in {
+  0%   { opacity: 0; transform: scale(2.4); }
+  60%  { opacity: 1; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+/* 貧乏神が駒にとりつく（上から落ちてきて弾む） */
+.fx-binbo-in { transform-box: fill-box; transform-origin: center bottom; animation: fx-binbo-in 0.8s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
+@keyframes fx-binbo-in {
+  0%   { opacity: 0; transform: translateY(-28px) scale(0.6); }
+  55%  { opacity: 1; transform: translateY(2px) scale(1.08); }
+  100% { opacity: 1; transform: none; }
+}
+/* 季節の名前が替わった（月替わり） */
+.fx-season-in { display: inline-block; animation: fx-season-in 0.9s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes fx-season-in {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.8); }
+  50%  { opacity: 1; transform: translateY(-2px) scale(1.12); }
+  100% { opacity: 1; transform: none; }
+}
+/* 地図の脈打つ輪（目的地・手番の駒）。地図の SVG に後から差し込む SMIL は文書の時計基準で始まり、
+   数秒たつと「もう終わった」扱いで動かないため、差し込んだ瞬間に始まる CSS アニメで回数限定にする */
+.fx-dest-pulse { transform-box: fill-box; transform-origin: center; animation: fx-dest-pulse 1.8s ease-in-out 3; }
+@keyframes fx-dest-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.6); opacity: 0.3; }
+}
+.fx-token-pulse { transform-box: fill-box; transform-origin: center; opacity: 0; animation: fx-token-pulse 1.4s ease-in-out 4 forwards; }
+@keyframes fx-token-pulse {
+  0%, 100% { transform: scale(0.86); opacity: 0.85; }
+  50%      { transform: scale(1.57); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-dest-pulse { animation: none !important; }
+  .fx-token-pulse { animation: none !important; opacity: 0; }
+}
+/* 地図の LOD: 貧乏神の人形は引くほど大きく（人形の足元＝駒のピンの頂点を中心に拡大）、名産の印は引いた表示では隠す */
+.map-svg .token-binbo { transform-box: fill-box; transform-origin: 50% 100%; }
+.map-svg[data-lod="mid"] .token-binbo { transform: scale(1.35); }
+.map-svg[data-lod="far"] .token-binbo { transform: scale(2.2); }
+.map-svg[data-lod="far"] .specialty-mark { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .fx-sheet, .fx-deal, .fx-card-play, .fx-mark-in, .fx-binbo-in, .fx-season-in { animation: fx-fade-in 0.2s ease-out both !important; }
+}
+
 /* ===== ミニゲーム係 ===== */
 /* 釣りミニゲームの演出。transform / opacity のみで動かす（リーリング中の再描画に負けない軽さ）。 */
 .fg-touch {
@@ -893,4 +961,400 @@ rt {
 }
 @media (prefers-reduced-motion: reduce) {
   .token-hop { animation: none; }
+}
+
+/* ===== 案内役 gd- ===== */
+/* 遊び方の画面（動く図解）・その場の案内（指差し・脈打つ輪・吹き出し）・地図の上の案内。
+   アニメは表示している間だけ動く。prefers-reduced-motion では動きを止め、枠で強調するだけにする。
+   図解は「素の状態＝動き終わった絵」にしてあるので、止めても意味が通る。 */
+
+/* --- その場の案内（GuideLayer）。吹き出し以外はタップを素通しする --- */
+.gd-layer { position: fixed; inset: 0; z-index: 58; pointer-events: none; }
+.gd-ring {
+  position: fixed; border-radius: 14px; pointer-events: none;
+  border: 2.5px solid #f1d893;
+  box-shadow: 0 0 0 3px rgba(10, 26, 44, 0.55), 0 0 18px rgba(241, 216, 147, 0.55);
+}
+.gd-ring.is-pulse::after {
+  content: ""; position: absolute; inset: -3px; border-radius: inherit;
+  border: 2px solid #f1d893;
+  animation: gd-ring-pulse 1.3s ease-out infinite;
+}
+@keyframes gd-ring-pulse {
+  0% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(1.16); opacity: 0; }
+}
+/* 指の先（左上）が要素に当たるよう、手の絵をずらして置く */
+.gd-hand {
+  position: fixed; margin: -4px 0 0 -7px; pointer-events: none;
+  transform-origin: 7px 4px;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5));
+  animation: gd-hand-tap 1.3s ease-in-out infinite;
+}
+@keyframes gd-hand-tap {
+  0%, 100% { transform: translate(12px, 14px); }
+  45% { transform: translate(0, 0) scale(1); }
+  55% { transform: translate(0, 0) scale(0.88); }
+  70% { transform: translate(5px, 6px); }
+}
+.gd-bubble {
+  position: fixed; pointer-events: auto; border-radius: 14px; padding: 10px 12px;
+  box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.7), 0 0 0 2px rgba(241, 216, 147, 0.6);
+}
+.gd-bubble.is-pop { animation: gd-bubble-in 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.gd-bubble.is-pop.is-above { animation-name: gd-bubble-in-up; }
+@keyframes gd-bubble-in { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes gd-bubble-in-up { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: none; } }
+.gd-tail {
+  position: absolute; width: 14px; height: 14px; margin-left: -7px; transform: rotate(45deg);
+  border: 1px solid rgba(154, 111, 36, 0.35);
+}
+.gd-tail.is-top { top: -7px; background: #f9f2e1; border-right: 0; border-bottom: 0; }
+.gd-tail.is-bottom { bottom: -7px; background: #e8d9b8; border-left: 0; border-top: 0; }
+
+/* --- 地図の上の案内（GuideMapLayer）。地図の座標で描き、ズーム段階で太さ・大きさを変える --- */
+.gd-map { pointer-events: none; }
+.gd-map-s { transform-box: fill-box; transform-origin: center; }
+.map-svg[data-lod="mid"] .gd-map-s { transform: scale(1.6); }
+.map-svg[data-lod="far"] .gd-map-s { transform: scale(2.6); }
+.gd-map-ring { fill: none; stroke-width: 2.6; }
+.gd-map-ring.is-kin { stroke: #ffe9a8; }
+.gd-map-ring.is-shu { stroke: #ff8a70; }
+.gd-map-ring.is-sumi { stroke: #d9c3ff; }
+.gd-map-pulse { transform-box: fill-box; transform-origin: center; animation: gd-map-pulse 1.3s ease-out infinite; }
+@keyframes gd-map-pulse {
+  0% { transform: scale(1); opacity: 0.95; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+.gd-map-flow {
+  fill: none; stroke-linecap: round; stroke-width: 3.2; stroke-dasharray: 7 7;
+  animation: gd-map-flow 1.4s linear infinite;
+}
+.gd-map-flow.is-kin { stroke: #fff3c4; }
+.gd-map-flow.is-shu { stroke: #ff9b82; }
+.map-svg[data-lod="mid"] .gd-map-flow { stroke-width: 5; stroke-dasharray: 14 14; }
+.map-svg[data-lod="far"] .gd-map-flow { stroke-width: 8; stroke-dasharray: 28 28; }
+/* 56 は各段階の模様の長さ（14・28・56）の公倍数。どの段階でも継ぎ目なく流れる */
+@keyframes gd-map-flow { to { stroke-dashoffset: -56; } }
+.gd-map-head { stroke: #1a130c; stroke-width: 1.4; stroke-linejoin: round; }
+.gd-map-head.is-kin { fill: #ffe9a8; }
+.gd-map-head.is-shu { fill: #ff8a70; }
+
+/* --- 遊び方の画面 --- */
+.gd-page-in { animation: gd-page-in 0.28s ease-out both; }
+@keyframes gd-page-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+
+/* 図解: 要素の中心・下端・上端・左端を軸に動かす */
+.gd-fb { transform-box: fill-box; transform-origin: center; }
+.gd-fb-b { transform-box: fill-box; transform-origin: 50% 100%; }
+.gd-fb-t { transform-box: fill-box; transform-origin: 50% 0%; }
+.gd-fb-l { transform-box: fill-box; transform-origin: 0% 50%; }
+
+/* 図解の筋書き（一巡の長さは svg の --gd-cycle。場面ごとに % で区切る） */
+.gd-dm-die, .gd-dm-land, .gd-dm-tok, .gd-fk-tok, .gd-fk-hand, .gd-ff-step, .gd-gear-s1, .gd-gear-s2, .gd-gear-dur, .gd-gear-fix,
+.gd-sq-pop, .gd-gs-tok, .gd-gs-seg, .gd-dst-tok, .gd-coin, .gd-stamp-late, .gd-late-pop, .gd-bg-l1, .gd-bg-l2, .gd-bg-hand,
+.gd-bg-cal, .gd-bg-coin, .gd-mono-b, .gd-card-fly, .gd-dice-b, .gd-spec-own, .gd-bb-a, .gd-bb-c, .gd-bb-god, .gd-bb-far,
+.gd-season-lbl, .gd-season-tour, .gd-season-com, .gd-ye-bar, .gd-confetti {
+  animation-duration: var(--gd-cycle, 5s);
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+  animation-timing-function: ease-in-out;
+}
+
+/* サイコロで進む */
+.gd-dm-die { animation-name: gd-dm-die; }
+@keyframes gd-dm-die {
+  0% { transform: rotate(-240deg) scale(0.5); opacity: 0; }
+  6% { opacity: 1; }
+  22% { transform: rotate(12deg) scale(1.1); }
+  28%, 100% { transform: none; opacity: 1; }
+}
+.gd-dm-tok { animation-name: gd-dm-tok; }
+@keyframes gd-dm-tok {
+  0%, 28% { transform: translate(-168px, 0); }
+  34% { transform: translate(-140px, -14px); }
+  40% { transform: translate(-112px, 0); }
+  46% { transform: translate(-84px, -14px); }
+  52% { transform: translate(-56px, 0); }
+  58% { transform: translate(-28px, -14px); }
+  64%, 100% { transform: translate(0, 0); }
+}
+.gd-dm-land { opacity: 0; animation-name: gd-dm-land; animation-timing-function: ease-out; }
+@keyframes gd-dm-land {
+  0%, 63% { transform: scale(0.6); opacity: 0; }
+  66% { opacity: 1; }
+  82%, 100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* 分かれ道 */
+.gd-flow-demo { stroke-dasharray: 8 8; animation: gd-flow-demo 1.2s linear infinite; }
+@keyframes gd-flow-demo { to { stroke-dashoffset: -32; } }
+.gd-pulse { animation: gd-pulse 1.4s ease-out infinite; }
+@keyframes gd-pulse {
+  0% { transform: scale(0.85); opacity: 1; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+.gd-fk-tok { animation-name: gd-fk-tok; }
+@keyframes gd-fk-tok {
+  0%, 42% { transform: translate(-224px, -33px); }
+  54% { transform: translate(-150px, 1px); }
+  64% { transform: translate(-74px, 13px); }
+  74%, 100% { transform: translate(0, 0); }
+}
+.gd-fk-hand { animation-name: gd-fk-hand; }
+@keyframes gd-fk-hand {
+  0%, 18% { transform: translate(26px, 30px); opacity: 0; }
+  30% { transform: translate(0, 0); opacity: 1; }
+  35% { transform: scale(0.86); }
+  40% { transform: scale(1); opacity: 1; }
+  52%, 100% { opacity: 0; }
+}
+
+/* 釣りのミニゲーム（4つの場面が順に光る） */
+.gd-ff-step { animation-name: gd-ff-step; }
+@keyframes gd-ff-step {
+  0% { opacity: 0.4; }
+  2%, 24% { opacity: 1; }
+  27%, 100% { opacity: 0.4; }
+}
+.gd-ff-rod { animation: gd-ff-rod 1.5s ease-in-out infinite alternate; }
+@keyframes gd-ff-rod { from { transform: rotate(-38deg); } to { transform: rotate(4deg); } }
+.gd-ripple { animation: gd-ripple 1.4s ease-out infinite; }
+@keyframes gd-ripple {
+  0% { transform: scale(0.4); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.gd-ff-bob { animation: gd-ff-bob 1.2s ease-in-out infinite; }
+@keyframes gd-ff-bob {
+  0%, 40%, 100% { transform: translateY(0); }
+  55% { transform: translateY(6px); }
+  70% { transform: translateY(1px); }
+}
+.gd-ff-shrink { animation: gd-ff-shrink 1.5s ease-in infinite; }
+@keyframes gd-ff-shrink {
+  0% { transform: scale(2.1); opacity: 0; }
+  15% { opacity: 1; }
+  70% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.2; }
+}
+.gd-ff-fish { animation: gd-ff-fish 0.9s ease-in-out infinite; }
+@keyframes gd-ff-fish {
+  0%, 100% { transform: rotate(-10deg) translateX(-2px); }
+  50% { transform: rotate(10deg) translateX(2px); }
+}
+.gd-ff-tension { animation: gd-ff-tension 1.6s ease-in-out infinite; }
+@keyframes gd-ff-tension {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(0.85); }
+}
+
+/* 道具をそろえる */
+.gd-gear-s1 { animation-name: gd-gear-s1; }
+@keyframes gd-gear-s1 {
+  0%, 28% { opacity: 0; transform: scale(0.4); }
+  34% { opacity: 1; transform: scale(1.3); }
+  38%, 94% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; }
+}
+.gd-gear-s2 { animation-name: gd-gear-s2; }
+@keyframes gd-gear-s2 {
+  0%, 52% { opacity: 0; transform: scale(0.4); }
+  58% { opacity: 1; transform: scale(1.3); }
+  62%, 94% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; }
+}
+.gd-gear-dur { animation-name: gd-gear-dur; }
+@keyframes gd-gear-dur {
+  0% { transform: scaleX(1); }
+  45%, 60% { transform: scaleX(0.3); }
+  70%, 100% { transform: scaleX(1); }
+}
+.gd-gear-fix { animation-name: gd-gear-fix; }
+@keyframes gd-gear-fix {
+  0%, 55% { transform: scale(0.6); opacity: 0.35; }
+  62% { transform: scale(1.2); opacity: 1; }
+  68%, 100% { transform: scale(1); opacity: 1; }
+}
+
+/* いろいろなマス・名産・独占・番付（順に現れる） */
+.gd-sq-pop, .gd-mono-b { animation-name: gd-pop-in; }
+@keyframes gd-pop-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  6% { transform: scale(1.15); opacity: 1; }
+  10%, 100% { transform: scale(1); opacity: 1; }
+}
+.gd-flag { animation: gd-flag 1.6s ease-in-out infinite; }
+@keyframes gd-flag {
+  0%, 100% { transform: skewY(0) scaleX(1); }
+  50% { transform: skewY(-6deg) scaleX(0.9); }
+}
+.gd-gs-tok { animation-name: gd-gs-tok; }
+@keyframes gd-gs-tok {
+  0% { transform: translate(-50px, 0); }
+  18%, 100% { transform: translate(0, 0); }
+}
+.gd-gs-seg { animation-name: gd-gs-seg; }
+@keyframes gd-gs-seg {
+  0%, 20% { transform: scaleX(0); }
+  30%, 100% { transform: scaleX(1); }
+}
+
+/* 目的地をめざす */
+.gd-dst-tok { animation-name: gd-dst-tok; }
+@keyframes gd-dst-tok {
+  0%, 8% { transform: translate(-222px, 52px); }
+  24% { transform: translate(-152px, 21px); }
+  40% { transform: translate(-78px, 40px); }
+  58%, 100% { transform: translate(0, 0); }
+}
+.gd-coin { opacity: 0; animation-name: gd-coin; animation-timing-function: ease-out; }
+@keyframes gd-coin {
+  0%, 58% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  62% { opacity: 1; }
+  80% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 1; }
+  92%, 100% { transform: translate(var(--dx), calc(var(--dy) + 10px)); opacity: 0; }
+}
+.gd-stamp-late { animation-name: gd-stamp-late; }
+@keyframes gd-stamp-late {
+  0%, 62% { transform: scale(2.2); opacity: 0; }
+  70% { transform: scale(0.92); opacity: 1; }
+  74%, 100% { transform: scale(1); opacity: 1; }
+}
+.gd-late-pop { animation-name: gd-late-pop; }
+@keyframes gd-late-pop {
+  0%, 68% { opacity: 0; transform: translateY(6px); }
+  76%, 100% { opacity: 1; transform: none; }
+}
+
+/* 空き地に建てる → 月末に育つ */
+.gd-bg-l1 { opacity: 0; animation-name: gd-bg-l1; }
+@keyframes gd-bg-l1 {
+  0%, 22% { opacity: 0; transform: scale(0.3); }
+  28% { opacity: 1; transform: scale(1.12); }
+  32%, 58% { opacity: 1; transform: scale(1); }
+  62%, 100% { opacity: 0; }
+}
+.gd-bg-l2 { animation-name: gd-bg-l2; }
+@keyframes gd-bg-l2 {
+  0%, 58% { opacity: 0; transform: scale(0.85); }
+  64% { opacity: 1; transform: scale(1.14); }
+  68%, 100% { opacity: 1; transform: scale(1); }
+}
+.gd-bg-hand { opacity: 0; animation-name: gd-bg-hand; }
+@keyframes gd-bg-hand {
+  0% { opacity: 0; transform: translate(24px, 30px); }
+  10% { opacity: 1; transform: translate(0, 0); }
+  15% { transform: scale(0.86); }
+  19% { transform: scale(1); opacity: 1; }
+  26%, 100% { opacity: 0; }
+}
+.gd-bg-cal { animation-name: gd-bg-cal; }
+@keyframes gd-bg-cal {
+  0%, 38% { opacity: 0; transform: scale(0.6) rotate(-8deg); }
+  46% { opacity: 1; transform: scale(1.08); }
+  50%, 100% { opacity: 1; transform: scale(1); }
+}
+.gd-bg-coin { animation-name: gd-bg-coin; }
+@keyframes gd-bg-coin {
+  0%, 66% { opacity: 0; transform: translateY(12px); }
+  74%, 100% { opacity: 1; transform: none; }
+}
+
+/* 需要と電気 */
+.gd-dd-up { animation: gd-dd-up 2.6s ease-in-out infinite; }
+@keyframes gd-dd-up { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.55); } }
+.gd-dd-mid { animation: gd-dd-mid 2.6s ease-in-out infinite; }
+@keyframes gd-dd-mid { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(0.7); } }
+.gd-dd-down { animation: gd-dd-down 2.6s ease-in-out infinite; }
+@keyframes gd-dd-down { 0%, 100% { transform: scaleY(0.8); } 50% { transform: scaleY(0.4); } }
+.gd-wave { animation: gd-wave 2.2s ease-out infinite; }
+@keyframes gd-wave {
+  0% { transform: scale(0.8); opacity: 0.9; }
+  100% { transform: scale(5.8); opacity: 0; }
+}
+.gd-lit { animation: gd-lit 2.2s ease-out infinite; }
+@keyframes gd-lit { 0%, 35% { opacity: 0.2; } 45%, 100% { opacity: 1; } }
+.gd-smoke { animation: gd-smoke 2s ease-out infinite; }
+@keyframes gd-smoke {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0.8; }
+  100% { transform: translate(10px, -26px) scale(1.8); opacity: 0; }
+}
+
+/* カード */
+.gd-card-fly { animation-name: gd-card-fly; }
+@keyframes gd-card-fly {
+  0%, 12% { transform: translate(0, 0); opacity: 1; }
+  24% { transform: translate(0, -22px); }
+  44% { transform: translate(112px, -44px) scale(0.5); opacity: 1; }
+  50% { transform: translate(112px, -44px) scale(0.5); opacity: 0; }
+  88% { transform: translate(0, 0) scale(1); opacity: 0; }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+.gd-dice-b { transform: translate(36px, 0); animation-name: gd-dice-b; }
+@keyframes gd-dice-b {
+  0%, 48% { transform: translate(0, 0); }
+  58% { transform: translate(40px, -4px); }
+  64%, 100% { transform: translate(36px, 0); }
+}
+
+/* 名産（順に自分の物になる） */
+.gd-spec-own { animation-name: gd-spec-own; }
+@keyframes gd-spec-own {
+  0%, 10% { opacity: 0; transform: scale(1.6); }
+  16% { opacity: 1; transform: scale(0.94); }
+  20%, 100% { opacity: 1; transform: scale(1); }
+}
+
+/* 貧乏神（一番乗り → いちばん遠い人にとりつく → すれ違いで移る） */
+.gd-bb-a { animation-name: gd-bb-a; }
+@keyframes gd-bb-a { 0% { transform: translate(-84px, 0); } 22%, 100% { transform: translate(0, 0); } }
+.gd-bb-c { animation-name: gd-bb-c; }
+@keyframes gd-bb-c { 0%, 50% { transform: translate(-138px, 0); } 64%, 100% { transform: translate(0, 0); } }
+.gd-bb-god { animation-name: gd-bb-god; }
+@keyframes gd-bb-god {
+  0%, 26% { transform: translate(-110px, -70px); opacity: 0; }
+  36% { transform: translate(-110px, 0); opacity: 1; }
+  50% { transform: translate(-110px, 0); }
+  64% { transform: translate(28px, 0); }
+  70% { transform: translate(14px, -24px); }
+  76%, 100% { transform: translate(0, 0); opacity: 1; }
+}
+.gd-bb-far { opacity: 0; animation-name: gd-bb-far; }
+@keyframes gd-bb-far { 0%, 32% { opacity: 0; } 38%, 52% { opacity: 1; } 58%, 100% { opacity: 0; } }
+
+/* 季節の行事（針が一周し、季節ごとに収入の棒が変わる） */
+.gd-season-hand { animation: gd-spin var(--gd-cycle, 8s) linear infinite; }
+@keyframes gd-spin { to { transform: rotate(360deg); } }
+.gd-season-lbl { opacity: 0; animation-name: gd-season-lbl; }
+.gd-season-lbl.is-first { opacity: 1; }
+@keyframes gd-season-lbl { 0% { opacity: 0; } 2%, 23% { opacity: 1; } 25%, 100% { opacity: 0; } }
+.gd-season-tour { animation-name: gd-season-tour; }
+@keyframes gd-season-tour {
+  0%, 22% { transform: scaleY(0.85); }
+  27%, 47% { transform: scaleY(1); }
+  52%, 72% { transform: scaleY(0.75); }
+  77%, 97% { transform: scaleY(0.35); }
+  100% { transform: scaleY(0.85); }
+}
+.gd-season-com { animation-name: gd-season-com; }
+@keyframes gd-season-com {
+  0%, 22% { transform: scaleY(0.55); }
+  27%, 47% { transform: scaleY(0.7); }
+  52%, 72% { transform: scaleY(0.6); }
+  77%, 97% { transform: scaleY(1); }
+  100% { transform: scaleY(0.55); }
+}
+
+/* 年度末の大決算 */
+.gd-ye-bar { animation-name: gd-ye-bar; }
+@keyframes gd-ye-bar { 0%, 6% { transform: scaleY(0); } 30%, 100% { transform: scaleY(1); } }
+.gd-confetti { opacity: 0; animation-name: gd-confetti; animation-timing-function: ease-in; }
+@keyframes gd-confetti {
+  0%, 58% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+  62% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), 130px) rotate(260deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gd-diagram *, .gd-map *, .gd-layer *, .gd-page-in, .gd-bubble { animation: none !important; }
 }

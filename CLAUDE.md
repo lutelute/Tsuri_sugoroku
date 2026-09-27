@@ -284,3 +284,24 @@ idle → roulette → path_selection(分岐あり) or node_action →
 - 貧乏神のお知らせは瓦版が消えてから出す（重なり防止）。
 - 数値を変えたら `balance.city.sim.test.ts` を必ず通す（名産・利用料・目的地・貧乏神も含めて計測している）。
 - DevPanel: カード配布 / 貧乏神（あと1か月で大貧乏神）/ 貧乏神の悪さ（その場で月末の悪さ）/ 目的地へワープ。
+
+## v4.3.0 遊び方・モーションガイド・テンポ（2026-09-27）
+
+案内役・テンポ係・演出係の分担。詳細は `CHANGELOG.md`。ユーザーは「文章より動いて教える」案内を望んでいる。
+
+### 案内（`src/components/guide/`）
+- `guideRules.ts`: どの場面で何を指すか（`GUIDES`・`pickGuide`・`stillValid`）。案内の対象は各画面の `data-guide="..."` 属性。**属性を消すと `guideRules.test.ts` が落ちる**（案内先が画面にあることを確かめている）。
+- `GuideLayer.tsx`（GameScreen に取り付け）: 指差し・輪・吹き出し。押すか場面が進むと見たものとして `useGuideStore.markSeen`（localStorage `tsuri_guide_seen`）。対象が下の固定帯の裏やスクロール外なら `guideDom.revealGuideTarget` で寄せる。閉じる判定は pointerdown なので、スクリプトの `click()` では閉じない。
+- `GuideMapLayer.tsx`（JapanMap に取り付け）: 地図の座標で道の光・駒の輪・目的地への矢印。viewBox の直書きに追従し、再描画しない。
+- `HowToPlayOverlay.tsx` + `howToPages.ts` + `HowToDiagrams.tsx`: 遊び方の画面。数値は定数から読む。文字の漢字がすべてふりがなで読めることをテストしている（新しい文を足したら `furigana.ts` に熟語で読みを足す）。
+- 新しい機能を足すときは、初めての場面の案内と遊び方のページも一緒に用意する。
+
+### テンポ（`src/game/tempo.ts`）
+- 時間の数字（`MOVE_STEP_MS` など）と、お知らせの順番待ち・月末の出し分け・行動選択の自動終了の判定は `tempo.ts` の純粋関数。CPU の速さは `useSettingsStore.cpuSpeed` と `useTempoScale(isCpuTurn)`（人の手番は常に等倍）。
+- CPU の1手は `components/cpu/cpuStep.ts`（CpuDriver は呼ぶだけ）。貧乏神の悪さの画面が出ている間は CPU を止めて覆いを外す。
+- お知らせはストアの順番待ちに積む（`cityToast` を直接上書きしない）。見出しは「名前：〜」の形。
+- `src/store/tempo.flow.test.ts` が本物のストアと CPU で1局を最後まで進め、固まらないこと・月末の全画面が月1回未満・人の1手番の操作が6回未満であることを確かめる。流れを変えたら必ず通す。
+
+### 演出
+- 下から出る画面は `fx/BottomSheet.tsx`。地図の SVG に後から差し込む SMIL は文書の時計で始まるので動かないことがある。地図の動きは CSS アニメで作る。
+- 貧乏神の人形は `map/useDisplayedBinbo.ts` で表示だけ遅らせる（ストアはすぐ移る）。

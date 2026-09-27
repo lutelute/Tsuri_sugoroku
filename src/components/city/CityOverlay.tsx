@@ -1,5 +1,5 @@
 // まちづくり: 町の区画パネル。建設・再開発・買収と、寄り道（釣り/釣具店/祭り/湯治）への入口。
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { NODE_MAP } from '../../data/boardNodes';
@@ -11,6 +11,7 @@ import {
 import type { BuildingKind, TownStats } from '../../game/city';
 import BuildingGlyph from './BuildingGlyph';
 import CardPlayBar from './CardPlayBar';
+import { CardIcon } from './CardHand';
 import CardShop from './CardShop';
 import SpecialtyCard from './SpecialtyCard';
 import { hasCardShop } from '../../game/cityCards';
@@ -18,6 +19,19 @@ import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
 import { playBuild, playStamp } from '../../utils/sound';
+import { useReducedMotion } from '../fx/useReducedMotion';
+
+/** 祭りの提灯の小さな印（絵文字の代わり） */
+function LanternIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <rect x="5.5" y="1" width="5" height="1.6" rx="0.5" fill="#1a1510" />
+      <ellipse cx="8" cy="8" rx="5.2" ry="5.4" fill="#e34a33" />
+      <path d="M3.4 6.4h9.2M3 8.2h10M3.4 10h9.2" stroke="#a92e1d" strokeWidth="0.6" />
+      <rect x="5.5" y="13.2" width="5" height="1.6" rx="0.5" fill="#1a1510" />
+    </svg>
+  );
+}
 
 function DemandBar({ label, value }: { label: string; value: number }) {
   const v = Math.max(-2, Math.min(2, value));
@@ -69,6 +83,14 @@ export default function CityOverlay() {
   const turn = useGameStore(s => s.turn);
   const handSize = useGameStore(s => s.cityCards?.hands[s.currentPlayerIndex]?.length ?? 0);
   const [error, setError] = useState<string | null>(null);
+  const reduced = useReducedMotion();
+  const actionRef = useRef<HTMLDivElement>(null);
+
+  // 区画を選んだら、建てる/再開発の操作が見える位置まで寄せる（スマホでは区画の下が画面外になりやすい）
+  useEffect(() => {
+    if (selected === null) return;
+    actionRef.current?.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+  }, [selected, reduced]);
 
   const player = players[currentPlayerIndex];
   const nodeId = player?.currentNode ?? '';
@@ -109,17 +131,19 @@ export default function CityOverlay() {
 
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/55 backdrop-blur-[2px]">
-      <div className="panel-ai rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[92vh] overflow-y-auto p-4 sm:p-5 space-y-3 relative">
+      {/* 本文だけをスクロールし、「町を出る」は下に固定（スマホの縦・横どちらでも常に押せる） */}
+      <div className="panel-ai fx-rise rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[94dvh] sm:max-h-[90dvh] flex flex-col overflow-hidden relative">
         <button
           onClick={() => setTurnPhase('action_choice')}
           aria-label="閉じる"
-          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-ai-800/60 border border-kin-500/30 rounded-full text-washi/70 hover:text-washi transition cursor-pointer"
+          className="absolute top-2 right-2 z-10 w-10 h-10 flex items-center justify-center bg-ai-800/70 border border-kin-500/30 rounded-full text-washi/70 hover:text-washi transition cursor-pointer"
         >
           <Icon name="close" size={16} />
         </button>
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-3">
 
         {/* 見出し */}
-        <div className="pr-10">
+        <div className="pr-11">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-mincho text-xl font-bold text-kin-300"><Ruby>{info.name}</Ruby></h3>
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-kin-500/20 border border-kin-500/35 text-kin-200">
@@ -164,7 +188,7 @@ export default function CityOverlay() {
 
         {/* 町の状態 */}
         <div className="flex gap-2 items-stretch">
-          <div className="grid grid-cols-4 gap-1.5 flex-1">
+          <div className="grid grid-cols-2 min-[420px]:grid-cols-4 gap-1.5 flex-1">
             <Stat label="人口" value={`${st.population.toLocaleString()}人`} />
             <Stat label="幸福度" value={st.happiness.toFixed(1)} tone={st.happiness >= 6 ? 'text-emerald-300' : st.happiness >= 3 ? 'text-washi' : 'text-shu-400'} />
             <Stat label="公害" value={st.pollution.toFixed(1)} tone={st.pollution >= 4 ? 'text-shu-400' : 'text-washi'} />
@@ -185,13 +209,14 @@ export default function CityOverlay() {
               <Ruby>工事</Ruby> <span className="tabular-nums">{actionsLeft}</span>/<span className="tabular-nums">{actionsMax}</span> <Ruby>回</Ruby>
             </span>
           </div>
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-4 gap-1.5" data-guide="plots">
             {town.plots.map((p, i) => {
               const owner = p ? players[p.owner] : null;
               const isSel = selected === i;
               return (
                 <button
                   key={i}
+                  data-guide={p ? undefined : 'plot-empty'}
                   onClick={() => { setSelected(isSel ? null : i); setError(null); }}
                   className={`relative h-[74px] rounded-lg border transition cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                     isSel ? 'ring-2 ring-kin-300 bg-ai-600/60' : 'bg-ai-900/50 hover:bg-ai-700/60'
@@ -235,7 +260,7 @@ export default function CityOverlay() {
 
         {/* 選択中の区画の操作 */}
         {selected !== null && sel === null && (
-          <div className="space-y-1.5">
+          <div ref={actionRef} data-guide="build-options" className="fx-rise space-y-1.5 scroll-mb-3">
             <p className="text-xs text-washi/60"><Ruby>何を建てる？</Ruby>（<Ruby>所持金</Ruby> ¥{player.money.toLocaleString()}）</p>
             <div className="grid grid-cols-2 gap-1.5">
               {info.allowed.map((k: BuildingKind) => {
@@ -248,7 +273,7 @@ export default function CityOverlay() {
                     disabled={disabled}
                     onClick={() => act(() => cityBuild(selected, k), playBuild)}
                     title={why ?? BUILDING_INFO[k].desc}
-                    className="flex items-center gap-2 text-left rounded-lg border border-kin-500/25 bg-ai-800/60 hover:bg-ai-700/70 px-2 py-1.5 transition cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
+                    className="min-h-11 flex items-center gap-2 text-left rounded-lg border border-kin-500/25 bg-ai-800/60 hover:bg-ai-700/70 px-2 py-1.5 transition cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
                   >
                     <BuildingGlyph kind={k} size={26} className="shrink-0" />
                     <span className="min-w-0">
@@ -263,7 +288,7 @@ export default function CityOverlay() {
         )}
 
         {selected !== null && sel && (
-          <div className="rounded-lg border border-kin-500/25 bg-ai-900/50 p-2.5 space-y-1.5">
+          <div ref={actionRef} className="fx-rise rounded-lg border border-kin-500/25 bg-ai-900/50 p-2.5 space-y-1.5 scroll-mb-3">
             <div className="flex items-center gap-2">
               <BuildingGlyph kind={sel.kind} level={sel.level} size={32} />
               <div className="min-w-0">
@@ -281,7 +306,7 @@ export default function CityOverlay() {
                 onClick={() => act(() => cityRenovate(selected), playBuild)}
                 variant="gold"
                 size="sm"
-                className="w-full"
+                className="w-full min-h-11"
                 disabled={actionsLeft <= 0 || player.money < renovateCost(sel, nodeId, town)}
               >
                 <Ruby>空き家を直して入居者を呼び戻す</Ruby> ¥{renovateCost(sel, nodeId, town).toLocaleString()}
@@ -292,7 +317,7 @@ export default function CityOverlay() {
                   onClick={() => act(() => cityUpgrade(selected), playBuild)}
                   variant="primary"
                   size="sm"
-                  className="w-full"
+                  className="w-full min-h-11"
                   disabled={actionsLeft <= 0 || player.money < upgradeCost(sel, nodeId, town)}
                 >
                   <Ruby>再開発して等級を上げる</Ruby> ¥{upgradeCost(sel, nodeId, town).toLocaleString()}
@@ -307,7 +332,7 @@ export default function CityOverlay() {
                 onClick={() => act(() => cityAcquire(selected), playStamp)}
                 variant="danger"
                 size="sm"
-                className="w-full"
+                className="w-full min-h-11"
                 disabled={actionsLeft <= 0 || player.money < acquireCost(sel, nodeId, town)}
               >
                 <Ruby>買収する</Ruby> ¥{acquireCost(sel, nodeId, town).toLocaleString()}（<Ruby>代金は持ち主へ</Ruby>）
@@ -316,13 +341,13 @@ export default function CityOverlay() {
           </div>
         )}
 
-        {error && <p className="text-xs text-shu-400 text-center"><Ruby>{error}</Ruby></p>}
+        {error && <p className="fx-rise text-xs text-shu-200 text-center bg-shu-700/25 border border-shu-500/40 rounded-lg px-3 py-1.5" role="alert"><Ruby>{error}</Ruby></p>}
 
         {/* カード: 町で使える札（工事券・誘致・地上げ）と売り場 */}
         <CardPlayBar timing="in_town" compact />
         {hasCardShop(nodeId) && (
-          <Button onClick={() => setShowShop(true)} variant="secondary" size="sm" className="w-full">
-            <span className="inline-flex items-center gap-1.5">🎴 <Ruby>カード売り場</Ruby></span>
+          <Button onClick={() => setShowShop(true)} variant="secondary" size="sm" className="w-full min-h-11">
+            <span className="inline-flex items-center gap-1.5"><CardIcon size={16} /><Ruby>カード売り場</Ruby></span>
           </Button>
         )}
         {showShop && (
@@ -338,31 +363,41 @@ export default function CityOverlay() {
         {(isFishing || hasShop || isCapital || isRest) && (
           <div className="grid grid-cols-2 gap-1.5 pt-1">
             {isFishing && (
-              <Button onClick={() => setTurnPhase('fishing_choice')} variant="secondary" size="sm">
+              <Button onClick={() => setTurnPhase('fishing_choice')} variant="secondary" size="sm" className="min-h-11">
                 <span className="inline-flex items-center gap-1.5"><Icon name="rod" size={15} /><Ruby>釣りをする</Ruby></span>
               </Button>
             )}
             {hasShop && (
-              <Button onClick={() => setTurnPhase('shop')} variant="secondary" size="sm">
+              <Button onClick={() => setTurnPhase('shop')} variant="secondary" size="sm" className="min-h-11">
                 <span className="inline-flex items-center gap-1.5"><Icon name="cart" size={15} /><Ruby>釣具店</Ruby></span>
               </Button>
             )}
             {isCapital && !capitalDoneThisTurn && (
-              <Button onClick={() => setTurnPhase('capital_event')} variant="secondary" size="sm">
-                <span className="inline-flex items-center gap-1.5">🏮 <Ruby>祭りに参加</Ruby></span>
+              <Button onClick={() => setTurnPhase('capital_event')} variant="secondary" size="sm" className="min-h-11">
+                <span className="inline-flex items-center gap-1.5"><LanternIcon /><Ruby>祭りに参加</Ruby></span>
               </Button>
             )}
             {isRest && (
-              <Button onClick={() => setTurnPhase('rest')} variant="secondary" size="sm">
+              <Button onClick={() => setTurnPhase('rest')} variant="secondary" size="sm" className="min-h-11">
                 <span className="inline-flex items-center gap-1.5"><Icon name="repair" size={15} /><Ruby>湯治（装備修理）</Ruby></span>
               </Button>
             )}
           </div>
         )}
 
-        <Button onClick={() => setTurnPhase('action_choice')} variant="gold" size="md" className="w-full">
-          <Ruby>町を出る</Ruby>
-        </Button>
+        </div>
+
+        {/* 下に固定: 工事の残りと「町を出る」。町を出るとそのまま手番を終える（行動選択の確認を挟まない）。
+            右上の × は行動選択に戻る逃げ道（地図を見てから町を開き直せる） */}
+        <div className="shrink-0 flex items-center gap-3 border-t border-kin-500/25 bg-ai-950/70 px-4 pt-2.5 pb-[max(10px,env(safe-area-inset-bottom))]">
+          <span data-guide="actions-left" className={`shrink-0 text-xs font-mincho ${actionsLeft > 0 ? 'text-kin-300' : 'text-washi/45'}`}>
+            <Ruby>工事</Ruby> <span className="tabular-nums text-sm font-bold">{actionsLeft}</span>/<span className="tabular-nums">{actionsMax}</span>
+          </span>
+          <Button onClick={() => setTurnPhase('turn_end')} variant="gold" size="md" className="flex-1 min-h-11 font-mincho tracking-widest">
+            <Ruby>町を出る</Ruby>
+            <span className="text-xs tracking-normal opacity-80 ml-1">（<Ruby>手番を終える</Ruby>）</span>
+          </Button>
+        </div>
       </div>
     </div>
   );

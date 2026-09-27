@@ -1,10 +1,14 @@
 // まちづくり: カード売り場（大都市・商都）。売り物の札を並べ、買うと onBuy を呼ぶ。
 // 手札がいっぱい（4枚）のときは買えない（大事な札をうっかり捨てないため）。支払いと手札への追加はストアが行う。
+import { useState } from 'react';
+import type { CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { CARD_CATEGORY_INFO, CARD_INFO, CARD_TIMING_LABEL, MAX_HAND, SHOP_CARDS } from '../../game/cityCards';
 import type { CityCardId } from '../../game/cityCards';
 import { CardFace } from './CardHand';
 import Button from '../shared/Button';
 import Ruby from '../shared/Ruby';
+import Stamp from '../fx/Stamp';
 import { playCoinLoss } from '../../utils/sound';
 
 interface CardShopProps {
@@ -16,22 +20,36 @@ interface CardShopProps {
 
 export default function CardShop({ money, handSize, onBuy, onClose }: CardShopProps) {
   const full = handSize >= MAX_HAND;
+  // 買えたとき（手札が増えたとき）だけ「毎度」の判子
+  const [prevHand, setPrevHand] = useState(handSize);
+  const [thanks, setThanks] = useState(0);
+  if (handSize !== prevHand) {
+    if (handSize > prevHand) setThanks(t => t + 1);
+    setPrevHand(handSize);
+  }
   const buy = (id: CityCardId) => {
     playCoinLoss();
     onBuy(id);
   };
 
-  return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  // 町パネル（backdrop-filter で fixed の基準が変わる）の中から開くので、body へ描いて画面全体に出す
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
       <div
-        className="washi-card animate-bounce-in rounded-2xl w-full max-w-md max-h-[90dvh] flex flex-col overflow-hidden"
+        className="washi-card animate-bounce-in relative rounded-2xl w-full max-w-md max-h-[92dvh] flex flex-col overflow-hidden"
         role="dialog"
         aria-modal="true"
         aria-labelledby="card-shop-title"
       >
         {/* 暖簾風の見出し */}
-        <div className="relative px-5 pt-4 pb-3 border-b border-[#9a6f24]/30 bg-gradient-to-b from-ai-700 to-ai-800 text-washi">
-          <div className="flex items-end justify-between gap-3">
+        {thanks > 0 && (
+          <span key={thanks} className="absolute right-3 top-14 z-10 pointer-events-none">
+            <Stamp tone="shu" size={52} vertical tilt={12}>毎度</Stamp>
+          </span>
+        )}
+        <div className="relative px-4 sm:px-5 pt-3 pb-2.5 border-b border-[#9a6f24]/30 bg-gradient-to-b from-ai-700 to-ai-800 text-washi">
+          <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
             <div>
               <p className="text-[10px] tracking-[0.4em] text-kin-300/85 font-mincho"><Ruby>一発逆転のカード</Ruby></p>
               <h2 id="card-shop-title" className="font-brush text-3xl leading-tight kinpaku"><Ruby>カード売り場</Ruby></h2>
@@ -49,7 +67,7 @@ export default function CardShop({ money, handSize, onBuy, onClose }: CardShopPr
           </p>
         )}
 
-        <ul className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+        <ul className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-3 space-y-2">
           {SHOP_CARDS.map((id, i) => {
             const info = CARD_INFO[id];
             const price = info.price ?? 0;
@@ -59,7 +77,7 @@ export default function CardShop({ money, handSize, onBuy, onClose }: CardShopPr
               <li
                 key={id}
                 className="fx-rise flex items-center gap-3 rounded-xl bg-[#2a2118]/5 border border-[#9a6f24]/25 px-2.5 py-2"
-                style={{ '--d': `${i * 50}ms` } as React.CSSProperties}
+                style={{ '--d': `${i * 50}ms` } as CSSProperties}
               >
                 <CardFace id={id} width={42} dim={!!reason} />
                 <div className="min-w-0 flex-1">
@@ -71,7 +89,7 @@ export default function CardShop({ money, handSize, onBuy, onClose }: CardShopPr
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   <span className={`text-sm font-bold tabular-nums ${short ? 'text-[#a92e1d]' : 'text-[#2a2118]'}`}>¥{price.toLocaleString()}</span>
-                  <Button onClick={() => buy(id)} variant="gold" size="sm" disabled={!!reason} className="min-w-[4.5rem]">
+                  <Button onClick={() => buy(id)} variant="gold" size="sm" disabled={!!reason} className="min-w-[4.5rem] min-h-10">
                     <Ruby>買う</Ruby>
                   </Button>
                   {reason && <span className="text-[9px] text-[#a92e1d]"><Ruby>{reason}</Ruby></span>}
@@ -81,11 +99,12 @@ export default function CardShop({ money, handSize, onBuy, onClose }: CardShopPr
           })}
         </ul>
 
-        <div className="px-4 pb-4 pt-2 border-t border-[#9a6f24]/20">
-          <p className="text-[10px] text-[#7a5a2a] text-center mb-2"><Ruby>特急と誘致は売っていない。村のマスで引けるかも</Ruby></p>
+        <div className="shrink-0 px-4 pb-3 pt-2 border-t border-[#9a6f24]/20">
+          <p className="text-[10px] text-[#7a5a2a] text-center mb-1.5"><Ruby>特急と誘致は売っていない。村のマスで引けるかも</Ruby></p>
           <Button onClick={onClose} variant="primary" size="md" className="w-full"><Ruby>店を出る</Ruby></Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

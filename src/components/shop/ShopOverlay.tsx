@@ -63,7 +63,7 @@ export default function ShopOverlay() {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm overflow-y-auto">
-      <div className="panel-ai fx-rise relative rounded-2xl p-6 max-w-lg w-[90%] my-4 max-h-[90vh] overflow-y-auto">
+      <div data-guide="shop" className="panel-ai fx-rise relative rounded-2xl p-6 max-w-lg w-[90%] my-4 max-h-[90vh] overflow-y-auto">
         {thanks > 0 && (
           <span key={thanks} className="absolute right-4 top-4 z-10 pointer-events-none">
             <Stamp tone="shu" size={60} vertical tilt={12}>毎度あり</Stamp>

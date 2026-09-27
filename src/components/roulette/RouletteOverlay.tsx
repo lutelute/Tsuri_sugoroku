@@ -5,7 +5,6 @@ import { clampDiceCount } from '../../game/cityCards';
 import Dice3D from '../fx/Dice3D';
 import MiniDie from '../fx/MiniDie';
 import Confetti from '../fx/Confetti';
-import Button from '../shared/Button';
 import Ruby from '../shared/Ruby';
 import { playDiceLand, playDiceRoll, playGood } from '../../utils/sound';
 
@@ -15,6 +14,8 @@ const RESULT_HOLD_MS = 950;
 const RESULT_HOLD_EXTRA_MS = 300;
 /** 複数個のとき、1個ずつずらして止める間隔 */
 const DICE_STAGGER_MS = 160;
+/** 盆が開いてから自動で振るまでの間（地図の「サイコロを振る」を押したら、もう一度押させずにそのまま振る） */
+const AUTO_ROLL_MS = 150;
 
 /** 1個のとき、端の出目にはひとこと添える */
 const RESULT_REMARK: Record<number, string> = {
@@ -89,6 +90,17 @@ export default function RouletteOverlay() {
     }
   }, [rollNow, count, stagger, rollMs]);
 
+  // 開いたらすぐ振る（StrictMode の付け外しでも1回だけ）
+  const autoRolled = useRef(false);
+  useEffect(() => {
+    if (autoRolled.current) return;
+    const t = window.setTimeout(() => {
+      autoRolled.current = true;
+      spin();
+    }, AUTO_ROLL_MS);
+    return () => clearTimeout(t);
+  }, [spin]);
+
   const canRoll = !isSpinning && result === null;
   const size = DIE_SIZE[count] ?? 100;
   const jackpot = result !== null && isJackpot(result);
@@ -147,16 +159,7 @@ export default function RouletteOverlay() {
         </div>
 
         <div className="min-h-[92px] flex flex-col items-center justify-start">
-          {canRoll && (
-            <>
-              <Button onClick={spin} variant="gold" size="lg" className="font-mincho tracking-widest">
-                <Ruby>サイコロを振る</Ruby>
-              </Button>
-              <p className="text-[11px] text-washi/40 mt-2"><Ruby>サイコロをタップしても振れる</Ruby></p>
-            </>
-          )}
-
-          {isSpinning && (
+          {(isSpinning || canRoll) && (
             <p className="text-kin-300/75 text-sm font-mincho tracking-[0.3em]"><Ruby>コロコロ…</Ruby></p>
           )}
 

@@ -212,7 +212,7 @@ export default function CapitalEventOverlay() {
         </div>
 
         {/* 選択肢 */}
-        <div className="space-y-2">
+        <div className="space-y-2" data-guide="festival">
           {event.choices.map((c, i) => (
             <div key={c.id} className="fx-rise" style={{ '--d': `${250 + i * 90}ms` } as CSSProperties}>
               <ChoiceCard

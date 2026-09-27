@@ -7,6 +7,7 @@ import { nodeRadius } from './mapTheme';
 import type { DataMapMode } from './cityMapModes';
 import { SpecialtyShapes } from '../city/SpecialtyIcon';
 import { CITY_SPECIALTIES } from '../../data/citySpecialties';
+import { regionalMonopolies, regionOfSpecialty } from '../../game/citySpecialties';
 
 // ===== データマップ（ノードの下に敷く） =====
 export const CityDataLayer = memo(function CityDataLayer({ city, mode }: { city: CityState; mode: DataMapMode }) {
@@ -133,21 +134,29 @@ export const CitySkyline = memo(function CitySkyline({ city, colors }: { city: C
 });
 
 // ===== 名産（持ち主のいる県庁に小さな印） =====
+// 寄った表示・中くらいの表示で出し、引いた表示（far）では CSS で隠す（小さすぎて地名の邪魔になるため）。
+// 持ち主が替わると key が変わって印を押し直す（fx-mark-in）。地方独占中は金の二重の輪。
 export const SpecialtyMarks = memo(function SpecialtyMarks({ owners, colors }: { owners?: Record<string, number>; colors: string[] }) {
+  const monopolies = useMemo(() => regionalMonopolies(owners), [owners]);
   if (!owners) return null;
   return (
-    <g aria-hidden="true" className="pointer-events-none">
+    <g aria-hidden="true" className="pointer-events-none specialty-mark">
       {Object.entries(owners).map(([nodeId, owner]) => {
         const n = NODE_MAP.get(nodeId);
         const icon = CITY_SPECIALTIES[nodeId]?.icon;
         if (!n || !icon) return null;
+        const region = regionOfSpecialty(nodeId);
+        const mono = region !== null && monopolies[region] === owner;
         const x = n.x + nodeRadius(n) + 2;
         const y = n.y + 2;
         return (
-          <g key={nodeId} transform={`translate(${x} ${y})`}>
-            <circle cx={6} cy={6} r={7.5} fill="#fbf6e8" stroke={colors[owner] ?? '#fff'} strokeWidth={2} />
-            <g transform="translate(0.5 0.5) scale(0.46)">
-              <SpecialtyShapes icon={icon} />
+          <g key={`${nodeId}-${owner}`} transform={`translate(${x} ${y})`}>
+            <g className="fx-mark-in">
+              {mono && <circle cx={6} cy={6} r={10} fill="none" stroke="#e6c266" strokeWidth={1.6} />}
+              <circle cx={6} cy={6} r={7.5} fill="#fbf6e8" stroke={colors[owner] ?? '#fff'} strokeWidth={2} />
+              <g transform="translate(0.5 0.5) scale(0.46)">
+                <SpecialtyShapes icon={icon} />
+              </g>
             </g>
           </g>
         );
@@ -157,15 +166,13 @@ export const SpecialtyMarks = memo(function SpecialtyMarks({ owners, colors }: {
 });
 
 // ===== 目的地 =====
+// 目的地が決まった・替わったときに輪が3回だけ脈打ち、あとは静止（地図で常時アニメを回さない。key で差し込み直す）
 export const DestinationMarker = memo(function DestinationMarker({ nodeId, reward }: { nodeId: string | null; reward: number }) {
   const n = nodeId ? NODE_MAP.get(nodeId) : null;
   if (!n) return null;
   return (
-    <g aria-hidden="true" className="pointer-events-none">
-      <circle cx={n.x} cy={n.y} r={20} fill="none" stroke="#ffd84a" strokeWidth="2.4">
-        <animate attributeName="r" values="16;26;16" dur="1.8s" repeatCount="indefinite" />
-        <animate attributeName="opacity" values="1;0.3;1" dur="1.8s" repeatCount="indefinite" />
-      </circle>
+    <g key={nodeId ?? ''} aria-hidden="true" className="pointer-events-none">
+      <circle cx={n.x} cy={n.y} r={16} fill="none" stroke="#ffd84a" strokeWidth="2.4" className="fx-dest-pulse" />
       <g transform={`translate(${n.x - 16} ${n.y - 44})`}>
         <path d="M2 0 V26" stroke="#3a2a0e" strokeWidth="1.6" />
         <path d="M2 1 H30 L26 7 L30 13 H2 Z" fill="#e34a33" stroke="#7a1f12" strokeWidth="0.9" />

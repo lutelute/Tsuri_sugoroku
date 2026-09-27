@@ -62,7 +62,7 @@ function Fly({ on, to, dur = '1.1s', begin = '0s' }: { on: boolean; to: string; 
 function MischiefProp({ kind, great, animate, targetColor }: { kind: BinboMischiefKind; great: boolean; animate: boolean; targetColor: string }) {
   const n = great ? 2 : 1;
   return (
-    <svg width={108} height={126} viewBox="0 0 96 112" aria-hidden="true" overflow="visible" className="fx-fade-in shrink-0">
+    <svg width={108} height={126} viewBox="0 0 96 112" aria-hidden="true" overflow="visible" className="fx-fade-in shrink-0 [@media(max-height:520px)]:h-[78px] [@media(max-height:520px)]:w-auto">
       {kind === 'waste' && (
         <>
           {/* 役に立たない壺と、飛んでいくお金 */}
@@ -196,8 +196,9 @@ export default function BinboOverlay({ playerName, playerColor, kind, message, g
       {revealed && harmful && <ScreenFlash color={great ? '#6d3a9c' : '#5a4a36'} opacity={great ? 0.5 : 0.35} />}
 
       <div className={`w-[92%] max-w-sm ${revealed && harmful ? 'fx-shake' : ''}`}>
+        {/* 横向きのスマホ（高さ 390px 前後）でも OK まで届くよう、はみ出す分はスクロール */}
         <div
-          className="washi-card animate-bounce-in rounded-2xl p-5 text-center relative overflow-hidden"
+          className="washi-card animate-bounce-in rounded-2xl p-4 sm:p-5 text-center relative overflow-x-hidden overflow-y-auto overscroll-contain max-h-[92dvh]"
           style={{ borderTop: `5px solid ${great ? '#5a2d82' : style.accent}` }}
         >
           {/* 見出し */}
@@ -228,7 +229,7 @@ export default function BinboOverlay({ playerName, playerColor, kind, message, g
             onClick={() => setRevealed(true)}
             disabled={revealed}
             aria-label={revealed ? undefined : '悪さを見る'}
-            className="relative w-full rounded-xl mb-3 flex items-end justify-center gap-1 pt-3 pb-1 overflow-hidden cursor-pointer disabled:cursor-default"
+            className="relative w-full rounded-xl mb-3 [@media(max-height:520px)]:mb-2 flex items-end justify-center gap-1 pt-3 pb-1 overflow-hidden cursor-pointer disabled:cursor-default"
             style={{
               background: great
                 ? 'radial-gradient(120% 90% at 50% 100%, #3b2a52 0%, #20162e 70%)'
@@ -236,11 +237,11 @@ export default function BinboOverlay({ playerName, playerColor, kind, message, g
               boxShadow: 'inset 0 0 18px rgba(42,33,24,0.35)',
             }}
           >
-            <BinboFigure size={150} great={great} animated title={who} />
+            <BinboFigure size={150} great={great} animated title={who} className="shrink-0 [@media(max-height:520px)]:h-[92px] [@media(max-height:520px)]:w-auto" />
             {revealed ? (
               <MischiefProp kind={kind} great={great} animate={!reduced} targetColor={targetColor} />
             ) : (
-              <span className="mb-16 ml-1 rounded-full bg-[#fbf6e8] px-3 py-1 text-lg font-bold text-[#4a3a28] shadow fx-fade-in" aria-hidden="true">
+              <span className="mb-16 [@media(max-height:520px)]:mb-8 ml-1 rounded-full bg-[#fbf6e8] px-3 py-1 text-lg font-bold text-[#4a3a28] shadow fx-fade-in" aria-hidden="true">
                 ……
               </span>
             )}
@@ -254,7 +255,7 @@ export default function BinboOverlay({ playerName, playerColor, kind, message, g
               </div>
               <p className="text-sm leading-relaxed text-[#4a3a28] mb-2 font-mincho font-bold"><Ruby>{message}</Ruby></p>
               {moneyDelta !== undefined && moneyDelta < 0 && harmful && <LossAmount amount={-moneyDelta} />}
-              <Button onClick={onClose} variant={harmful ? 'primary' : 'gold'} size="md" className="w-full mt-3">OK</Button>
+              <Button onClick={onClose} variant={harmful ? 'primary' : 'gold'} size="md" className="w-full min-h-11 mt-3">OK</Button>
             </div>
           ) : (
             <div>
