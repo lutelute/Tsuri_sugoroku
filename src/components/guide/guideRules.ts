@@ -4,8 +4,9 @@
 import type { GameMode, GameState, NodeType, TurnPhase } from '../../game/types';
 import { NODE_MAP } from '../../data/boardNodes';
 import { CITY_ACTIONS_PER_VISIT, CITY_ECONOMY, isTown, monopolyOwner } from '../../game/city';
-import { getSpecialty } from '../../game/citySpecialties';
+import { getSpecialty, SPECIALTY_ECONOMY } from '../../game/citySpecialties';
 import { GOAL_CLOSE_ROUNDS } from '../../game/constants';
+import { MIN_CLOSE_TURN } from '../../game/deadline';
 
 /** 地図の上に重ねる案内（GuideMapLayer が描く） */
 export type GuideMapCue =
@@ -164,7 +165,7 @@ export const GUIDES: GuideDef[] = [
   {
     id: 'city-specialty', mode: 'city', target: 'specialty', delayMs: 700,
     when: c => c.phase === 'city' && c.hasSpecialtyHere,
-    text: () => ({ title: '名産を買おう', body: '県庁には名産がある。持っていると毎月収入が入る。地方の名産をぜんぶ集めると収入2倍！' }),
+    text: () => ({ title: '名産を買おう', body: `この町には名産がある。持っていると毎月収入が入る。地方の名産をぜんぶ集めると収入${SPECIALTY_ECONOMY.monopolyMul}倍！` }),
   },
   {
     id: 'city-monopoly', mode: 'city', target: 'plots', delayMs: 700,
@@ -209,7 +210,7 @@ export const GUIDES: GuideDef[] = [
   {
     id: 'deadline', mode: 'fishing', target: 'deadline', delayMs: IDLE_DELAY,
     when: c => c.phase === 'idle' && c.firstFinishTurn !== null,
-    text: () => ({ title: 'ゴールした人がいる', body: `最初のゴールから${GOAL_CLOSE_ROUNDS}巡で終わり。残りの巡数は上に出るよ。` }),
+    text: () => ({ title: 'ゴールした人がいる', body: `最初のゴールから${GOAL_CLOSE_ROUNDS}巡で終わり（${MIN_CLOSE_TURN}巡目までは続く）。残りの巡数は上に出るよ。` }),
   },
   {
     id: 'tools', mode: 'fishing', target: 'side-tools', union: true, delayMs: IDLE_DELAY,

@@ -11,11 +11,16 @@
 //  - 止まったら釣る（1ターン最大3回）。店（県庁所在地は祭りの後）ではお金が貯まっていれば最も弱い装備から買い替える。
 //  - 県庁所在地の祭りは「装備の修理代＋賞金」「特産品の装備」「名物釣り」から期待値が最大の選択肢を選ぶ。
 //  - 休憩所では耐久度70未満の装着品を修理する。お金に余裕があり装備が育っていれば名所で船釣りする。
+//  - 締め切りはストアと同じ deadline.fishingLastTurn（最初のゴール + GOAL_CLOSE_ROUNDS。ただし MIN_CLOSE_TURN 巡目までは続く）。
+//    寄り道型は締め切りまでの巡数を見て急ぐ（画面上部の「締切まで N巡」を見て動く人を想定）。
+//    CPU は cpuStep.ts と同じく、締め切りの巡を最大巡数として道を選ぶ。
+//  - cpu 型は本物の CPU の判断（cpuAI.ts の chooseCpuPath / cpuCatchChance / chooseShopPurchase / chooseCapitalChoice と
+//    cpuStep.ts の流れ）で動く。性格は席順に 堅実・独占・目的地（ストアの割り当てと同じ）。
 //
 // 計測結果を見たいときは BALANCE_REPORT_DIR=/path npx vitest run src/game/balance.fishing.sim.test.ts
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { writeFileSync } from 'node:fs';
-import type { Player, EquipmentType, FishRarity, EventCard, PlayerEquipment, ScoreBreakdown } from './types';
+import type { Player, EquipmentType, FishRarity, EventCard, PlayerEquipment, ScoreBreakdown, CapitalChoiceEffect } from './types';
 import { selectFish, createCaughtFish, checkTairyou, getEffectiveLevel, getStrikeGreenZone } from './fishing';
 import {
   createInitialEquipment, createEquipmentItem, applyDurabilityLoss, getEquipmentLevels, getEquippedItem,
@@ -25,8 +30,10 @@ import { applyEvent } from './events';
 import { calculateScore } from './scoring';
 import {
   FISH_SELL_PRICE, INITIAL_MONEY, REST_MONEY_BONUS, GOAL_MONEY_REWARD, BOAT_FISHING_COST, SHOP_TIER_MAX_LEVEL,
-  DEFAULT_MAX_TURNS, REGION_COMPLETE_BONUS,
+  DEFAULT_MAX_TURNS, REGION_COMPLETE_BONUS, GOAL_CLOSE_ROUNDS, MONEY_TO_POINTS_RATE,
 } from './constants';
+import { chooseCpuPath, cpuCatchChance, chooseShopPurchase, chooseCapitalChoice, CPU_STYLES } from './cpuAI';
+import { fishingLastTurn, MIN_CLOSE_TURN } from './deadline';
 import { getEquipment } from '../data/equipmentData';
 import { NODE_MAP } from '../data/boardNodes';
 import { EVENT_CARDS } from '../data/eventCards';
@@ -44,7 +51,7 @@ const FISH_MAP = new Map(FISH_DATABASE.map(f => [f.id, f]));
 const MAX_FISHING_PER_TURN = 3; // useGameStore と同じ
 
 
-export type Policy = 'wander' | 'direct';
+export type Policy = 'wander' | 'direct' | 'cpu';
 type Phase = 'early' | 'mid' | 'late';
 
 interface Tracker {
@@ -97,8 +104,9 @@ function newTracker(policy: Policy): Tracker {
   };
 }
 
-function makePlayer(i: number): Player {
+function makePlayer(i: number, policy: Policy = 'wander', cpuIndex = 0): Player {
   return {
+    ...(policy === 'cpu' ? { isCpu: true, cpuStyle: CPU_STYLES[cpuIndex % CPU_STYLES.length] } : {}),
     id: i,
     name: `P${i + 1}`,
     color: '#fff',
@@ -170,12 +178,31 @@ function drawEvent(type?: 'good' | 'bad' | 'random'): EventCard {
 /** シナリオ切り替え。capitalShop: 県庁所在地（shopTier あり）では祭りの結果の後に店へ進む（v4.1 の本番仕様） */
 export const SIM_OPTIONS = { capitalShop: true };
 
+export interface GameOptions {
+  /** 最初のゴールから何巡で締め切るか（既定 GOAL_CLOSE_ROUNDS。掃引用に上書きできる） */
+  closeRounds?: number;
+  /** CPU が締め切りの巡を最大巡数として道を選ぶか（既定 true = 本番。false は v4.3.0 までの CPU） */
+  cpuDeadlineAware?: boolean;
+  /** 締め切りはこの巡より前には来ない（既定 MIN_CLOSE_TURN = 本番。0 は v4.3.0 までの締め切り） */
+  minCloseTurn?: number;
+}
+
 interface Game {
   players: Player[];
   trackers: Tracker[];
   encs: Record<string, boolean>[];
   maxTurns: number;
   finished: number;
+  closeRounds: number;
+  cpuDeadlineAware: boolean;
+  minCloseTurn: number;
+  firstFinish: number | null;
+}
+
+/** 実際に遊べる最後の巡。既定の設定ではストアと同じ fishingLastTurn を使い、掃引で上書きしたときだけ同じ式に上書き値を入れる */
+function endTurnOf(g: Game): number {
+  if (g.closeRounds === GOAL_CLOSE_ROUNDS && g.minCloseTurn === MIN_CLOSE_TURN) return fishingLastTurn(g.firstFinish, g.maxTurns);
+  return g.firstFinish !== null ? Math.min(g.maxTurns, Math.max(g.minCloseTurn, g.firstFinish + g.closeRounds)) : g.maxTurns;
 }
 
 function recordCatch(g: Game, i: number, fishId: string, turn: number, fromEvent: boolean) {
@@ -196,6 +223,7 @@ function finish(g: Game, i: number, turn: number) {
   const reward = GOAL_MONEY_REWARD[g.finished] ?? GOAL_MONEY_REWARD[GOAL_MONEY_REWARD.length - 1];
   p.hasFinished = true;
   p.finishOrder = g.finished;
+  if (g.firstFinish === null) g.firstFinish = turn;
   p.money += reward;
   g.trackers[i].income.goal += reward;
   g.trackers[i].goalTurn = turn;
@@ -226,7 +254,7 @@ function chooseEndpoint(g: Game, i: number, paths: string[][], turn: number): st
   const tr = g.trackers[i];
   const ends = paths.map(pa => pa[pa.length - 1]);
   const curD = GOAL_DIST.get(p.currentNode) ?? 99;
-  const remaining = g.maxTurns - turn;
+  const remaining = endTurnOf(g) - turn;
   // 1ターン平均3マス前進として、最終巡に間に合わなくなりそうなら急ぐ
   const hurry = tr.policy === 'direct' || curD / 3 >= remaining - 3;
   let best = ends[0];
@@ -386,7 +414,17 @@ function doCapital(g: Game, i: number, node: BoardNode, turn: number) {
     }
   }
   tr.capitalChoices[best.effect.kind] = (tr.capitalChoices[best.effect.kind] ?? 0) + 1;
-  const e = best.effect;
+  applyCapitalEffect(g, i, node, turn, best.effect);
+  // 祭りの結果を閉じた後、県庁所在地に店があれば寄る
+  if (SIM_OPTIONS.capitalShop && node.shopTier) doShop(g, i, SHOP_TIER_MAX_LEVEL[node.shopTier] ?? 3);
+}
+
+/** 祭りで選んだ効果を適用する（ストアの applyCapitalChoice と同じ） */
+function applyCapitalEffect(g: Game, i: number, node: BoardNode, turn: number, e: CapitalChoiceEffect) {
+  const p = g.players[i];
+  const tr = g.trackers[i];
+  const lv = getEquipmentLevels(p.equipment);
+  const avg = (lv.rod + lv.reel + lv.lure) / 3;
   switch (e.kind) {
     case 'feast':
       p.money += e.moneyBonus;
@@ -394,6 +432,7 @@ function doCapital(g: Game, i: number, node: BoardNode, turn: number) {
       p.equipment = reequip({ ...p.equipment, inventory: p.equipment.inventory.map(it => ({ ...it, durability: 100 })) });
       break;
     case 'specialty_shop': {
+      if (p.money < e.price) break; // 所持金が足りなければ買えない（ストアと同じ）
       const item = createEquipmentItem(e.equipmentType, e.level);
       p.money -= e.price;
       tr.spend.equip += e.price;
@@ -421,8 +460,6 @@ function doCapital(g: Game, i: number, node: BoardNode, turn: number) {
     default:
       break;
   }
-  // 祭りの結果を閉じた後、県庁所在地に店があれば寄る
-  if (SIM_OPTIONS.capitalShop && node.shopTier) doShop(g, i, SHOP_TIER_MAX_LEVEL[node.shopTier] ?? 3);
 }
 
 function doEvent(g: Game, i: number, card: EventCard, turn: number) {
@@ -442,7 +479,116 @@ function doEvent(g: Game, i: number, card: EventCard, turn: number) {
   if (p.currentNode !== prevNode && NODE_MAP.get(p.currentNode)?.type === 'goal') finish(g, i, turn);
 }
 
+// ===== CPU（cpuStep.ts と同じ流れ） =====
+
+function cpuFishOnce(g: Game, i: number, node: BoardNode, turn: number) {
+  const p = g.players[i];
+  const tr = g.trackers[i];
+  const fish = selectFish(node.id, node.region, p.equipment, node.type === 'fishing_special', false);
+  tr.attempts++;
+  if (random() < cpuCatchChance(p, fish)) {
+    tr.successes++;
+    const c = createCaughtFish(fish.id, node.id, turn, p.equipment);
+    const sale = Math.round((FISH_SELL_PRICE[fish.rarity] ?? 200) * c.size);
+    recordCatch(g, i, c.fishId, turn, false);
+    p.caughtFish = [...p.caughtFish, { ...c, bonusMultiplier: p.fishBonusMultiplier }];
+    p.money += sale;
+    tr.income.fish += sale;
+  }
+  p.equipment = reequip(applyDurabilityLoss(p.equipment));
+}
+
+function cpuShop(g: Game, i: number, shopTier: number) {
+  const p = g.players[i];
+  const tr = g.trackers[i];
+  tr.shopVisits++;
+  for (let guard = 0; guard < 6; guard++) {
+    const buy = chooseShopPurchase(p, shopTier);
+    if (!buy) break;
+    const item = createEquipmentItem(buy.type, buy.level);
+    p.money -= buy.cost;
+    tr.spend.equip += buy.cost;
+    tr.upgrades++;
+    p.equipment = { equipped: { ...p.equipment.equipped, [buy.type]: item.id }, inventory: [...p.equipment.inventory, item] };
+  }
+}
+
+function cpuTurn(g: Game, i: number, turn: number) {
+  const p = g.players[i];
+  const tr = g.trackers[i];
+  const dice = randomInt(1, 6);
+  const paths = getReachableNodes(p.currentNode, dice);
+  // CPU は「今の巡 ÷ 最大巡数」で終盤を判断する。本番（cpuStep.ts）は締め切りの巡を最大巡数として渡す
+  const maxTurns = g.cpuDeadlineAware ? endTurnOf(g) : g.maxTurns;
+  const idx = chooseCpuPath({ paths, mode: 'fishing', player: p, playerIndex: i, city: null, turn, maxTurns, goalClaims: [] });
+  const dest = paths[idx][paths[idx].length - 1];
+  p.currentNode = dest;
+  const node = NODE_MAP.get(dest)!;
+  switch (node.type) {
+    case 'fishing':
+    case 'fishing_special':
+      for (let k = 0; k < MAX_FISHING_PER_TURN; k++) {
+        if (!getEquippedItem(p.equipment, 'rod')) break;
+        cpuFishOnce(g, i, node, turn);
+      }
+      break;
+    case 'shop':
+    case 'start':
+      cpuShop(g, i, node.shopTier ?? 1);
+      break;
+    case 'event_good':
+    case 'event_bad':
+    case 'event_random':
+    case 'route': {
+      if (node.type === 'route' && random() >= 0.5) break;
+      const card = node.type === 'event_good' ? drawEvent('good') : node.type === 'event_bad' ? drawEvent('bad') : drawEvent();
+      // 魚のイベントは人ならファイトが要るので、CPU は6割の確率でだけ獲得する
+      const fishEvent = card.effect.kind === 'random_fish' || card.effect.kind === 'multi_fish';
+      if (!fishEvent || random() < 0.6) doEvent(g, i, card, turn);
+      break;
+    }
+    case 'rest': {
+      p.money += REST_MONEY_BONUS;
+      tr.income.rest += REST_MONEY_BONUS;
+      const worn = Object.values(p.equipment.equipped)
+        .map(id => p.equipment.inventory.find(it => it.id === id))
+        .filter((it): it is NonNullable<typeof it> => !!it && it.durability < 70)
+        .sort((a, b) => a.durability - b.durability)[0];
+      if (worn) {
+        const cost = (100 - worn.durability) * 15;
+        if (p.money - cost >= 1500) {
+          p.money -= cost;
+          tr.spend.repair += cost;
+          p.equipment = repairItem(p.equipment, worn.id);
+        }
+      }
+      break;
+    }
+    case 'capital': {
+      const ev = node.capitalEventId ? getCapitalEvent(node.capitalEventId) : undefined;
+      if (ev) {
+        const choice = ev.choices.find(c => c.id === chooseCapitalChoice(ev, p)) ?? ev.choices[0];
+        applyCapitalEffect(g, i, node, turn, choice.effect);
+        tr.capitalChoices[choice.effect.kind] = (tr.capitalChoices[choice.effect.kind] ?? 0) + 1;
+      }
+      if (node.shopTier) cpuShop(g, i, node.shopTier);
+      break;
+    }
+    case 'goal':
+      finish(g, i, turn);
+      break;
+  }
+  if (p.fishBonusTurnsLeft > 0) {
+    p.fishBonusTurnsLeft--;
+    if (p.fishBonusTurnsLeft === 0) p.fishBonusMultiplier = 1;
+  }
+}
+
 function playTurn(g: Game, i: number, turn: number) {
+  if (g.trackers[i].policy === 'cpu') {
+    cpuTurn(g, i, turn);
+    return;
+  }
   const p = g.players[i];
   const tr = g.trackers[i];
   const dice = randomInt(1, 6);
@@ -493,17 +639,26 @@ export interface FishingGameResult {
   players: Player[];
   trackers: Tracker[];
   scores: ScoreBreakdown[];
+  /** 実際に遊んだ巡数（締め切り・全員ゴール・最大巡数のどれかで終わった巡） */
+  rounds: number;
+  firstFinish: number | null;
 }
 
-export function simulateFishingGame(seed: number, policies: Policy[], maxTurns = DEFAULT_MAX_TURNS): FishingGameResult {
+export function simulateFishingGame(seed: number, policies: Policy[], maxTurns = DEFAULT_MAX_TURNS, opts: GameOptions = {}): FishingGameResult {
   setRandomSource(mulberry32(seed));
+  let cpuCount = 0;
   const g: Game = {
-    players: policies.map((_, i) => makePlayer(i)),
+    players: policies.map((pol, i) => makePlayer(i, pol, pol === 'cpu' ? cpuCount++ : 0)),
     trackers: policies.map(pol => newTracker(pol)),
     encs: policies.map(() => ({})),
     maxTurns,
     finished: 0,
+    closeRounds: opts.closeRounds ?? GOAL_CLOSE_ROUNDS,
+    cpuDeadlineAware: opts.cpuDeadlineAware ?? true,
+    minCloseTurn: opts.minCloseTurn ?? MIN_CLOSE_TURN,
+    firstFinish: null,
   };
+  let rounds = maxTurns;
   for (let turn = 1; turn <= maxTurns; turn++) {
     for (let i = 0; i < g.players.length; i++) {
       const p = g.players[i];
@@ -525,7 +680,10 @@ export function simulateFishingGame(seed: number, policies: Policy[], maxTurns =
       g.trackers[i].moneyAt[turn] = p.money;
       g.trackers[i].avgLvAt[turn] = avgLevel(p.equipment);
     });
-    if (g.players.every(p => p.hasFinished)) {
+    // 全員ゴール、または最初のゴールから closeRounds 巡たったら終わり
+    const closed = g.firstFinish !== null && turn >= endTurnOf(g);
+    if (g.players.every(p => p.hasFinished) || closed) {
+      rounds = turn;
       for (let t = turn + 1; t <= maxTurns; t++) g.players.forEach((p, i) => {
         g.trackers[i].moneyAt[t] = p.money;
         g.trackers[i].avgLvAt[t] = avgLevel(p.equipment);
@@ -534,7 +692,7 @@ export function simulateFishingGame(seed: number, policies: Policy[], maxTurns =
     }
   }
   resetRandomSource();
-  return { players: g.players, trackers: g.trackers, scores: g.players.map((p, i) => calculateScore(p, g.encs[i])) };
+  return { players: g.players, trackers: g.trackers, scores: g.players.map((p, i) => calculateScore(p, g.encs[i])), rounds, firstFinish: g.firstFinish };
 }
 
 // ===== 集計 =====
@@ -689,16 +847,117 @@ function formatSummary(s: FishingSummary): string {
 
 // ===== テスト =====
 
-const REPORT_DIR = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.BALANCE_REPORT_DIR;
+const ENV = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+const REPORT_DIR = ENV.BALANCE_REPORT_DIR;
 const report: string[] = [];
 
-describe('釣り旅バランス（ヘッドレス80巡シミュレーション）', () => {
+// ===== 締め切り（GOAL_CLOSE_ROUNDS）の比較 =====
+
+export interface CloseSummary {
+  label: string;
+  games: number;
+  roundsMean: number;
+  roundsMedian: number;
+  firstFinishMean: number;
+  winRate: number[]; // 席ごと
+  finishRate: number[]; // 席ごと（締め切りまでにゴールできた割合）
+  scoreMean: number[];
+  firstFinisherWins: number; // 最初にゴールした人が勝つ率
+  nonFinisherWins: number; // ゴールできなかった人が勝つ率
+  finishShare: number; // 勝者のスコアに占めるゴール順位ボーナス＋ゴール賞金の割合
+}
+
+/** 並びごとの結果をまとめる。rotate=true なら seat0 の方針を全席に回して席の有利を消す（seat の統計は「その方針」の席） */
+export function runClose(label: string, policies: Policy[], seeds: number, opts: GameOptions, seedBase = 7000, rotate = false): CloseSummary {
+  const n = policies.length;
+  const wins = new Array(n).fill(0);
+  const fin = new Array(n).fill(0);
+  const score = new Array(n).fill(0);
+  const rounds: number[] = [];
+  const firsts: number[] = [];
+  let firstWins = 0;
+  let firstGames = 0;
+  let nonFinWins = 0;
+  const shares: number[] = [];
+  const rots = rotate ? n : 1;
+  for (let rot = 0; rot < rots; rot++) {
+    // 方針の並びを rot だけずらす（統計は元の並びの位置で集計する）
+    const seats = policies.map((_, k) => policies[(k - rot + n) % n]);
+    for (let sd = 1; sd <= seeds; sd++) {
+      const res = simulateFishingGame(seedBase + rot * 1000 + sd, seats, DEFAULT_MAX_TURNS, opts);
+      rounds.push(res.rounds);
+      if (res.firstFinish !== null) firsts.push(res.firstFinish);
+      const totals = res.scores.map(sc => sc.total);
+      const w = totals.indexOf(Math.max(...totals));
+      const orig = (k: number) => (k + rot) % n; // 席k は元の並びの orig(k) 番目の方針
+      wins[orig(w)]++;
+      res.players.forEach((p, k) => {
+        if (p.hasFinished) fin[orig(k)]++;
+        score[orig(k)] += res.scores[k].total;
+      });
+      const first = res.players.findIndex(p => p.finishOrder === 0);
+      if (first >= 0) {
+        firstGames++;
+        if (first === w) firstWins++;
+      }
+      if (!res.players[w].hasFinished) nonFinWins++;
+      const ws = res.scores[w];
+      const goalMoney = res.trackers[w].income.goal * MONEY_TO_POINTS_RATE;
+      shares.push((ws.finishBonus + goalMoney) / Math.max(1, ws.total));
+    }
+  }
+  const total = rots * seeds;
+  return {
+    label,
+    games: total,
+    roundsMean: r2(mean(rounds)),
+    roundsMedian: quantile(rounds, 0.5),
+    firstFinishMean: r2(mean(firsts)),
+    winRate: wins.map(v => r2((v / total) * 100)),
+    finishRate: fin.map(v => r2((v / total) * 100)),
+    scoreMean: score.map(v => r0(v / total)),
+    firstFinisherWins: r2((firstWins / Math.max(1, firstGames)) * 100),
+    nonFinisherWins: r2((nonFinWins / total) * 100),
+    finishShare: r2(mean(shares) * 100),
+  };
+}
+
+function formatClose(s: CloseSummary): string {
+  return `| ${s.label} | ${s.roundsMean}（中央値${s.roundsMedian}・最初のゴール${s.firstFinishMean}） | ${s.winRate.join(' / ')} | ${s.finishRate.join(' / ')} | ${s.firstFinisherWins}% | ${s.nonFinisherWins}% | ${s.finishShare}% |`;
+}
+
+const CLOSE_SWEEP = ENV.BALANCE_CLOSE_SWEEP; // 例: '5,6,7,8,10'
+
+describe.skipIf(!CLOSE_SWEEP)('釣り旅: 締め切り巡数の比較（調整用）', () => {
+  it('掃引', () => {
+    const out: string[] = ['| 並び・締め切り | 巡数 | 勝率%（席順） | ゴールできた%（席順） | 1着が勝つ | ゴールせず勝つ | 勝者のゴール点の割合 |', '|---|---|---|---|---|---|---|'];
+    const G = Number(ENV.BALANCE_CLOSE_GAMES ?? 100);
+    const OLD: GameOptions = { cpuDeadlineAware: false, minCloseTurn: 0 };
+    const variants: { tag: string; o: GameOptions }[] = [
+      { tag: '旧 締切10（v4.2）', o: { ...OLD, closeRounds: 10 } },
+      { tag: '旧 締切8（v4.3.0）', o: { ...OLD, closeRounds: 8 } },
+      ...CLOSE_SWEEP!.split(',').map(Number).map(c => ({ tag: `新 締切${c}・40巡目まで続く・CPU締切を見る`, o: { closeRounds: c } as GameOptions })),
+    ];
+    for (const { tag, o } of variants) {
+      out.push(formatClose(runClose(`CPU4人 ${tag}`, ['cpu', 'cpu', 'cpu', 'cpu'], G, o)));
+      out.push(formatClose(runClose(`人(寄り道)+CPU3 ${tag}`, ['wander', 'cpu', 'cpu', 'cpu'], G, o)));
+      out.push(formatClose(runClose(`人(直行)+CPU3 ${tag}`, ['direct', 'cpu', 'cpu', 'cpu'], G, o)));
+      out.push(formatClose(runClose(`直行1+寄り道3（席回し） ${tag}`, ['direct', 'wander', 'wander', 'wander'], Math.ceil(G / 4), o, 7000, true)));
+      out.push(formatClose(runClose(`寄り道4人 ${tag}`, ['wander', 'wander', 'wander', 'wander'], G, o)));
+    }
+    if (REPORT_DIR) writeFileSync(`${REPORT_DIR}/fishing-close-sweep.md`, out.join('\n'));
+  }, 900_000);
+});
+
+describe.skipIf(!!CLOSE_SWEEP)('釣り旅バランス（ヘッドレス80巡シミュレーション）', () => {
   let solo: FishingSummary;
   let quad: FishingSummary;
   let raceDirect: FishingSummary;
   let raceWander: FishingSummary;
   let raceWinRate = 0;
   let firstFinisherWinRate = 0;
+  let withCpu: CloseSummary;
+  let rushCpu: CloseSummary;
 
   beforeAll(() => {
     solo = runMany('1人・寄り道型', 150, ['wander']).summary;
@@ -727,12 +986,16 @@ describe('釣り旅バランス（ヘッドレス80巡シミュレーション�
         res.players.forEach((p, i) => (i === seat ? directRows : wanderRows).push({ tr: res.trackers[i], score: res.scores[i], player: p }));
       }
     }
+    // 締め切り（GOAL_CLOSE_ROUNDS）: 本番に近い「人1人+CPU3人」と、人がゴールへ直行した場合
+    withCpu = runClose('人(寄り道)+CPU3', ['wander', 'cpu', 'cpu', 'cpu'], 100, {});
+    rushCpu = runClose('人(直行)+CPU3', ['direct', 'cpu', 'cpu', 'cpu'], 100, {});
     raceDirect = summarize('4人・直行型（1人）', directRows);
     raceWander = summarize('4人・寄り道型（直行型1人と同卓）', wanderRows);
     raceWinRate = (directWins / games) * 100;
     report.push('## 釣り旅モード', formatSummary(solo), formatSummary(quad), formatSummary(raceDirect), formatSummary(raceWander));
     report.push(`4人・全員寄り道型でゴール1着が勝つ率 ${r2(firstFinisherWinRate)}%（均等なら25%）`);
     report.push(`直行型の勝率 ${r2(raceWinRate)}%（4人中1人なので公平なら25%）`);
+    report.push(`### 締め切り ${GOAL_CLOSE_ROUNDS}巡`, '| 並び | 巡数 | 勝率%（席順） | ゴールできた%（席順） | 1着が勝つ | ゴールせず勝つ | 勝者のゴール点の割合 |', '|---|---|---|---|---|---|---|', formatClose(withCpu), formatClose(rushCpu));
     SIM_OPTIONS.capitalShop = false;
     const legacy = runMany('【参考】1人・寄り道型・県庁所在地で店が使えない旧仕様', 150, ['wander']).summary;
     SIM_OPTIONS.capitalShop = true;
@@ -789,6 +1052,24 @@ describe('釣り旅バランス（ヘッドレス80巡シミュレーション�
   it('4人戦ではゴールを急ぐ（釣りの時間を削る）こととゴール順位ボーナスが釣り合う（1着の勝率 15〜60%）', () => {
     expect(firstFinisherWinRate).toBeGreaterThanOrEqual(15);
     expect(firstFinisherWinRate).toBeLessThanOrEqual(60);
+  });
+
+  it('シミュレーションの締め切りはストアと同じ fishingLastTurn で決まる', () => {
+    for (const ff of [null, 5, 20, 33, 45, 60, 75]) {
+      const g = { firstFinish: ff, maxTurns: DEFAULT_MAX_TURNS, closeRounds: GOAL_CLOSE_ROUNDS, minCloseTurn: MIN_CLOSE_TURN } as Game;
+      expect(endTurnOf(g)).toBe(fishingLastTurn(ff, DEFAULT_MAX_TURNS));
+    }
+  });
+
+  it('締め切り: 人+CPU3で、遅れた CPU も締め切りに間に合い（各9割以上）、着順だけで決まらない', () => {
+    for (let k = 1; k < 4; k++) expect(withCpu.finishRate[k], `CPU席${k}`).toBeGreaterThanOrEqual(90);
+    expect(withCpu.firstFinisherWins).toBeLessThanOrEqual(60);
+    expect(withCpu.finishShare).toBeLessThanOrEqual(30);
+  });
+
+  it('締め切り: 人がゴールへ直行して早く終わらせる抜け道はない（CPU 相手の勝率3割以下・40巡目より前には終わらない）', () => {
+    expect(rushCpu.winRate[0]).toBeLessThanOrEqual(30);
+    expect(rushCpu.roundsMedian).toBeGreaterThanOrEqual(Math.min(MIN_CLOSE_TURN, 30));
   });
 
   it('ゴールへ直行して早抜けするのが必勝にはならない', () => {

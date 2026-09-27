@@ -8,6 +8,13 @@ import { BUILDING_INFO, CITY_ACTIONS_PER_VISIT, getTownInfo } from '../../game/c
 import { getEquippedItem, getEquipmentName } from '../../game/equipment';
 import { randomInt, random } from '../../utils/random';
 import { ROULETTE_MIN, ROULETTE_MAX } from '../../game/constants';
+import { fishingLastTurn } from '../../game/deadline';
+
+/** CPU の道選びに渡す「最後の巡」。無制限（0）で誰もゴールしていなければ 0 のまま（cpuAI が中盤とみなす） */
+function cpuFishingLastTurn(firstFinishTurn: number | null, maxTurns: number): number {
+  const last = fishingLastTurn(firstFinishTurn, maxTurns);
+  return Number.isFinite(last) ? last : maxTurns;
+}
 import { playDiceRoll, playDiceLand } from '../../utils/sound';
 import { chooseCpuCard, rollDiceFaces, emptyPlotIndex } from '../../game/cityCards';
 import { distancesFrom } from '../../game/city';
@@ -70,7 +77,8 @@ export function runCpuStep() {
         playerIndex: st.currentPlayerIndex,
         city: st.city,
         turn: st.turn,
-        maxTurns: st.settings.maxTurns,
+        // 釣り旅: 誰かがゴールしたら締め切りを「最後の巡」として道を選ぶ（間に合わずにゴールを逃さない）
+        maxTurns: isCity ? st.settings.maxTurns : cpuFishingLastTurn(st.firstFinishTurn, st.settings.maxTurns),
         goalClaims: st.cityGoalClaims,
         binboHolder: st.city?.binbo?.playerIndex ?? null,
         playerNodes: st.players.map(p => p.currentNode),
@@ -145,7 +153,7 @@ export function runCpuStep() {
         const pick = chooseCpuCard(st.cityCards, st.currentPlayerIndex, cardContext(true));
         if (pick && !st.playCityCard(pick.index, pick.target)) return;
       }
-      // 県庁なら名産を検討（空きは買う・独占が完成するなら買収も）
+      // 名産のある町なら名産を検討（空きは買う・独占が完成するなら買収も。県庁かどうかは問わない）
       if (shouldBuySpecialty(st.city.specialties, player.currentNode, st.currentPlayerIndex, player.money, player.cpuStyle ?? 'steady')) {
         if (!st.cityBuySpecialty()) return;
       }

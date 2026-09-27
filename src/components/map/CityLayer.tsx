@@ -133,7 +133,7 @@ export const CitySkyline = memo(function CitySkyline({ city, colors }: { city: C
   );
 });
 
-// ===== 名産（持ち主のいる県庁に小さな印） =====
+// ===== 名産（持ち主のいる名産の町に小さな印。県庁かどうかは問わない） =====
 // 寄った表示・中くらいの表示で出し、引いた表示（far）では CSS で隠す（小さすぎて地名の邪魔になるため）。
 // 持ち主が替わると key が変わって印を押し直す（fx-mark-in）。地方独占中は金の二重の輪。
 export const SpecialtyMarks = memo(function SpecialtyMarks({ owners, colors }: { owners?: Record<string, number>; colors: string[] }) {

@@ -3,7 +3,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { NODE_MAP } from '../../data/boardNodes';
 import { computeDistanceToGoal } from '../../utils/pathfinding';
 import { calendarLabel, seasonOf } from '../../game/city';
-import { GOAL_CLOSE_ROUNDS } from '../../game/constants';
+import { fishingLastTurn } from '../../game/deadline';
 import Ruby from '../shared/Ruby';
 
 const distanceToGoal = computeDistanceToGoal();
@@ -110,7 +110,7 @@ export default function TurnIndicator() {
         {node && <span className="hidden md:inline font-mincho truncate"><Ruby>{node.name}</Ruby></span>}
         {!isCity && firstFinishTurn != null && (
           <span data-guide="deadline" className="shrink-0 whitespace-nowrap bg-shu-600/25 border border-shu-500/40 rounded-full px-2 py-0.5 text-shu-200 font-mincho text-xs" title="最初の人がゴールしたので、残り巡数で全体が終わる">
-            <Ruby>締切</Ruby><span className="hidden min-[420px]:inline"><Ruby>まで</Ruby></span> {Math.max(0, firstFinishTurn + GOAL_CLOSE_ROUNDS - turn + 1)}<Ruby>巡</Ruby>
+            <Ruby>締切</Ruby><span className="hidden min-[420px]:inline"><Ruby>まで</Ruby></span> {Math.max(0, fishingLastTurn(firstFinishTurn, maxTurns) - turn + 1)}<Ruby>巡</Ruby>
           </span>
         )}
         {!isCity && remainingDist !== undefined && remainingDist > 0 && (

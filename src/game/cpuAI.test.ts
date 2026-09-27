@@ -122,9 +122,12 @@ describe('CPU: 名産と貧乏神', () => {
     expect(shouldBuySpecialty({}, 'sapporo', 0, 20000, 'steady')).toBe(true);
     expect(shouldBuySpecialty({}, 'sapporo', 0, 9500, 'steady')).toBe(false);
     expect(shouldBuySpecialty({}, 'otaru', 0, 99999, 'steady')).toBe(false); // 名産のないマス
-    // 北海道: 札幌と釧路。釧路を持っていれば、札幌の買収で独占が完成する
-    expect(shouldBuySpecialty({ kushiro: 0, sapporo: 1 }, 'sapporo', 0, 25000, 'steady')).toBe(true);
+    // 北海道: 札幌・釧路（県庁）と函館。釧路と函館を持っていれば、札幌の買収で独占が完成する
+    expect(shouldBuySpecialty({ kushiro: 0, hakodate: 0, sapporo: 1 }, 'sapporo', 0, 25000, 'steady')).toBe(true);
+    expect(shouldBuySpecialty({ kushiro: 0, sapporo: 1 }, 'sapporo', 0, 25000, 'steady')).toBe(false); // 函館がまだ
     expect(shouldBuySpecialty({ sapporo: 1 }, 'sapporo', 0, 25000, 'steady')).toBe(false);
+    // 県庁ではない町の名産も同じ判断（函館は空きなら買う）
+    expect(shouldBuySpecialty({}, 'hakodate', 0, 20000, 'steady')).toBe(true);
   });
 
   it('貧乏神がとりついていると、他の駒のいるマスを通る道を選ぶ', () => {

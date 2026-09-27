@@ -2,8 +2,12 @@
 // 子どもも読むので文章は短く。漢字はすべてふりがな辞書（data/furigana.ts）で読めるようにする（howToPages.test.ts で確認）。
 import type { HowToMode } from '../../store/useGuideStore';
 import { CITY_ACTIONS_PER_VISIT, CITY_ECONOMY } from '../../game/city';
-import { SPECIALTY_ECONOMY } from '../../game/citySpecialties';
+import { SPECIALTY_ECONOMY, SPECIALTY_REGIONS, regionSpecialtyIds } from '../../game/citySpecialties';
 import { GOAL_CLOSE_ROUNDS } from '../../game/constants';
+import { MIN_CLOSE_TURN } from '../../game/deadline';
+
+/** どの地方にも少なくともこの数の名産がある（県庁が2つの地方は、名物で知られる町で補っている） */
+const MIN_SPECIALTIES_PER_REGION = Math.min(...SPECIALTY_REGIONS.map(r => regionSpecialtyIds(r).length));
 
 export type DiagramId =
   | 'dice-move' | 'fork' | 'fishing-flow' | 'gear' | 'squares' | 'goal-score'
@@ -45,7 +49,7 @@ export const HOWTO_PAGES: Record<HowToMode, HowToPage[]> = {
     },
     {
       id: 'f-goal', title: 'ゴールと得点', diagram: 'goal-score',
-      lines: ['魚の点数・めずらしさ・地方ごとの種類・ゴールの順番で得点が決まる。', `最初の人がゴールしてから${GOAL_CLOSE_ROUNDS}巡で終わり。`],
+      lines: ['魚の点数・めずらしさ・地方ごとの種類・ゴールの順番で得点が決まる。', `最初の人がゴールしてから${GOAL_CLOSE_ROUNDS}巡で終わり（${MIN_CLOSE_TURN}巡目までは続く）。`],
     },
   ],
   city: [
@@ -71,7 +75,7 @@ export const HOWTO_PAGES: Record<HowToMode, HowToPage[]> = {
     },
     {
       id: 'c-spec', title: '名産', diagram: 'specialty',
-      lines: ['県庁には名産がある。買うと毎月収入が入り、旬の月は多くなる。', `地方の名産をぜんぶ集めると地方独占。収入が${SPECIALTY_ECONOMY.monopolyMul}倍！`],
+      lines: ['県庁と、名物で知られる町には名産がある。買うと毎月収入が入り、旬の月は多くなる。', `名産はどの地方にも${MIN_SPECIALTIES_PER_REGION}つ以上。ぜんぶ集めると地方独占。収入が${SPECIALTY_ECONOMY.monopolyMul}倍！`],
     },
     {
       id: 'c-binbo', title: '貧乏神', diagram: 'binbo',

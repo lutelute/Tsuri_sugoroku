@@ -139,6 +139,8 @@ interface CGame {
   specsClosed: SpecTrack[];
   regionMonoMonths: number;
   regionMonoEver: boolean;
+  firstRegionMono: number | null; // 最初に地方独占が起きた月
+
   binboDamage: number; // binboMischief が返す「被害額」の合計
   binboMonths: number[]; // プレイヤーごとの、月末にとりつかれていた月数
   binboAttaches: number;
@@ -772,7 +774,10 @@ function monthEnd(g: CGame) {
   }
   const monoRegions = Object.keys(regionalMonopolies(owners)).length;
   g.regionMonoMonths += monoRegions;
-  if (monoRegions > 0) g.regionMonoEver = true;
+  if (monoRegions > 0) {
+    g.regionMonoEver = true;
+    if (g.firstRegionMono === null) g.firstRegionMono = g.turn;
+  }
   const before = g.state;
   const levelsBefore = new Map<string, number>();
   for (const [id, town] of Object.entries(before.towns)) town.plots.forEach((p, idx) => p && levelsBefore.set(plotKey(id, idx), p.level));
@@ -889,6 +894,7 @@ export function simulateCityGame(seed: number, strategies: Strategy[], months = 
     specsClosed: [],
     regionMonoMonths: 0,
     regionMonoEver: false,
+    firstRegionMono: null,
     binboDamage: 0,
     binboMonths: strategies.map(() => 0),
     binboAttaches: 0,
@@ -968,6 +974,8 @@ export interface CitySummary {
   regionMonoEverRate: number; // 地方独占が一度でも起きた局の割合(%)
   regionMonoAtEndRate: number; // 最終月に地方独占がある局の割合(%)
   regionMonoMonthsPerGame: number; // 地方独占の「地方×月」の合計（1局平均）
+  firstMonoMedian: number; // 最初の地方独占の月（起きた局の中央値）
+  firstMonoYear1Rate: number; // 1年目（12か月目まで）に最初の地方独占が起きた局の割合(%)
   binboDamagePerGame: number; // 貧乏神の被害額（binboMischief の damage 合計・1局平均）
   binboLossPerGame: number; // 実際に失った額（無駄遣い・渡した額・半値売りの差額・1局平均）
   binboMaxShareMedian: number; // 1局の中で一番長くとりつかれた人の割合（中央値。4人で均等なら25%）
@@ -1112,6 +1120,8 @@ export function summarizeCity(label: string, games: CGame[], months = CITY_DEFAU
     regionMonoEverRate: r2((games.filter(g => g.regionMonoEver).length / games.length) * 100),
     regionMonoAtEndRate: r2((games.filter(g => Object.keys(regionalMonopolies(g.state.specialties)).length > 0).length / games.length) * 100),
     regionMonoMonthsPerGame: r2(mean(games.map(g => g.regionMonoMonths))),
+    firstMonoMedian: quantile(games.filter(g => g.firstRegionMono !== null).map(g => g.firstRegionMono!), 0.5),
+    firstMonoYear1Rate: r2((games.filter(g => g.firstRegionMono !== null && g.firstRegionMono <= 12).length / games.length) * 100),
     binboDamagePerGame: r0(mean(games.map(g => g.binboDamage))),
     binboLossPerGame: r0(mean(games.map(g => g.tracks.reduce((a, t) => a + t.binboLoss, 0)))),
     ...(() => {
@@ -1174,7 +1184,7 @@ function formatCity(s: CitySummary): string {
   L.push(`等級2到達(中央値) ${s.level2Median}か月 / 最高等級到達(中央値) ${s.level3Median}か月（到達率 ${s.level3Rate}%） / 自然成長 ${s.growthPerPlotMonth}%/区画・月 種別 ${JSON.stringify(s.kindGrowth)}`);
   L.push(`発展度(36か月・町の数の中央値) 壱以上 ${s.tierMedian.t1} / 弐以上 ${s.tierMedian.t2} / 参 ${s.tierMedian.t3}`);
   L.push(`名産: 回収 ${s.specialtyPayback}か月（中央値・24か月以内に買ったもの。回収できた割合 ${s.specialtyRecovered}%） / 最終月に持ち主のいる名産 ${s.specialtiesOwnedAtEnd}件`);
-  L.push(`地方独占: 一度でも起きた局 ${s.regionMonoEverRate}% / 最終月にある局 ${s.regionMonoAtEndRate}% / 地方×月 ${s.regionMonoMonthsPerGame}（1局）`);
+  L.push(`地方独占: 一度でも起きた局 ${s.regionMonoEverRate}% / 最終月にある局 ${s.regionMonoAtEndRate}% / 地方×月 ${s.regionMonoMonthsPerGame}（1局） / 最初の独占 ${s.firstMonoMedian}か月目（中央値）・1年目に起きた局 ${s.firstMonoYear1Rate}%`);
   L.push(`貧乏神: 被害額 ¥${s.binboDamagePerGame}/局（実損 ¥${s.binboLossPerGame}） / 一番長くとりつかれた人の割合 中央値 ${s.binboMaxShareMedian}%・p90 ${s.binboMaxShareP90}% / 実損÷最終総資産 ${s.binboLossShareOfAssets}%（中央値）`);
   L.push(`買い物代 ¥${s.visitorPerGame}/局 / 年度末の称号 ¥${s.awardsPerGame}/局 / カード使用 ${JSON.stringify(s.cardUsesPerGame)} 購入 ${s.cardsBoughtPerGame}枚/局`);
   L.push(`空き家の発生 ${s.vacatedPerGame}件/局 / 最終月の空き家率 ${s.vacantAtEnd}% / 修理 ${s.renovationsPerGame}件/局 / 視察 ${s.inspectionsPerGame}回/局`);
@@ -1263,7 +1273,7 @@ describe.skipIf(!SWEEP)('まちづくり: パラメータ掃引（調整用）',
       const a = summarizeCity('field', fieldRun(Number(ENV.BALANCE_SWEEP_BASE ?? 100), Number(ENV.BALANCE_SWEEP_SEEDS ?? 3)));
       const w = (s: CitySummary) => Object.entries(s.byStrategy).map(([k, v]) => `${k}:${v.winRate}%/¥${Math.round(v.assets / 1000)}k`).join(' ');
       const solo = BUILDER_STRATEGIES.map(st => soloRun(st, 10)).map(o => `${o.strategy}:¥${Math.round(o.assets / 1000)}k/成長${o.naturalUps}/月収${o.incomeAt12}→${o.incomeAt36}`).join(' ');
-      out.push(`${JSON.stringify(cfg)}\n  ${w(a)} | pay ${JSON.stringify(a.paybackMedian)} L2 ${a.level2Median} grow ${JSON.stringify(a.kindGrowth)} dis ${a.annualDisasterLossRate}% p90loss ${Math.max(...Object.values(a.byStrategy).map(v => v.maxLossShare))}% lead12 ${a.leaderAt12Wins}% lead24 ${a.leaderAt24Wins}% early ${JSON.stringify(a.incomeShare12)} tier ${JSON.stringify(a.tierMedian)} vac ${a.vacatedPerGame}/${a.vacantAtEnd}% ren ${a.renovationsPerGame}\n  spec pay ${a.specialtyPayback}(${a.specialtyRecovered}%) mono ${a.regionMonoEverRate}/${a.regionMonoAtEndRate}% binbo ¥${a.binboDamagePerGame}(実損¥${a.binboLossPerGame}, 資産比${a.binboLossShareOfAssets}%) max ${a.binboMaxShareMedian}/${a.binboMaxShareP90}% visitor ¥${a.visitorPerGame} award ¥${a.awardsPerGame} cards ${JSON.stringify(a.cardUsesPerGame)}\n  solo ${solo}`);
+      out.push(`${JSON.stringify(cfg)}\n  ${w(a)} | pay ${JSON.stringify(a.paybackMedian)} L2 ${a.level2Median} grow ${JSON.stringify(a.kindGrowth)} dis ${a.annualDisasterLossRate}% p90loss ${Math.max(...Object.values(a.byStrategy).map(v => v.maxLossShare))}% lead12 ${a.leaderAt12Wins}% lead24 ${a.leaderAt24Wins}% early ${JSON.stringify(a.incomeShare12)} tier ${JSON.stringify(a.tierMedian)} vac ${a.vacatedPerGame}/${a.vacantAtEnd}% ren ${a.renovationsPerGame}\n  spec pay ${a.specialtyPayback}(${a.specialtyRecovered}%) mono ${a.regionMonoEverRate}/${a.regionMonoAtEndRate}% first ${a.firstMonoMedian}m y1 ${a.firstMonoYear1Rate}% binbo ¥${a.binboDamagePerGame}(実損¥${a.binboLossPerGame}, 資産比${a.binboLossShareOfAssets}%) max ${a.binboMaxShareMedian}/${a.binboMaxShareP90}% visitor ¥${a.visitorPerGame} award ¥${a.awardsPerGame} cards ${JSON.stringify(a.cardUsesPerGame)}\n  solo ${solo}`);
     }
     Object.assign(CITY_ECONOMY, base);
     Object.assign(SPECIALTY_ECONOMY, spBase);
@@ -1344,9 +1354,16 @@ describe.skipIf(!!SWEEP)('まちづくりバランス（ヘッドレス36か月�
     expect(field.tierMedian.t3).toBeGreaterThanOrEqual(2);
   });
 
-  it('名産は安全な資産として回収できる（回収 9〜21か月）', () => {
-    expect(field.specialtyPayback).toBeGreaterThanOrEqual(9);
-    expect(field.specialtyPayback).toBeLessThanOrEqual(21);
+  it('地方独占は起きるが毎局ではない（36か月の4人戦の30〜60%）。最初の独占はふつう1年目より後', () => {
+    expect(field.regionMonoEverRate).toBeGreaterThanOrEqual(30);
+    expect(field.regionMonoEverRate).toBeLessThanOrEqual(60);
+    expect(field.firstMonoMedian).toBeGreaterThan(12);
+    expect(field.firstMonoYear1Rate).toBeLessThanOrEqual(20);
+  });
+
+  it('名産は安全な資産として36か月のうちに回収できる（回収 12〜24か月。価値が下がらないぶん建物より少し遅くてよい）', () => {
+    expect(field.specialtyPayback).toBeGreaterThanOrEqual(12);
+    expect(field.specialtyPayback).toBeLessThanOrEqual(24);
   });
 
   it('貧乏神は痛いが致命的でなく、特定の人に張り付きすぎない', () => {

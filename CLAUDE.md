@@ -305,3 +305,10 @@ idle → roulette → path_selection(分岐あり) or node_action →
 ### 演出
 - 下から出る画面は `fx/BottomSheet.tsx`。地図の SVG に後から差し込む SMIL は文書の時計で始まるので動かないことがある。地図の動きは CSS アニメで作る。
 - 貧乏神の人形は `map/useDisplayedBinbo.ts` で表示だけ遅らせる（ストアはすぐ移る）。
+
+## v4.4.0 地方独占を珍しく・釣り旅の終盤（2026-09-28）
+
+名産係・難易度調整係の分担。詳細は `CHANGELOG.md`。
+
+- **名産は26**: 県庁22か所と、名物で知られる町4か所（函館・松本・和歌山・岡山）。どの地方も3つ以上。名産のあるマスは `CITY_SPECIALTIES` にある町マス（県庁に限らない）。`citySpecialties.test.ts` が「すべて isTown」「どの地方も3つ以上」を確かめる。地方独占は36か月・4人で約45%の局に起きる（`balance.city.sim.test.ts` の目標30〜60%）。
+- **釣り旅の締め切り**: `src/game/deadline.ts` の `fishingLastTurn(firstFinishTurn, maxTurns)` が唯一の計算（ストアの終了判定・上部の「締切まで」・CPU の道選び・シミュレーションが共通で使う）。最初のゴールから `GOAL_CLOSE_ROUNDS`(7) 巡、ただし `MIN_CLOSE_TURN`(40) 巡目より前には終わらない（ゴール直行の抜け道を塞ぐ）。

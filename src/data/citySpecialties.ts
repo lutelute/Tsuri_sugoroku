@@ -1,6 +1,10 @@
-// まちづくり: 県庁マスの名産（桃鉄の物件にあたる、区画とは別の枠）。
+// まちづくり: 名産（桃鉄の物件にあたる、区画とは別の枠）。
 //
 // - 盤面の県庁マス（type === 'capital'）すべてに1つずつ置く（citySpecialties.test.ts で網羅を確認）。
+// - 県庁が2つしかない地方（北海道・中部・近畿・中国）には、名物で知られる県庁以外の町にも1つ置き、
+//   どの地方も名産が3つ以上になるようにする（2つだけだと地方独占が偶然そろいやすいため）。
+//   県庁以外の名産も、買う・買収・収入・地図の印・称号は県庁の名産とまったく同じに扱う。
+// - 名産を置けるのは町のマス（city.ts の isTown が町とみなすマス）だけ。中継・スタート・ゴールには置かない。
 // - 実在の地名と一般的な名物だけを使い、実在の企業名・商標は使わない。
 // - season は「月(1〜12) → 収入の倍率」。書いていない月は 1.0。12か月の平均がほぼ 1.0 になるように組み、
 //   年間でならすと「月収 = 価格の5%」の流儀が崩れないようにしてある（テストで確認）。
@@ -11,7 +15,8 @@ import type { Region } from '../game/types';
 export type SpecialtyIcon =
   | 'beer' | 'robata' | 'apple' | 'urchin' | 'gyutan' | 'sake' | 'sushi' | 'shumai'
   | 'goldleaf' | 'eel' | 'weave' | 'takoyaki' | 'oyster' | 'fugu' | 'katsuo' | 'mikan'
-  | 'udon' | 'mentaiko' | 'castella' | 'watermelon' | 'pork' | 'mango';
+  | 'udon' | 'mentaiko' | 'castella' | 'watermelon' | 'pork' | 'mango'
+  | 'squid' | 'soba' | 'ume' | 'peach';
 
 export interface CitySpecialty {
   nodeId: string;
@@ -41,7 +46,7 @@ export const SPECIALTY_REGION_NAME: Record<Region, string> = {
 };
 
 export const CITY_SPECIALTIES: Record<string, CitySpecialty> = {
-  // ===== 北海道（2） =====
+  // ===== 北海道（3。函館は県庁ではない） =====
   sapporo: {
     nodeId: 'sapporo', name: '麦酒工場', short: '麦酒', price: 9000, icon: 'beer',
     season: { 6: 1.4, 7: 1.6, 8: 1.5, 10: 0.9, 11: 0.8, 12: 0.7, 1: 0.7, 2: 0.7, 3: 0.8, 4: 0.9 },
@@ -51,6 +56,11 @@ export const CITY_SPECIALTIES: Record<string, CitySpecialty> = {
     nodeId: 'kushiro', name: '炉端焼き', short: '炉端', price: 5000, icon: 'robata',
     season: { 9: 1.3, 10: 1.4, 11: 1.2, 12: 1.2, 1: 1.2, 2: 1.1, 3: 0.8, 4: 0.8, 5: 0.8, 6: 0.7, 7: 0.7, 8: 0.8 },
     flavor: '炭火で秋刀魚や鮭を焼く港町の炉端。寒い夜ほど客が増える',
+  },
+  hakodate: {
+    nodeId: 'hakodate', name: 'いか刺し', short: 'いか', price: 7000, icon: 'squid',
+    season: { 6: 1.3, 7: 1.4, 8: 1.4, 9: 1.3, 10: 1.2, 11: 0.9, 12: 0.9, 1: 0.7, 2: 0.6, 3: 0.6, 4: 0.8, 5: 0.9 },
+    flavor: '漁火の灯る津軽海峡で釣るいか。朝獲れを刺身で味わう。夏から秋が旬',
   },
 
   // ===== 東北（3） =====
@@ -87,7 +97,7 @@ export const CITY_SPECIALTIES: Record<string, CitySpecialty> = {
     flavor: '港町の中華街で湯気を立てる蒸したて。寒い季節ほどよく売れる',
   },
 
-  // ===== 中部（2） =====
+  // ===== 中部（3。松本は県庁ではない） =====
   kanazawa: {
     nodeId: 'kanazawa', name: '金箔工房', short: '金箔', price: 8000, icon: 'goldleaf',
     season: { 4: 1.2, 11: 1.2, 12: 1.1, 1: 0.8, 2: 0.8, 6: 0.9 },
@@ -98,8 +108,13 @@ export const CITY_SPECIALTIES: Record<string, CitySpecialty> = {
     season: { 7: 1.8, 8: 1.3, 9: 0.9, 10: 0.9, 11: 0.9, 12: 0.9, 1: 0.8, 2: 0.8, 3: 0.9, 4: 0.9, 5: 0.9 },
     flavor: '木曽三川のうなぎを香ばしく焼く。土用の丑の夏が大勝負',
   },
+  matsumoto: {
+    nodeId: 'matsumoto', name: '信州そば', short: 'そば', price: 8000, icon: 'soba',
+    season: { 10: 1.3, 11: 1.4, 12: 1.5, 1: 0.9, 2: 0.8, 3: 0.8, 4: 0.9, 5: 0.9, 6: 0.9, 7: 0.9, 8: 0.9, 9: 0.8 },
+    flavor: '信州の高原で育つそば。秋の新そばと、暮れの年越しそばが稼ぎどき',
+  },
 
-  // ===== 近畿（2） =====
+  // ===== 近畿（3。和歌山は県庁ではない） =====
   kyoto: {
     nodeId: 'kyoto', name: '西陣織', short: '西陣', price: 11000, icon: 'weave',
     season: { 4: 1.2, 10: 1.1, 11: 1.3, 1: 1.1, 2: 0.8, 6: 0.8, 7: 0.9, 8: 0.8 },
@@ -110,8 +125,18 @@ export const CITY_SPECIALTIES: Record<string, CitySpecialty> = {
     season: { 7: 1.2, 8: 1.3, 12: 1.1, 2: 0.8, 3: 0.9, 6: 0.9, 9: 0.9, 11: 0.9 },
     flavor: '天下の台所の食い倒れ。夏祭りの屋台で飛ぶように売れる',
   },
+  wakayama: {
+    nodeId: 'wakayama', name: '紀州の梅干し', short: '梅干し', price: 10000, icon: 'ume',
+    season: { 6: 1.4, 7: 1.3, 8: 1.1, 12: 1.2, 1: 0.9, 2: 0.8, 3: 0.8, 4: 0.9, 5: 0.9, 9: 0.9, 10: 0.9, 11: 0.9 },
+    flavor: '梅雨どきに実った梅の実を、夏の日差しで干して漬ける。すっぱさが自慢',
+  },
 
-  // ===== 中国（2） =====
+  // ===== 中国（3。岡山は県庁ではない） =====
+  okayama: {
+    nodeId: 'okayama', name: '岡山の白桃', short: '白桃', price: 7000, icon: 'peach',
+    season: { 6: 1.1, 7: 1.7, 8: 1.6, 10: 0.9, 11: 0.9, 1: 0.7, 2: 0.7, 3: 0.7, 4: 0.8, 5: 0.9 },
+    flavor: '紙袋をかけて大切に育てる白桃。やわらかく甘い夏の贈り物',
+  },
   hiroshima: {
     nodeId: 'hiroshima', name: '牡蠣小屋', short: '牡蠣', price: 7000, icon: 'oyster',
     season: { 11: 1.3, 12: 1.6, 1: 1.6, 2: 1.5, 3: 1.2, 5: 0.7, 6: 0.5, 7: 0.5, 8: 0.5, 9: 0.6 },

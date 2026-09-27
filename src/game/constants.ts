@@ -1,4 +1,4 @@
-export const APP_VERSION = '4.3.0';
+export const APP_VERSION = '4.4.0';
 
 export const ROULETTE_MIN = 1;
 export const ROULETTE_MAX = 6;
@@ -139,7 +139,9 @@ export const NO_LURE_BITE_DELAY_MULTIPLIER = 2.5; // ルアーなし: バイト�
 export const DEFAULT_MAX_TURNS = 80;
 
 // 釣り旅: 最初の人がゴールしてから、この巡数で全体が終了する（早くゴールした人が長く待たされないように）
-export const GOAL_CLOSE_ROUNDS = 10;
+// v4.3 調整: 10 → 8 → 7。CPU が締め切りの巡を見て進むようになり（cpuStep.ts）、MIN_CLOSE_TURN（deadline.ts）で
+// 直行の抜け道も塞いだため、7 でも CPU はほぼ全員（99〜100%）間に合う（balance.fishing.sim.test.ts）。
+export const GOAL_CLOSE_ROUNDS = 7;
 
 // 設定画面・タイトルで共有する「前回選んだ遊び方」の保存キー
 export const MODE_STORAGE_KEY = 'tsuri_sugoroku_mode';

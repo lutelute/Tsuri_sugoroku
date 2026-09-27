@@ -174,7 +174,7 @@ export default function CityOverlay() {
           <p className="text-[11px] text-washi/50 mt-0.5"><Ruby>{node.description ?? ''}</Ruby></p>
         </div>
 
-        {/* 名産（県庁のみ。他のマスでは何も出ない） */}
+        {/* 名産（県庁と、名物で知られる町だけ。名産のないマスでは何も出ない） */}
         <SpecialtyCard
           nodeId={nodeId}
           owners={city.specialties ?? {}}

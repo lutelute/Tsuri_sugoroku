@@ -1,9 +1,12 @@
-// マス情報パネル用: まちづくりモードでの町の状況（区画・持ち主・人口など）
+// マス情報パネル用: まちづくりモードでの町の状況（区画・持ち主・人口・名産など）
+// 名産は県庁だけでなく名物で知られる町にもあるので、地図でマスを押したときに分かるようここにも出す。
 import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { getTownInfo, computeAllStats, TOWN_CLASS_INFO, BUILDING_INFO, buildCost, monopolyOwner, effectiveLandValue, CITY_ECONOMY, TIER_LABEL } from '../../game/city';
+import { getSpecialty, ownerOf, isSpecialtyMonopolized } from '../../game/citySpecialties';
 import BuildingGlyph from './BuildingGlyph';
+import SpecialtyIcon from './SpecialtyIcon';
 import Ruby from '../shared/Ruby';
 
 export default function TownInfoSection({ nodeId }: { nodeId: string }) {
@@ -16,6 +19,9 @@ export default function TownInfoSection({ nodeId }: { nodeId: string }) {
   if (!town || !st) return null;
   const mono = monopolyOwner(town);
   const isDest = city.destination === nodeId;
+  const sp = getSpecialty(nodeId);
+  const spOwner = sp ? ownerOf(city.specialties, nodeId) : null;
+  const spOwnerPlayer = spOwner !== null ? players[spOwner] : undefined;
 
   return (
     <div className="mt-3 p-3 rounded-lg bg-emerald-900/20 border border-emerald-500/25">
@@ -25,6 +31,23 @@ export default function TownInfoSection({ nodeId }: { nodeId: string }) {
         <span className="text-washi/60"><Ruby>地価</Ruby> ×{effectiveLandValue(nodeId, town).toFixed(2)}（<Ruby>住宅</Ruby> ¥{buildCost('res', nodeId, town).toLocaleString()}〜）</span>
         {isDest && <span className="px-2 py-0.5 rounded-full bg-shu-600/40 border border-shu-400/50 text-shu-100"><Ruby>目的地</Ruby> ¥{city.destinationReward.toLocaleString()}</span>}
       </div>
+      {sp && (
+        <div className="flex items-center gap-1.5 text-[11px] mb-2 rounded-md bg-washi/10 border border-kin-500/25 px-2 py-1">
+          <SpecialtyIcon icon={sp.icon} size={20} className="shrink-0" />
+          <span className="text-washi/55 shrink-0"><Ruby>名産</Ruby></span>
+          <span className="font-mincho font-bold text-kin-200 truncate"><Ruby>{sp.name}</Ruby></span>
+          <span className="ml-auto shrink-0 tabular-nums" style={spOwnerPlayer ? { color: spOwnerPlayer.color } : undefined}>
+            {spOwnerPlayer ? (
+              <>
+                {spOwnerPlayer.name}
+                {isSpecialtyMonopolized(city.specialties, nodeId) && <Ruby>（顔役）</Ruby>}
+              </>
+            ) : (
+              <span className="text-washi/60"><Ruby>売り出し中</Ruby> ¥{sp.price.toLocaleString()}</span>
+            )}
+          </span>
+        </div>
+      )}
       <div className="grid grid-cols-4 gap-1 text-center text-[11px] mb-2">
         <div><div className="text-washi/45"><Ruby>人口</Ruby></div><div className="font-bold tabular-nums">{st.population.toLocaleString()}</div></div>
         <div><div className="text-washi/45"><Ruby>幸福度</Ruby></div><div className="font-bold tabular-nums">{st.happiness.toFixed(1)}</div></div>

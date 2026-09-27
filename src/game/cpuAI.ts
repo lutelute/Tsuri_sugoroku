@@ -290,7 +290,7 @@ export function cpuCatchChance(player: Player, fish: Fish): number {
 // ===== まちづくり: 名産 =====
 
 /**
- * 今いる県庁の名産を買うか。空きなら予備費を残して買い、他人のものは独占型か、
+ * 今いる町の名産を買うか（県庁でも、名物で知られる町でも同じ）。空きなら予備費を残して買い、他人のものは独占型か、
  * 地方独占が完成する・大金持ちのときだけ買収する。
  */
 export function shouldBuySpecialty(owners: Record<string, number> | undefined, nodeId: string, playerIndex: number, money: number, style: CpuStyle): boolean {

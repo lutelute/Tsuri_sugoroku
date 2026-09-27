@@ -312,13 +312,69 @@ export function SpecialtyShapes({ icon }: { icon: SpecialtyIconKind }) {
           <path d="M7.4 10.4c.5-1.2 1.4-2 2.4-2.4" stroke={WASHI} strokeWidth="1" opacity="0.7" strokeLinecap="round" fill="none" />
         </g>
       );
+    case 'squid':
+      // 透きとおったいか（函館）
+      return (
+        <g>
+          <path d="M9 15.4c-.8 2-2.2 3.4-3.6 4.6M10.4 15.8c-.4 2-1 3.8-1.8 5.4M12 16v5.6M13.6 15.8c.4 2 1 3.8 1.8 5.4M15 15.4c.8 2 2.2 3.4 3.6 4.6" stroke={INK} strokeWidth="2.3" strokeLinecap="round" fill="none" />
+          <path d="M9 15.4c-.8 2-2.2 3.4-3.6 4.6M10.4 15.8c-.4 2-1 3.8-1.8 5.4M12 16v5.6M13.6 15.8c.4 2 1 3.8 1.8 5.4M15 15.4c.8 2 2.2 3.4 3.6 4.6" stroke={WASHI2} strokeWidth="1.1" strokeLinecap="round" fill="none" />
+          <path d="M12 1.8 17.4 8.2H6.6Z" fill={WASHI2} stroke={INK} strokeWidth="0.9" strokeLinejoin="round" />
+          <path d="M8.2 7.6c0-2.2 1.7-4 3.8-4s3.8 1.8 3.8 4v6.4c0 1-.8 1.8-1.8 1.8H10c-1 0-1.8-.8-1.8-1.8Z" fill={WASHI} stroke={INK} strokeWidth="1" />
+          <path d="M10 7h.1M13.6 8.6h.1M11.2 10.8h.1M13 12.4h.1" stroke="#e39a9a" strokeWidth="1.1" strokeLinecap="round" />
+          <path d="M9.6 5.6c.4-.8 1-1.3 1.8-1.5" stroke={AI_LIGHT} strokeWidth="0.9" strokeLinecap="round" fill="none" />
+          <circle cx="10.2" cy="14.2" r="0.9" fill={INK} />
+          <circle cx="13.8" cy="14.2" r="0.9" fill={INK} />
+        </g>
+      );
+    case 'soba':
+      // ざるそばとそばちょこ（信州）
+      return (
+        <g>
+          <path d="M3 5.6 10.6 3M3.4 6.8l7.6-2.5" stroke={WOOD} strokeWidth="0.9" strokeLinecap="round" />
+          <path d="M3.6 12.2c.6-3.6 3.4-5.6 6.6-5.6s6 2 6.6 5.6Z" fill="#b8a27a" stroke={INK} strokeWidth="0.9" />
+          <path d="M5.8 10.8c1-.6 2-.6 3 0s2 .6 3 0 2-.6 3 0M7 9c.8-.5 1.6-.5 2.4 0s1.6.5 2.4 0 1.6-.5 2.4 0" stroke="#7d6a48" strokeWidth="0.7" fill="none" />
+          <path d="M9 7.4l.5-1.1M10.8 7l.1-1.2M12.6 7.3l-.3-1.1" stroke={INK} strokeWidth="0.9" strokeLinecap="round" />
+          <rect x="2.4" y="12.2" width="16" height="3.4" rx="0.6" fill={KIN_DARK} stroke={INK} strokeWidth="0.9" />
+          <path d="M2.4 13.9h16" stroke={WOOD} strokeWidth="0.6" />
+          <path d="M4 15.6v1.8M16.8 15.6v1.8" stroke={INK} strokeWidth="1.2" />
+          <path d="M16.8 14.6h5l-.6 5.8h-3.8Z" fill={AI} stroke={INK} strokeWidth="0.9" strokeLinejoin="round" />
+          <path d="M17.6 17.6h3.4" stroke={AI_LIGHT} strokeWidth="0.8" />
+          <ellipse cx="19.3" cy="14.6" rx="2.5" ry="0.75" fill="#5a2e10" stroke={INK} strokeWidth="0.6" />
+        </g>
+      );
+    case 'ume':
+      // 赤じそと梅干し（紀州）
+      return (
+        <g>
+          <ellipse cx="12" cy="16.6" rx="9.6" ry="3.8" fill={WASHI} stroke={INK} strokeWidth="1" />
+          <path d="M4.2 16.2c2.6-3.2 8-3.8 11-1.6-2.8 2.8-8.2 3.4-11 1.6Z" fill="#7a2e4a" stroke={INK} strokeWidth="0.7" />
+          <circle cx="8.2" cy="12.6" r="3.4" fill="#c8323a" stroke={INK} strokeWidth="0.9" />
+          <circle cx="15" cy="12.2" r="3.6" fill="#b82a33" stroke={INK} strokeWidth="0.9" />
+          <circle cx="11.8" cy="15.4" r="3.2" fill="#d23c40" stroke={INK} strokeWidth="0.9" />
+          <path d="M7 12c.6.6.6 1.4 0 2M14 11.4c.7.5.8 1.4.2 2.1M11 14.8c.6.5.6 1.3 0 1.9" stroke="#8e1f28" strokeWidth="0.7" strokeLinecap="round" fill="none" />
+          <path d="M6.8 11c.4-.5.9-.8 1.5-.9M13.4 10.4c.4-.5 1-.8 1.6-.9M10.4 13.9c.4-.4.9-.7 1.4-.8" stroke={WASHI} strokeWidth="0.8" strokeLinecap="round" opacity="0.8" fill="none" />
+        </g>
+      );
+    case 'peach':
+      // 白桃（岡山）
+      return (
+        <g>
+          <path d="M12 7V4.6" stroke={WOOD} strokeWidth="1.2" strokeLinecap="round" />
+          <path d="M12.3 5c1.4-2 4.2-2.3 5.6-1.1-1.2 1.9-3.8 2.4-5.6 1.1Z" fill={LEAF} stroke={INK} strokeWidth="0.8" strokeLinejoin="round" />
+          <path d="M11.7 5.2C10.6 3.6 8.4 3.2 7 4c.8 1.5 2.9 2 4.7 1.2Z" fill={LEAF_LIGHT} stroke={INK} strokeWidth="0.7" strokeLinejoin="round" />
+          <path d="M12 7c-2-2.2-7-1.8-7.6 3-.5 4.2 2.6 9.2 7.6 10 5-.8 8.1-5.8 7.6-10C19 5.2 14 4.8 12 7Z" fill="#f6d6cf" stroke={INK} strokeWidth="1" strokeLinejoin="round" />
+          <path d="M13 8.2c2.6-.9 5.2.6 5.4 3.4.2 2.6-1.4 5.4-3.8 6.8 1.4-3.2 1.2-7-1.6-10.2Z" fill="#f09a9a" opacity="0.85" />
+          <path d="M12 7c-.8 3.6-.6 8.6 0 13" stroke="#d98a86" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+          <path d="M7.2 10.2c.4-1.3 1.3-2.1 2.4-2.4" stroke={WASHI} strokeWidth="1" opacity="0.8" strokeLinecap="round" fill="none" />
+        </g>
+      );
   }
 }
 
 interface SpecialtyIconProps {
   /** 絵の種類（nodeId を渡せば省略可） */
   icon?: SpecialtyIconKind;
-  /** 県庁マスの nodeId（名産の表から絵を引く） */
+  /** 名産のある町の nodeId（名産の表から絵を引く） */
   nodeId?: string;
   size?: number;
   className?: string;

@@ -3,7 +3,8 @@ import type {
   GameState, GameScreen, TurnPhase, Player, GameSettings,
   FishingState, CaughtFish, EquipmentType, CapitalChoiceEffect, CapitalResult,
 } from '../game/types';
-import { INITIAL_MONEY, PLAYER_COLORS, PLAYER_DEFAULT_NAMES, REST_MONEY_BONUS, DEFAULT_MAX_TURNS, FISH_SELL_PRICE, BOAT_FISHING_COST, GOAL_MONEY_REWARD, GOAL_CLOSE_ROUNDS } from '../game/constants';
+import { INITIAL_MONEY, PLAYER_COLORS, PLAYER_DEFAULT_NAMES, REST_MONEY_BONUS, DEFAULT_MAX_TURNS, FISH_SELL_PRICE, BOAT_FISHING_COST, GOAL_MONEY_REWARD } from '../game/constants';
+import { fishingLastTurn } from '../game/deadline';
 import { getCapitalEvent } from '../data/capitalEvents';
 import { calculateReachableNodes } from '../game/movement';
 import { NODE_MAP } from '../data/boardNodes';
@@ -84,7 +85,7 @@ interface GameActions {
   playCityCard: (index: number, target?: number) => string | null;
   /** まちづくり: カード売り場で買う */
   buyCityCard: (id: CityCardId) => string | null;
-  /** まちづくり: 今いる県庁の名産を買う（他人のものは買収） */
+  /** まちづくり: 今いる町の名産を買う（他人のものは買収）。県庁と、名物で知られる町に名産がある */
   cityBuySpecialty: () => string | null;
   dismissBinboToast: () => void;
   acknowledgeBinboEvent: () => void;
@@ -1074,9 +1075,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
 
-    // 釣り旅: 最初のゴールから GOAL_CLOSE_ROUNDS 巡たったら締め切り
+    // 釣り旅: 最初のゴールから GOAL_CLOSE_ROUNDS 巡たったら締め切り（MIN_CLOSE_TURN 巡目より前には来ない）
     const ff = get().firstFinishTurn;
-    if (!isCityMode(settings) && ff != null && newTurn > ff + GOAL_CLOSE_ROUNDS) {
+    if (!isCityMode(settings) && ff != null && newTurn > fishingLastTurn(ff, settings.maxTurns)) {
       set({ players: workingPlayers });
       get().endGame();
       return;

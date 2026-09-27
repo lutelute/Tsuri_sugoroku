@@ -1,10 +1,11 @@
 // まちづくり: 名産と地方独占（桃鉄の物件独占）。React / ストアに依存しない純粋関数。
 //
-// 状態は CityState に足す想定の `specialties?: Record<string, number>`（県庁の nodeId → 持ち主の playerIndex）。
+// 状態は `CityState.specialties?: Record<string, number>`（名産のある町の nodeId → 持ち主の playerIndex）。
 // ここでは city.ts を触らないため、その持ち主表を引数で受け取る。未定義（古いセーブ）でも動くよう undefined も受ける。
 //
 // ルール:
-//  - 県庁マスごとに名産が1つ。空きなら価格で買え、他人の名産は価値の acquireMul 倍で買収できる（代金は持ち主へ）。
+//  - 県庁マスごとに名産が1つ。県庁が2つしかない地方は、名物で知られる町にも1つあり、どの地方も3つ以上になる。
+//    県庁かどうかでルールは変わらない。空きなら価格で買え、他人の名産は価値の acquireMul 倍で買収できる（代金は持ち主へ）。
 //  - 月収 = 価格 × 5% × 季節の倍率。電気は要らず、自然には育たない。
 //  - ある地方の名産をすべて1人で持つと地方独占。その地方の名産収入が2倍になり、称号「○○の顔役」が付く。
 import type { Region } from './types';
@@ -12,12 +13,12 @@ import { REALISTIC_NODES } from '../data/realisticData_nodes';
 import { CITY_SPECIALTIES, SPECIALTY_REGION_NAME } from '../data/citySpecialties';
 import type { CitySpecialty } from '../data/citySpecialties';
 
-/** 県庁の nodeId → 持ち主の playerIndex */
+/** 名産のある町の nodeId → 持ち主の playerIndex */
 export type SpecialtyOwners = Readonly<Record<string, number>>;
 
 /** 名産の経済の数値（難易度調整係が調整する。CITY_ECONOMY と同じく実行時に書き換えて試算してよい） */
 export const SPECIALTY_ECONOMY = {
-  /** 月収 = 価格 × これ × 季節の倍率 */
+  /** 月収 = 価格 × これ × 季節の倍率（回収は約20か月。災害・空き家で価値が下がらない安全な資産なので建物より少し遅い） */
   incomeRate: 0.05,
   /** 地方独占中の名産収入の倍率 */
   monopolyMul: 2,
@@ -33,9 +34,13 @@ export const SPECIALTY_ECONOMY = {
 
 // ===== 静的な引き当て =====
 
-/** 盤面の順に並べた、名産のある県庁マス */
+// 名産を置けないマス（町ではないマス）。city.ts の isTown と同じ線引き。
+// city.ts がこのファイルを import しているので、循環を避けて isTown は使わない（一致はテストで確かめる）。
+const NOT_TOWN: ReadonlySet<string> = new Set(['route', 'start', 'goal']);
+
+/** 盤面の順に並べた、名産のある町（県庁と、名物で知られる町） */
 export const SPECIALTY_IDS: string[] = REALISTIC_NODES
-  .filter(n => n.type === 'capital' && CITY_SPECIALTIES[n.id] !== undefined)
+  .filter(n => !NOT_TOWN.has(n.type) && CITY_SPECIALTIES[n.id] !== undefined)
   .map(n => n.id);
 
 const REGION_OF = new Map<string, Region>(

@@ -96,7 +96,7 @@ export interface CityState {
   inspections?: { nodeId: string; playerIndex: number }[];
   /** 特需（目的地に一番乗りされた町など）: 残り月数のあいだ需要が上乗せされる */
   booms?: { nodeId: string; monthsLeft: number }[];
-  /** 名産の持ち主（県庁の nodeId → playerIndex） */
+  /** 名産の持ち主（名産のある町の nodeId → playerIndex） */
   specialties?: Record<string, number>;
   /** 貧乏神（とりついている人と月数） */
   binbo?: BinboState;

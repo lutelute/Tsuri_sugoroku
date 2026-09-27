@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { REALISTIC_NODES } from '../data/realisticData_nodes';
 import { CITY_SPECIALTIES, SPECIALTY_REGION_NAME } from '../data/citySpecialties';
 import { toRubySegments } from '../data/furigana';
+import { isTown } from './city';
 import {
   SPECIALTY_ECONOMY, SPECIALTY_IDS, SPECIALTY_REGIONS, regionOfSpecialty, regionSpecialtyIds, specialtySeasonMul,
   specialtySeasonLabel, specialtyValue, specialtyBuyCost, specialtyIncome, specialtyMonthlyIncome, specialtyIncomes,
@@ -11,6 +12,9 @@ import {
 import type { SpecialtyOwners } from './citySpecialties';
 
 const CAPITALS = REALISTIC_NODES.filter(n => n.type === 'capital');
+const NODE_BY_ID = new Map(REALISTIC_NODES.map(n => [n.id, n]));
+/** 県庁以外に置いた名産（県庁が2つしかない地方の補い） */
+const NON_CAPITAL = Object.keys(CITY_SPECIALTIES).filter(id => NODE_BY_ID.get(id)?.type !== 'capital');
 
 /** 地方の名産をすべて player に持たせる */
 function ownRegion(owners: Record<string, number>, region: Parameters<typeof regionSpecialtyIds>[0], player: number): Record<string, number> {
@@ -20,18 +24,28 @@ function ownRegion(owners: Record<string, number>, region: Parameters<typeof reg
 }
 
 describe('名産: データの網羅', () => {
-  it('盤面の県庁マスすべてに名産がある', () => {
+  it('盤面の県庁マスすべてに名産があり、表の名産はすべて盤面に並ぶ', () => {
     expect(CAPITALS.length).toBeGreaterThan(0);
     const missing = CAPITALS.filter(n => !CITY_SPECIALTIES[n.id]).map(n => n.id);
     expect(missing).toEqual([]);
-    expect(SPECIALTY_IDS.length).toBe(CAPITALS.length);
+    expect(SPECIALTY_IDS.length).toBe(Object.keys(CITY_SPECIALTIES).length);
+    expect(SPECIALTY_IDS.length).toBeGreaterThan(CAPITALS.length);
   });
 
-  it('名産は県庁マスにだけあり、nodeId がキーと一致する', () => {
-    const capitalIds = new Set(CAPITALS.map(n => n.id));
+  it('名産は町のマス（isTown）にだけあり、nodeId がキーと一致する', () => {
     for (const [key, sp] of Object.entries(CITY_SPECIALTIES)) {
-      expect(capitalIds.has(key), key).toBe(true);
+      expect(isTown(NODE_BY_ID.get(key)), key).toBe(true);
       expect(sp.nodeId).toBe(key);
+    }
+  });
+
+  it('県庁以外の名産は、県庁が2つ以下の地方を3つにする補いだけ', () => {
+    expect(NON_CAPITAL.length).toBeGreaterThan(0);
+    for (const id of NON_CAPITAL) {
+      const region = regionOfSpecialty(id)!;
+      const capitalsInRegion = CAPITALS.filter(n => n.region === region).length;
+      expect(capitalsInRegion, id).toBeLessThan(3);
+      expect(regionSpecialtyIds(region).length, id).toBe(3);
     }
   });
 
@@ -62,16 +76,18 @@ describe('名産: データの網羅', () => {
     }
   });
 
-  it('どの地方にも名産が2つ以上あり、地方の独占を狙える', () => {
+  it('どの地方にも名産が3つ以上あり、2つだけの地方はない（偶然の独占を防ぐ）', () => {
     const regions = new Set(CAPITALS.map(n => n.region));
     expect(new Set(SPECIALTY_REGIONS)).toEqual(regions);
     for (const r of SPECIALTY_REGIONS) {
-      expect(regionSpecialtyIds(r).length, r).toBeGreaterThanOrEqual(2);
+      expect(regionSpecialtyIds(r).length, r).toBeGreaterThanOrEqual(3);
       expect(SPECIALTY_REGION_NAME[r].length).toBeGreaterThan(0);
     }
     expect(regionOfSpecialty('sapporo')).toBe('hokkaido');
+    expect(regionOfSpecialty('hakodate')).toBe('hokkaido');
     expect(regionOfSpecialty('naha')).toBe('kyushu');
     expect(regionOfSpecialty('choshi')).toBeNull();
+    expect(regionOfSpecialty('otaru')).toBeNull();
   });
 
   it('名産の名前・呼び名・称号の漢字にはすべてふりがなが付く', () => {
@@ -98,7 +114,9 @@ describe('名産: 季節と収入', () => {
   it('表にない月は1.0倍で、月収は価格の5%', () => {
     // 札幌の5月は表にない
     expect(specialtySeasonMul('sapporo', 5)).toBe(1);
-    expect(specialtyIncome('sapporo', 5)).toBe(Math.round(CITY_SPECIALTIES.sapporo.price * SPECIALTY_ECONOMY.incomeRate));
+    // 月収は incomeRound 円単位に丸める
+    const r = SPECIALTY_ECONOMY.incomeRound;
+    expect(specialtyIncome('sapporo', 5)).toBe(Math.round((CITY_SPECIALTIES.sapporo.price * SPECIALTY_ECONOMY.incomeRate) / r) * r);
     // 7月は1.6倍: 9000 × 5% × 1.6 = 720
     expect(specialtyIncome('sapporo', 7)).toBe(720);
   });
@@ -126,7 +144,7 @@ describe('名産: 地方独占', () => {
     expect(isSpecialtyMonopolized(owners, 'sapporo')).toBe(true);
     expect(isSpecialtyMonopolized(owners, 'tokyo')).toBe(false);
     const expected =
-      specialtyIncome('sapporo', 7, true) + specialtyIncome('kushiro', 7, true) + specialtyIncome('tokyo', 7, false);
+      regionSpecialtyIds('hokkaido').reduce((acc, id) => acc + specialtyIncome(id, 7, true), 0) + specialtyIncome('tokyo', 7, false);
     expect(specialtyMonthlyIncome(owners, 0, 7)).toBe(expected);
     expect(specialtyIncome('sapporo', 7, true)).toBe(specialtyIncome('sapporo', 7) * SPECIALTY_ECONOMY.monopolyMul);
     expect(specialtyTitles(owners)).toEqual([{ region: 'hokkaido', playerIndex: 0, title: '北海道の顔役' }]);
@@ -191,14 +209,38 @@ describe('名産: 売買', () => {
   });
 
   it('最後の1つを買うと独占が完成し、買収で独占が崩れたことも返す', () => {
-    const [a, b] = regionSpecialtyIds('chugoku');
-    const done = buySpecialty({ [a]: 0 }, b, 0, 1e9);
+    const ids = regionSpecialtyIds('chugoku');
+    const last = ids[ids.length - 1];
+    const allButLast = Object.fromEntries(ids.slice(0, -1).map(id => [id, 0]));
+    const done = buySpecialty(allButLast, last, 0, 1e9);
     expect(done.ok && done.monopolyFormed).toBe('chugoku');
     expect(done.ok && done.message).toContain('中国の顔役');
 
-    const broke = buySpecialty({ [a]: 0, [b]: 0 }, a, 1, 1e9);
+    const broke = buySpecialty(ownRegion({}, 'chugoku', 0), ids[0], 1, 1e9);
     expect(broke.ok && broke.monopolyBroken).toEqual({ region: 'chugoku', playerIndex: 0 });
     expect(broke.ok && broke.monopolyFormed).toBeUndefined();
+  });
+
+  it('県庁以外の名産も県庁と同じく買え、収入・資産・地方独占・称号が付く', () => {
+    // 北海道は札幌・釧路（県庁）と函館（県庁ではない）
+    expect(regionSpecialtyIds('hokkaido')).toContain('hakodate');
+    const bought = buySpecialty({}, 'hakodate', 0, 1e9);
+    expect(bought.ok && bought.cost).toBe(CITY_SPECIALTIES.hakodate.price);
+    const acquired = buySpecialty({ hakodate: 1 }, 'hakodate', 0, 1e9);
+    expect(acquired.ok && acquired.prevOwner).toBe(1);
+    expect(acquired.ok && acquired.cost).toBe(specialtyBuyCost({ hakodate: 1 }, 'hakodate'));
+    expect(specialtyMonthlyIncome({ hakodate: 0 }, 0, 7)).toBe(specialtyIncome('hakodate', 7));
+    expect(playerSpecialtyValue({ hakodate: 0 }, 0)).toBe(CITY_SPECIALTIES.hakodate.price);
+
+    // 県庁2つだけでは独占にならず、函館をそろえて初めて「北海道の顔役」
+    expect(regionalMonopolies({ sapporo: 0, kushiro: 0 })).toEqual({});
+    const done = buySpecialty({ sapporo: 0, kushiro: 0 }, 'hakodate', 0, 1e9);
+    expect(done.ok && done.monopolyFormed).toBe('hokkaido');
+    expect(done.ok && specialtyTitles(done.owners)).toEqual([{ region: 'hokkaido', playerIndex: 0, title: '北海道の顔役' }]);
+    for (const id of NON_CAPITAL) {
+      const region = regionOfSpecialty(id)!;
+      expect(isSpecialtyMonopolized(ownRegion({}, region, 2), id), id).toBe(true);
+    }
   });
 
   it('資産価値は価格と同じで、持ち主ごとに合計できる', () => {
