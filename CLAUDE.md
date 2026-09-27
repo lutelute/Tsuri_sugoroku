@@ -31,6 +31,7 @@ npx vite build       # プロダクションビルド
 | `events.ts` | イベントカード効果の適用 |
 | `movement.ts` | ボード上の移動・経路計算 |
 | `scoring.ts` | 最終スコア計算（魚ポイント+ボーナス） |
+| `city.ts` | まちづくりモード（区画・建設/再開発/買収・RCI需要・電力・公害・月末シミュレーション・災害・目的地・まちイベント） |
 
 ### `src/data/` — 静的データ
 | ファイル | 内容 |
@@ -38,6 +39,8 @@ npx vite build       # プロダクションビルド
 | `fishDatabase.ts` | 魚300種のデータ（276種にWikipedia URL付き） |
 | `boardNodes.ts` | ボードのノード定義（日本全国の釣りスポット） |
 | `boardEdges.ts` | ノード間の接続定義 |
+| `japanGeo.ts` | 自動生成: 都道府県ポリゴン・海岸線・県境（`scripts/build-japan-geo.mjs`） |
+| `realisticData_nodes.ts` | 日本列島盤のマス。座標は `scripts/relayout-nodes.mjs` が実在地の緯度経度から生成 |
 | `equipmentData.ts` | 装備データ（竿5段階・リール5段階・ルアー5段階） |
 | `eventCards.ts` | イベントカード定義（良・悪・ランダム） |
 
@@ -221,3 +224,26 @@ idle → roulette → path_selection(分岐あり) or node_action →
 
 ### ロールバック
 旧本番は commit `d718428`（タグ `pre-wamodern-renovation`）。`git reset --hard d718428 && git push --force-with-lease origin main`。
+
+
+## v4.0.0 地図刷新 + まちづくりモード（2026-09-27）
+
+詳細は `CHANGELOG.md`。
+
+### 地図（`src/components/map/`）
+- 座標系: `x = 84 + (lon - 127.7) * 67.6`, `y = 1445 - (lat - 26.2) * 79.4`（`mapTheme.projectLatLon`）。地形・マス・スクリプトすべてこの式で一致させる。
+- 地形は `MapTerrain.tsx`（静的・memo）。データは `src/data/japanGeo.ts`（生成物・直接編集しない）。再生成: `node scripts/build-japan-geo.mjs [japan.topojson]`。出典表記（地球地図日本・国土地理院）を地図下に表示している。
+- マス座標の再計算: `node scripts/relayout-nodes.mjs`（LATLON 表 → 投影 → 陸地に留める → 最小間隔31の反発 → 中継マスは中点）。マスを足したら LATLON に緯度経度を追加する。
+- カメラ `useMapCamera.ts`: 操作中は viewBox 属性を直接更新（React 再描画なし）。ズーム段階は svg の `data-lod`（far/mid/near）→ `index.css` の `.lbl-*` / `.lod-*` で出し分け。
+- 地名ラベル `labelLayout.ts`: 重なり回避で LOD ごとのずらし量を事前計算し、CSS 変数（--nx/--mx/--fx…）+ transform で適用。**`LABEL_FONT` と index.css のフォントサイズは一致させること。**
+- ジグザグ盤・島ホップ盤は `LegacyTerrain.tsx`（凸包表示）を使う。
+
+### まちづくりモード
+- `settings.mode === 'city'`。状態は `GameState.city`（`CityState`）。1巡=1か月、`nextPlayer` でラウンドが進むと `simulateRound` → `turnPhase: 'city_report'`。
+- 町マス到着は `executeCityNodeAction`（ストア末尾）。町パネル `turnPhase: 'city'`（`components/city/CityOverlay.tsx`）。祭り・釣り・店・湯治は町パネルから寄り道し、終われば行動選択/町パネルへ戻る。
+- 1訪問の工事は `CITY_ACTIONS_PER_VISIT`(2) 回。引き継ぎ（Firestore の装備・お金保存）はまちづくりでは行わない。ランキング登録もしない。
+- 経済バランスは `city.test.ts` と、一時的な試算テスト（`simulateRound` を36回回す）で確認して調整した。
+
+### 開発時の注意
+- リポジトリが iCloud 同期下（~/Documents）にあり、`node_modules` が退避（dataless）されると cat/grep/vite が固まる。`npm ci` で復旧する。
+- 同じ理由でファイル変更イベントが遅れて届き、Vite 開発サーバーが遅れて再起動・再読み込みすることがある。ブラウザ確認が不安定なときは `NODE_ENV=development npx vite build --mode development --outDir <tmp>` を静的配信すると安定する（DevPanel も使える）。

@@ -5,7 +5,8 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { PLAYER_DEFAULT_NAMES, PLAYER_COLORS, DEFAULT_MAX_TURNS } from '../../game/constants';
 import { lookupUserByUsername, loadUserEquipment, loadUserMoney, loadUserEncyclopedia } from '../../lib/firestore';
 import { verifyAuth } from '../../lib/firebase';
-import type { PlayerEquipment, BoardType } from '../../game/types';
+import type { PlayerEquipment, BoardType, GameMode } from '../../game/types';
+import { CITY_DEFAULT_MONTHS, CITY_INITIAL_MONEY } from '../../game/city';
 import { getActiveBoardType, setActiveBoardType, BOARD_TYPE_LABEL, BOARD_TYPE_DESC } from '../../data/boards/boardType';
 import Button from '../shared/Button';
 import Ruby from '../shared/Ruby';
@@ -22,7 +23,9 @@ export default function SetupScreen() {
   const signInGuest = useAuthStore(s => s.signInGuest);
   const [playerCount, setPlayerCount] = useState(1);
   const [names, setNames] = useState<string[]>([...PLAYER_DEFAULT_NAMES]);
-  const [maxTurns, setMaxTurns] = useState(DEFAULT_MAX_TURNS);
+  const [maxTurns, setMaxTurns] = useState(() => {
+    try { return localStorage.getItem('tsuri_sugoroku_mode') === 'city' ? CITY_DEFAULT_MONTHS : DEFAULT_MAX_TURNS; } catch { return DEFAULT_MAX_TURNS; }
+  });
   const [linkedUsers, setLinkedUsers] = useState<(LinkedUser | null)[]>([null, null, null, null]);
   const [searchInputs, setSearchInputs] = useState<string[]>(['', '', '', '']);
   const [passwordInputs, setPasswordInputs] = useState<string[]>(['', '', '', '']);
@@ -32,6 +35,15 @@ export default function SetupScreen() {
   const [starting, setStarting] = useState(false);
   const [carryOver, setCarryOver] = useState(true); // 引き継ぎモード
   const [boardType, setBoardType] = useState<BoardType>(getActiveBoardType());
+  const [mode, setModeState] = useState<GameMode>(() => {
+    try { return localStorage.getItem('tsuri_sugoroku_mode') === 'city' ? 'city' : 'fishing'; } catch { return 'fishing'; }
+  });
+  const setMode = (m: GameMode) => {
+    setModeState(m);
+    try { localStorage.setItem('tsuri_sugoroku_mode', m); } catch { /* noop */ }
+    // モードに応じた既定の長さ
+    setMaxTurns(m === 'city' ? CITY_DEFAULT_MONTHS : DEFAULT_MAX_TURNS);
+  };
 
   // ログイン中ならプレイヤー1に自動紐付け（ゲストは共有アカウントのため紐付けしない）
   useEffect(() => {
@@ -80,7 +92,7 @@ export default function SetupScreen() {
         }
       }
 
-      if (carryOver && hasLinkedUser) {
+      if (carryOver && hasLinkedUser && mode !== 'city') {
         // 引き継ぎモード: Firestoreから装備とお金を読み込み
         const savedEquipments: (PlayerEquipment | null)[] = [];
         const savedMoneys: (number | null)[] = [];
@@ -104,6 +116,7 @@ export default function SetupScreen() {
             playerUids: uids.map(u => u?.uid ?? null),
             maxTurns,
             carryOver: true,
+            mode,
           },
           savedEquipments,
           savedMoneys,
@@ -118,6 +131,7 @@ export default function SetupScreen() {
             playerUids: uids.map(u => u?.uid ?? null),
             maxTurns,
             carryOver: false,
+            mode,
           },
           undefined,
           undefined,
@@ -132,6 +146,7 @@ export default function SetupScreen() {
         playerUids: linkedUsers.slice(0, playerCount).map(u => u?.uid ?? null),
         maxTurns,
         carryOver: false,
+        mode,
       });
     } finally {
       setStarting(false);
@@ -229,6 +244,34 @@ export default function SetupScreen() {
     <div className="flex flex-col items-center justify-center h-full px-4 overflow-y-auto py-6">
       <div className="panel-ai rounded-2xl p-6 sm:p-8 w-full max-w-md">
         <h2 className="font-mincho text-2xl font-bold text-center mb-7 text-kin-300 ink-underline"><Ruby>ゲーム設定</Ruby></h2>
+
+        {/* ゲームモード */}
+        <div className="mb-6">
+          <label className="block text-sm text-white/60 mb-2"><Ruby>あそびかた</Ruby></label>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { m: 'fishing' as GameMode, icon: '🎣', title: '釣り旅', desc: '日本を巡って魚を集め、ゴールを目指す' },
+              { m: 'city' as GameMode, icon: '🏙', title: 'まちづくり', desc: `町に建物を建てて育て、総資産を競う（初期資金¥${CITY_INITIAL_MONEY.toLocaleString()}）` },
+            ]).map(o => (
+              <button
+                key={o.m}
+                onClick={() => setMode(o.m)}
+                className={`text-left rounded-xl border p-3 transition cursor-pointer ${
+                  mode === o.m ? 'bg-ai-600/70 border-kin-400/70 shadow-lg ring-1 ring-kin-300/40' : 'bg-white/5 border-white/10 hover:bg-white/10'
+                }`}
+              >
+                <div className="text-2xl leading-none mb-1">{o.icon}</div>
+                <div className="font-mincho font-bold text-washi"><Ruby>{o.title}</Ruby></div>
+                <div className="text-[11px] text-white/55 leading-snug mt-0.5"><Ruby>{o.desc}</Ruby></div>
+              </button>
+            ))}
+          </div>
+          {mode === 'city' && (
+            <p className="text-[11px] text-kin-300/80 mt-2 leading-relaxed">
+              <Ruby>止まった町に住宅・商業・工業・発電所などを建てよう。電力・公害・幸福度のバランスで町は毎月ひとりでに発展する。目的地に一番乗りで賞金、地震や台風にも注意！</Ruby>
+            </p>
+          )}
+        </div>
 
         {/* プレイヤー人数 */}
         <div className="mb-6">
@@ -341,7 +384,7 @@ export default function SetupScreen() {
         </div>
 
         {/* 引き継ぎモード */}
-        {hasLinkedUser && (
+        {hasLinkedUser && mode !== 'city' && (
           <div className="mb-6">
             <label className="block text-sm text-white/60 mb-2"><Ruby>装備・お金の引き継ぎ</Ruby></label>
             <div className="flex gap-2">
@@ -377,9 +420,9 @@ export default function SetupScreen() {
 
         {/* ターン数設定 */}
         <div className="mb-6">
-          <label className="block text-sm text-white/60 mb-2"><Ruby>最大ターン数</Ruby></label>
+          <label className="block text-sm text-white/60 mb-2"><Ruby>{mode === 'city' ? 'あそぶ期間' : '最大ターン数'}</Ruby></label>
           <div className="flex gap-2">
-            {[50, 80, 120, 0].map(n => (
+            {(mode === 'city' ? [12, 24, 36, 48] : [50, 80, 120, 0]).map(n => (
               <button
                 key={n}
                 onClick={() => setMaxTurns(n)}
@@ -389,7 +432,7 @@ export default function SetupScreen() {
                     : 'bg-white/10 text-white/60 hover:bg-white/20'
                   }`}
               >
-                {n === 0 ? <Ruby>無制限</Ruby> : `${n}T`}
+                {n === 0 ? <Ruby>無制限</Ruby> : mode === 'city' ? <>{n / 12}<Ruby>年</Ruby></> : `${n}T`}
               </button>
             ))}
           </div>

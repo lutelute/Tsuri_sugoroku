@@ -1,3 +1,5 @@
+import type { CityState, CityReport, CityEventCard, CityDisasterReport } from './city';
+
 // ===== ノード関連 =====
 
 export type NodeType =
@@ -226,6 +228,9 @@ export interface FishingState {
 
 export type GameScreen = 'title' | 'setup' | 'game' | 'result' | 'login';
 
+/** ゲームモード: 釣り旅（従来）/ まちづくり（SimCity 風） */
+export type GameMode = 'fishing' | 'city';
+
 export type TurnPhase =
   | 'idle'
   | 'roulette'
@@ -239,6 +244,9 @@ export type TurnPhase =
   | 'rest'
   | 'capital_event'
   | 'action_choice'
+  | 'city'          // まちづくり: 町の区画パネル
+  | 'city_event'    // まちづくり: まちイベントカード
+  | 'city_report'   // まちづくり: 月末の市政レポート
   | 'turn_end';
 
 export interface GameSettings {
@@ -247,6 +255,7 @@ export interface GameSettings {
   playerUids: (string | null)[]; // 各プレイヤーの Firebase UID（未紐付けは null）
   maxTurns: number; // 0 = ゴール到達で終了
   carryOver?: boolean; // 装備・所持金の引き継ぎモード（falseならゲーム終了時にFirestoreへ保存しない）
+  mode?: GameMode; // 省略時は 'fishing'
 }
 
 export interface GameState {
@@ -266,6 +275,21 @@ export interface GameState {
   nodeActionsThisTurn: number;
   boatFishingRemaining: number; // 船釣り残り回数（0=通常モード）
   lastCapitalResult: CapitalResult | null; // 直近の県メインイベント結果（モーダル表示用）
+  lastMove: MoveRecord | null; // 直近の移動経路（駒のアニメーション用）
+  // ===== まちづくりモード =====
+  city: CityState | null;
+  cityReport: CityReport | null;
+  cityActionsThisTurn: number;
+  currentCityEvent: CityEventCard | null;
+  lastCityEventOutcome: { message: string; moneyDelta: number; disaster?: CityDisasterReport } | null;
+  cityToast: { title: string; body: string; seq: number } | null;
+  capitalDoneThisTurn: boolean;
+}
+
+export interface MoveRecord {
+  playerIndex: number;
+  path: string[];
+  seq: number;
 }
 
 // ===== スコア =====

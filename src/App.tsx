@@ -1,11 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { useGameStore } from './store/useGameStore';
 import { useAuthStore } from './store/useAuthStore';
 import TitleScreen from './components/screens/TitleScreen';
-import SetupScreen from './components/screens/SetupScreen';
-import GameScreen from './components/screens/GameScreen';
-import ResultScreen from './components/screens/ResultScreen';
-import LoginScreen from './components/screens/LoginScreen';
+// タイトル以外は遅延読み込み（地図の海岸線データや釣りミニゲームを初回表示に含めない）
+const SetupScreen = lazy(() => import('./components/screens/SetupScreen'));
+const GameScreen = lazy(() => import('./components/screens/GameScreen'));
+const ResultScreen = lazy(() => import('./components/screens/ResultScreen'));
+const LoginScreen = lazy(() => import('./components/screens/LoginScreen'));
 
 export default function App() {
   const screen = useGameStore(s => s.screen);
@@ -53,11 +54,13 @@ export default function App() {
 
   return (
     <div className="w-full h-full">
-      {screen === 'title' && <TitleScreen />}
-      {screen === 'setup' && <SetupScreen />}
-      {screen === 'game' && <GameScreen />}
-      {screen === 'result' && <ResultScreen />}
-      {screen === 'login' && <LoginScreen />}
+      <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-white/50 text-sm">読み込み中...</div>}>
+        {screen === 'title' && <TitleScreen />}
+        {screen === 'setup' && <SetupScreen />}
+        {screen === 'game' && <GameScreen />}
+        {screen === 'result' && <ResultScreen />}
+        {screen === 'login' && <LoginScreen />}
+      </Suspense>
     </div>
   );
 }

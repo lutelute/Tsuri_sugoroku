@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, MAX_FISHING_PER_TURN } from '../../store/useGameStore';
+import { MOVE_STEP_MS } from '../map/PlayerToken';
 import { NODE_MAP } from '../../data/boardNodes';
 import { GOAL_MONEY_REWARD } from '../../game/constants';
 import JapanMap from '../map/JapanMap';
@@ -16,16 +18,37 @@ import InventoryPanel from '../inventory/InventoryPanel';
 import RestOverlay from '../rest/RestOverlay';
 import CapitalEventOverlay from '../capital/CapitalEventOverlay';
 import DevPanel from '../dev/DevPanel';
+import CityOverlay from '../city/CityOverlay';
+import CityEventOverlay from '../city/CityEventOverlay';
+import CityReportOverlay from '../city/CityReportOverlay';
+import { isTown } from '../../game/city';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
 
 export default function GameScreen() {
+  // 釣りミニゲーム中の高頻度更新(fishingState)で画面全体が再描画されないよう、必要な値だけ購読する
   const {
     turnPhase, players, currentPlayerIndex, nodeActionsThisTurn,
     setTurnPhase, executeNodeAction, endTurn, doActionAgain, rouletteResult,
-    setScreen, endGame,
-  } = useGameStore();
+    setScreen, endGame, lastMove, isCity, cityToast, dismissCityToast,
+  } = useGameStore(useShallow(s => ({
+    isCity: s.settings.mode === 'city',
+    cityToast: s.cityToast,
+    dismissCityToast: s.dismissCityToast,
+    turnPhase: s.turnPhase,
+    players: s.players,
+    currentPlayerIndex: s.currentPlayerIndex,
+    nodeActionsThisTurn: s.nodeActionsThisTurn,
+    setTurnPhase: s.setTurnPhase,
+    executeNodeAction: s.executeNodeAction,
+    endTurn: s.endTurn,
+    doActionAgain: s.doActionAgain,
+    rouletteResult: s.rouletteResult,
+    setScreen: s.setScreen,
+    endGame: s.endGame,
+    lastMove: s.lastMove,
+  })));
 
   const [showEncyclopedia, setShowEncyclopedia] = useState(false);
   const [showCreel, setShowCreel] = useState(false);
@@ -35,13 +58,14 @@ export default function GameScreen() {
   const player = players[currentPlayerIndex];
   const node = NODE_MAP.get(player?.currentNode || '');
 
-  // node_action: 到着演出後にアクション実行
+  // node_action: 駒が1マスずつ進む演出を待ってからアクション実行
+  const moveSteps = lastMove && lastMove.playerIndex === currentPlayerIndex ? lastMove.path.length - 1 : 0;
   useEffect(() => {
     if (turnPhase === 'node_action') {
-      const timer = setTimeout(() => executeNodeAction(), 600);
+      const timer = setTimeout(() => executeNodeAction(), 450 + moveSteps * MOVE_STEP_MS);
       return () => clearTimeout(timer);
     }
-  }, [turnPhase, executeNodeAction]);
+  }, [turnPhase, executeNodeAction, moveSteps]);
 
   // turn_end → 次のプレイヤーへ（手動ではなく少し待つ）
   useEffect(() => {
@@ -50,6 +74,13 @@ export default function GameScreen() {
       return () => clearTimeout(timer);
     }
   }, [turnPhase, endTurn]);
+
+  // 目的地到着などのお知らせは数秒で自動的に閉じる
+  useEffect(() => {
+    if (!cityToast) return;
+    const t = setTimeout(() => dismissCityToast(), 4200);
+    return () => clearTimeout(t);
+  }, [cityToast, dismissCityToast]);
 
   // 現在のノードで再アクション可能か
   const canDoActionAgain = (() => {
@@ -113,6 +144,16 @@ export default function GameScreen() {
             <div className="text-center text-xs text-white/70 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1.5">
               📍 <Ruby>{node?.name || '???'}</Ruby> — <Ruby>何をする？</Ruby>
             </div>
+            {isCity && isTown(node) && (
+              <Button
+                onClick={() => setTurnPhase('city')}
+                variant="gold"
+                size="md"
+                className="w-full shadow-xl"
+              >
+                <Ruby>まちづくり（区画を見る）</Ruby>
+              </Button>
+            )}
             {canDoActionAgain && (
               <Button
                 onClick={doActionAgain}
@@ -195,6 +236,21 @@ export default function GameScreen() {
       {turnPhase === 'shop' && <ShopOverlay />}
       {turnPhase === 'event' && <EventOverlay />}
       {turnPhase === 'capital_event' && <CapitalEventOverlay />}
+      {turnPhase === 'city' && <CityOverlay />}
+      {turnPhase === 'city_event' && <CityEventOverlay />}
+      {turnPhase === 'city_report' && <CityReportOverlay />}
+
+      {/* まちづくり: 目的地到着などのお知らせ */}
+      {cityToast && (
+        <button
+          key={cityToast.seq}
+          onClick={dismissCityToast}
+          className="fixed top-14 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md washi-card rounded-xl px-4 py-3 text-left shadow-2xl animate-slide-in-down cursor-pointer"
+        >
+          <p className="font-mincho font-bold text-[#a92e1d]">🚩 <Ruby>{cityToast.title}</Ruby></p>
+          <p className="text-xs text-[#4a3a28] mt-0.5"><Ruby>{cityToast.body}</Ruby></p>
+        </button>
+      )}
 
       {/* 休憩所（修理機能付き） */}
       {turnPhase === 'rest' && node && (

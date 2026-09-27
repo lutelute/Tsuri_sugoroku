@@ -107,6 +107,7 @@ export default function CapitalEventOverlay() {
   const setTurnPhase = useGameStore(s => s.setTurnPhase);
   const lastCapitalResult = useGameStore(s => s.lastCapitalResult);
   const acknowledgeCapitalResult = useGameStore(s => s.acknowledgeCapitalResult);
+  const isCity = useGameStore(s => s.settings.mode === 'city');
 
   const player = players[currentPlayerIndex];
   const node = NODE_MAP.get(player?.currentNode || '');
@@ -156,7 +157,7 @@ export default function CapitalEventOverlay() {
 
         {/* スキップ（イベントを見送る） */}
         <Button
-          onClick={() => setTurnPhase('turn_end')}
+          onClick={() => setTurnPhase(isCity ? 'city' : 'turn_end')}
           variant="secondary"
           className="w-full mt-4"
           size="sm"

@@ -1,40 +1,68 @@
+import { memo, useEffect, useState } from 'react';
 import type { Player } from '../../game/types';
 import { NODE_MAP } from '../../data/boardNodes';
+
+/** 1マス進むのにかける時間（GameScreen の到着演出待ちと共有） */
+export const MOVE_STEP_MS = 190;
+
+export interface MoveInfo {
+  playerIndex: number;
+  path: string[];
+  seq: number;
+}
 
 interface PlayerTokenProps {
   player: Player;
   index: number;
   totalPlayers: number;
   isCurrent?: boolean;
+  move: MoveInfo | null;
+  /** 同じマスにいる駒の中での並び順 */
+  stackIndex: number;
+  stackSize: number;
 }
 
-export default function PlayerToken({ player, index, totalPlayers, isCurrent }: PlayerTokenProps) {
-  const node = NODE_MAP.get(player.currentNode);
+function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize }: PlayerTokenProps) {
+  // 表示上の現在マス（移動中は経路に沿って1マスずつ進める）
+  const [shownNode, setShownNode] = useState(player.currentNode);
+
+  useEffect(() => {
+    const timers: number[] = [];
+    const path = move && move.playerIndex === index ? move.path : null;
+    if (path && path.length > 1 && path[path.length - 1] === player.currentNode) {
+      path.slice(1).forEach((nid, i) => {
+        timers.push(window.setTimeout(() => setShownNode(nid), i * MOVE_STEP_MS));
+      });
+    } else {
+      timers.push(window.setTimeout(() => setShownNode(player.currentNode), 0));
+    }
+    return () => timers.forEach(t => clearTimeout(t));
+    // move.seq が変わったとき（新しい移動）と currentNode が変わったときだけ再生
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player.currentNode, move?.seq]);
+
+  const node = NODE_MAP.get(shownNode) ?? NODE_MAP.get(player.currentNode);
   if (!node) return null;
 
-  const offset = totalPlayers > 1 ? (index - (totalPlayers - 1) / 2) * 12 : 0;
-  const x = node.x + 14 + offset;
-  const y = node.y - 26;
+  const moving = shownNode !== player.currentNode;
+  const offset = stackSize > 1 && !moving ? (stackIndex - (stackSize - 1) / 2) * 13 : 0;
+  const x = node.x + 12 + offset;
+  const y = node.y - 22;
 
   return (
     <g
       aria-hidden="true"
       style={{
         transform: `translate(${x}px, ${y}px)`,
-        transition: 'transform 0.7s ease-in-out',
+        transition: `transform ${moving ? MOVE_STEP_MS - 20 : 450}ms ${moving ? 'linear' : 'ease-in-out'}`,
       }}
     >
       {/* 現在プレイヤーの強調オーラ (脈動) */}
       {isCurrent && (
-        <>
-          <circle cx={0} cy={2} r={14} fill="none" stroke={player.color} strokeWidth="1.8" opacity="0.7">
-            <animate attributeName="r" values="14;22;14" dur="1.6s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.8;0.2;0.8" dur="1.6s" repeatCount="indefinite" />
-          </circle>
-          <circle cx={0} cy={2} r={11} fill={player.color} opacity="0.18">
-            <animate attributeName="opacity" values="0.30;0.10;0.30" dur="1.6s" repeatCount="indefinite" />
-          </circle>
-        </>
+        <circle cx={0} cy={2} r={14} fill="none" stroke={player.color} strokeWidth="1.8" opacity="0.7">
+          <animate attributeName="r" values="12;20;12" dur="1.6s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.8;0.15;0.8" dur="1.6s" repeatCount="indefinite" />
+        </circle>
       )}
 
       {/* 接地影 */}
@@ -48,7 +76,6 @@ export default function PlayerToken({ player, index, totalPlayers, isCurrent }: 
         strokeWidth={isCurrent ? 2.2 : 1.65}
         strokeLinejoin="round"
       />
-      {/* 上面の照り */}
       <ellipse cx={-2.1} cy={-5.4} rx={3} ry={2.1} fill="#ffffff" opacity="0.35" />
 
       {/* 番号の白丸 */}
@@ -66,18 +93,9 @@ export default function PlayerToken({ player, index, totalPlayers, isCurrent }: 
       >
         {player.id + 1}
       </text>
-
-      {/* 現在プレイヤーの上に小さな矢印インジケーター */}
-      {isCurrent && (
-        <path
-          d="M 0,-14 L -3,-9 L 3,-9 Z"
-          fill="#ffffff"
-          stroke={player.color}
-          strokeWidth="0.6"
-        >
-          <animate attributeName="opacity" values="1;0.5;1" dur="1.0s" repeatCount="indefinite" />
-        </path>
-      )}
     </g>
   );
 }
+
+const PlayerToken = memo(PlayerTokenImpl);
+export default PlayerToken;

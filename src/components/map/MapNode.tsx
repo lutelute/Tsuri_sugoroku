@@ -1,5 +1,7 @@
+import { memo } from 'react';
 import type { BoardNode, NodeType, RouteTheme } from '../../game/types';
 import { computeDistanceToGoal } from '../../utils/pathfinding';
+import { nodeRadius } from './mapTheme';
 
 const distanceToGoal = computeDistanceToGoal();
 
@@ -8,7 +10,6 @@ interface MapNodeProps {
   isReachable: boolean;
   isCurrentPlayer: boolean;
   steps?: number;
-  onClick?: () => void;
 }
 
 // 和モダン パレット（藍×朱×金を基調に）
@@ -79,15 +80,14 @@ function darken(hex: string, a: number): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
-export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onClick }: MapNodeProps) {
+function MapNodeImpl({ node, isReachable, isCurrentPlayer, steps }: MapNodeProps) {
   const isCapital = node.type === 'capital';
   const isRoute = node.type === 'route';
   // routeはrouteThemeに応じて色を上書き
   const color = isRoute && node.routeTheme ? ROUTE_THEME_COLORS[node.routeTheme] : NODE_COLORS[node.type];
-  const special = node.type === 'start' || node.type === 'goal' || isCapital;
   // v3.1.x: 座標×4.5 に対してノード半径は相対的に縮小し、視覚的な余白を確保。
   // タップ判定は別途大きいまま（押しやすさは維持）。
-  const R = isCapital ? 11 : isRoute ? 4.2 : special ? 9.5 : 7.5;
+  const R = nodeRadius(node);
   const dist = distanceToGoal.get(node.id);
   // 地方の連想色を rim(外枠)に使い、ノード単体でも地方が認識できるように。
   // start/goal/capital/currentPlayerは特別色を維持。
@@ -103,10 +103,7 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
   const cy = node.y;
 
   return (
-    <g
-      className="cursor-pointer"
-      onClick={onClick}
-    >
+    <g className="cursor-pointer" data-node-id={node.id}>
       <title>
         {node.name}{dist !== undefined && dist > 0 ? ` - ゴールまで${dist}マス` : dist === 0 ? ' - ゴール' : ''}
       </title>
@@ -115,19 +112,16 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
       <circle
         cx={cx}
         cy={cy}
-        r={isReachable ? 28 : 14}
+        r={isReachable ? 24 : isRoute ? 8 : 13}
         fill="transparent"
         className="cursor-pointer"
       />
 
-      {/* capitalノード: 常時光る金のオーラ */}
+      {/* capitalノード: 金のオーラ（静的。常時アニメは全画面の再描画を招くため廃止） */}
       {isCapital && (
         <>
-          <circle cx={cx} cy={cy} r={R + 10.5} fill="rgba(241,216,147,0.10)" className="pointer-events-none">
-            <animate attributeName="r" values={`${R + 7.5};${R + 13.5};${R + 7.5}`} dur="2.4s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.55;0.95;0.55" dur="2.4s" repeatCount="indefinite" />
-          </circle>
-          <circle cx={cx} cy={cy} r={R + 6} fill="none" stroke="#f1d893" strokeWidth="1.35" opacity="0.7" className="pointer-events-none" />
+          <circle cx={cx} cy={cy} r={R + 5.5} fill="rgba(241,216,147,0.2)" className="pointer-events-none" />
+          <circle cx={cx} cy={cy} r={R + 3} fill="none" stroke="#f1d893" strokeWidth="1.2" opacity="0.85" className="pointer-events-none" />
         </>
       )}
 
@@ -163,8 +157,8 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
           <path d={`M ${cx - 5.1},${cy - 6.3} L ${cx + 5.7},${cy - 3.9} L ${cx - 5.1},${cy - 1.2} Z`} fill="#f1d893" stroke="#b8862f" strokeWidth="0.9" />
         </g>
       ) : isRoute ? (
-        // 街道テーマ別の小グラフィック
-        <g className="pointer-events-none">
+        // 街道テーマ別の小グラフィック（寄ったときだけ見せる）
+        <g className="pointer-events-none route-glyph">
           {node.routeTheme === 'mountain' && (
             <path d={`M ${cx - 3.6},${cy + 2.1} L ${cx},${cy - 3.3} L ${cx + 3.6},${cy + 2.1} Z`} fill="#fff" opacity="0.85" />
           )}
@@ -216,3 +210,6 @@ export default function MapNode({ node, isReachable, isCurrentPlayer, steps, onC
     </g>
   );
 }
+
+const MapNode = memo(MapNodeImpl);
+export default MapNode;

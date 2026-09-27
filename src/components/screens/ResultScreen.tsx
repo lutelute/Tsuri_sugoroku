@@ -1,4 +1,5 @@
 import { useMemo, useEffect, useRef } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { calculateScore } from '../../game/scoring';
 import { saveEncyclopedia } from '../../utils/storage';
@@ -6,9 +7,12 @@ import { saveUserEncyclopedia, saveUserScore } from '../../lib/firestore';
 import { FISH_DATABASE } from '../../data/fishDatabase';
 import Button from '../shared/Button';
 import Ruby from '../shared/Ruby';
+import CityResult from '../city/CityResult';
 
 export default function ResultScreen() {
-  const { players, encyclopedias, resetGame } = useGameStore();
+  const { players, encyclopedias, resetGame, city } = useGameStore(
+    useShallow(s => ({ players: s.players, encyclopedias: s.encyclopedias, resetGame: s.resetGame, city: s.city })),
+  );
   const savedRef = useRef(false);
 
   const results = useMemo(() => {
@@ -35,7 +39,8 @@ export default function ResultScreen() {
       }
     }
 
-    // ランキング保存（ログインユーザーのみ）
+    // ランキング保存（ログインユーザーのみ。まちづくりは得点体系が違うので釣果番付には載せない）
+    if (city) return;
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
       const enc = encyclopedias[i] ?? {};
@@ -54,18 +59,20 @@ export default function ResultScreen() {
         breakdown: score,
       }).catch(() => {});
     }
-  }, [players, encyclopedias]);
+  }, [players, encyclopedias, city]);
 
   const RANK_ICONS = ['🥇', '🥈', '🥉', '4️⃣'];
 
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 overflow-y-auto py-8">
       <h1 className="font-brush text-5xl mb-2 kinpaku kinpaku-shimmer animate-ink-rise">
-        <Ruby>釣果番付</Ruby>
+        <Ruby>{city ? '長者番付' : '釣果番付'}</Ruby>
       </h1>
       <p className="text-washi/55 mb-6 font-mincho tracking-widest"><Ruby>お疲れ様でした</Ruby></p>
 
-      <div className="w-full max-w-lg space-y-4">
+      {city && <CityResult city={city} players={players} />}
+
+      <div className={`w-full max-w-lg space-y-4 ${city ? 'hidden' : ''}`}>
         {results.map((result, index) => (
           <div
             key={result.player.id}

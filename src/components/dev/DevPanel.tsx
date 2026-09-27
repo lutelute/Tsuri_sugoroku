@@ -30,6 +30,8 @@ export default function DevPanel() {
   const user = useAuthStore(s => s.user);
   const screen = useGameStore(s => s.screen);
   const warpCurrentPlayerTo = useGameStore(s => s.warpCurrentPlayerTo);
+  const hasCity = useGameStore(s => !!s.city);
+  const devCityCheat = useGameStore(s => s.devCityCheat);
   const capitalNodes = BOARD_NODES.filter(n => n.type === 'capital');
 
   const flash = (m: string) => {
@@ -131,6 +133,15 @@ export default function DevPanel() {
                 {n.name} <span className="text-washi/40 text-[9px]">({n.region})</span>
               </button>
             ))}
+          </div>
+        )}
+        {screen === 'game' && hasCity && (
+          <div className="col-span-2 grid grid-cols-2 gap-1.5 rounded-md bg-emerald-900/25 border border-emerald-500/25 p-1.5">
+            <span className="col-span-2 text-[10px] text-emerald-200/80">まちづくり</span>
+            <button onClick={() => { devCityCheat('money'); flash('¥50,000 追加'); }} className="px-2 py-1 rounded bg-ai-700/60 hover:bg-ai-600/70 text-washi cursor-pointer">+¥50,000</button>
+            <button onClick={() => { devCityCheat('simulate'); flash('月末処理を実行'); }} className="px-2 py-1 rounded bg-ai-700/60 hover:bg-ai-600/70 text-washi cursor-pointer">月末処理</button>
+            <button onClick={() => { devCityCheat('quake'); flash('地震カード'); }} className="px-2 py-1 rounded bg-shu-800/50 hover:bg-shu-700/60 text-shu-100 cursor-pointer">地震</button>
+            <button onClick={() => { devCityCheat('kaiju'); flash('大王イカ'); }} className="px-2 py-1 rounded bg-shu-800/50 hover:bg-shu-700/60 text-shu-100 cursor-pointer">大王イカ</button>
           </div>
         )}
         <button onClick={clearSave} className="col-span-2 px-2 py-1.5 rounded-md bg-shu-800/50 hover:bg-shu-700/60 border border-shu-500/30 text-shu-200 cursor-pointer">中断セーブ削除</button>

@@ -6,6 +6,7 @@ import { getCapitalEvent } from '../../data/capitalEvents';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
 import { computeDistanceToGoal } from '../../utils/pathfinding';
+import TownInfoSection from '../city/TownInfoSection';
 
 const distanceToGoal = computeDistanceToGoal();
 
@@ -110,6 +111,9 @@ export default function NodeInfoOverlay({ node, onClose }: NodeInfoOverlayProps)
             <Ruby>{node.description}</Ruby>
           </p>
         )}
+
+        {/* まちづくり: 町の状況 */}
+        <TownInfoSection nodeId={node.id} />
 
         {/* 県メインイベント */}
         {capitalEvent && (

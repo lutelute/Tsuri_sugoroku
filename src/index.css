@@ -280,3 +280,26 @@ rt {
 .glow-rare { animation: glow-rare 2s ease-in-out infinite; }
 .glow-legendary { animation: glow-legendary 2s ease-in-out infinite; }
 .glow-mythical { animation: glow-mythical 3s ease-in-out infinite; }
+
+/* ===== 地図のズーム段階(LOD) =====
+   カメラが svg の data-lod 属性だけを書き換え、ラベルの大きさ・表示は CSS で切り替える。
+   （React の再描画を伴わないので、ズーム中もなめらか） */
+.map-svg { cursor: grab; }
+.map-svg:active { cursor: grabbing; }
+.map-svg .lbl-cap { font-size: 13px; stroke-width: 3px; }
+.map-svg .lbl-node { font-size: 9.5px; stroke-width: 2.4px; }
+.map-svg .lbl-pref { font-size: 11px; letter-spacing: 2px; }
+.map-svg .lbl-region { font-size: 30px; stroke-width: 7px; opacity: 0.9; letter-spacing: 4px; }
+.map-svg[data-lod="far"] .lbl-cap { font-size: 24px; stroke-width: 5px; }
+.map-svg[data-lod="far"] .lod-hide-far { display: none; }
+.map-svg[data-lod="far"] .lbl-region { font-size: 50px; stroke-width: 11px; }
+.map-svg[data-lod="mid"] .lbl-cap { font-size: 15px; stroke-width: 3.4px; }
+.map-svg[data-lod="mid"] .lbl-node { font-size: 11px; stroke-width: 2.6px; }
+.map-svg[data-lod="mid"] .lbl-region { font-size: 36px; stroke-width: 8px; }
+.map-svg:not([data-lod="near"]) .lod-near { display: none; }
+.map-svg:not([data-lod="near"]) .route-glyph { display: none; }
+/* 地名ラベル: 重なり回避で求めた「マス中心からのずらし量」を段階ごとに適用 */
+.map-svg .lbl { transform: translate(var(--nx), var(--ny)); }
+.map-svg[data-lod="mid"] .lbl { transform: translate(var(--mx), var(--my)); }
+.map-svg[data-lod="far"] .lbl { transform: translate(var(--fx), var(--fy)); }
+.map-svg[data-lod="near"] .lbl-region { font-size: 26px; stroke-width: 6px; opacity: 0.6; }

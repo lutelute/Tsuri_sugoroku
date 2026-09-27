@@ -8,7 +8,8 @@
 
 ## 特徴
 
-- 日本全国8地方を巡るマップ (北海道・東北・関東・中部・近畿・中国・四国・九州)
+- **2つの遊び方**: 魚を集めてゴールを目指す「釣り旅」と、町を建てて育てる SimCity 風の「まちづくり」（桃鉄のような目的地・物件・独占 + 需要・電力・公害・自然成長・災害）
+- 実際の海岸線・県境で描いた日本地図（地球地図日本・国土地理院のデータを加工）。8地方を巡るマップ
 - 多彩な魚種 (common〜mythical の5段階レアリティ)
 - タイミングベースの釣りミニゲーム (アタリ合わせ → リーリング)
 - 装備のアップグレード (竿・リール・ルアー各Lv1〜5)
@@ -22,6 +23,10 @@
 | タイトル | セットアップ | ゲーム画面 |
 |:---:|:---:|:---:|
 | ![title](docs/demo-title.png) | ![setup](docs/demo-setup.png) | ![game](docs/demo-game.png) |
+
+## 地図データの出典
+
+地図の海岸線・県境は [地球地図日本](https://www.gsi.go.jp/kankyochiri/gm_jpn.html)（国土地理院）を [dataofjapan/land](https://github.com/dataofjapan/land) 経由で取得し、`scripts/build-japan-geo.mjs` でゲーム座標へ投影・簡略化して `src/data/japanGeo.ts` に埋め込んでいます。
 
 ## 技術スタック
 
