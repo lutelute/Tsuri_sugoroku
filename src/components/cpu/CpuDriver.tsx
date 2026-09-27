@@ -5,13 +5,35 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, MAX_FISHING_PER_TURN } from '../../store/useGameStore';
 import { NODE_MAP } from '../../data/boardNodes';
 import { getCapitalEvent } from '../../data/capitalEvents';
-import { chooseCpuPath, chooseCityAction, chooseShopPurchase, chooseCapitalChoice } from '../../game/cpuAI';
+import { chooseCpuPath, chooseCityAction, chooseShopPurchase, chooseCapitalChoice, shouldBuySpecialty } from '../../game/cpuAI';
 import { BUILDING_INFO, CITY_ACTIONS_PER_VISIT, getTownInfo } from '../../game/city';
 import { getEquippedItem, getEquipmentName } from '../../game/equipment';
 import { randomInt, random } from '../../utils/random';
 import { ROULETTE_MIN, ROULETTE_MAX } from '../../game/constants';
 import Ruby from '../shared/Ruby';
 import { playDiceRoll, playDiceLand } from '../../utils/sound';
+import { chooseCpuCard, rollDiceFaces, emptyPlotIndex } from '../../game/cityCards';
+import { distancesFrom } from '../../game/city';
+import type { CpuCardContext } from '../../game/cityCards';
+
+/** CPU のカード判断に渡す状況 */
+function cardContext(isInTown: boolean): CpuCardContext {
+  const st = useGameStore.getState();
+  const pi = st.currentPlayerIndex;
+  const me = st.players[pi];
+  const dd = st.city?.destination ? distancesFrom(st.city.destination) : null;
+  const dist = (node: string) => (dd ? dd.get(node) ?? Infinity : Infinity);
+  const town = st.city?.towns[me.currentNode];
+  return {
+    distToDestination: dist(me.currentNode),
+    money: me.money,
+    isInTown,
+    opponents: st.players.map((p, i) => ({ index: i, distToDestination: dist(p.currentNode) })).filter(o => o.index !== pi),
+    hasEmptyPlot: st.city ? emptyPlotIndex(st.city, me.currentNode) >= 0 : false,
+    wantsAcquire: !!town && me.cpuStyle === 'monopoly' && town.plots.some(p => p && p.owner !== pi),
+    pendingDice: st.pendingDiceCount,
+  };
+}
 
 /** 段階ごとの「間」（ms）。人が目で追える速さにする */
 const DELAY: Record<string, number> = {
@@ -28,6 +50,9 @@ const DELAY: Record<string, number> = {
   action_choice: 800,
 };
 
+/** 町でのカード検討は1訪問1回まで（同じ手番で何度も考えない） */
+const cpuTownCardTried = new Set<string>();
+
 function runCpuStep() {
   const st = useGameStore.getState();
   const player = st.players[st.currentPlayerIndex];
@@ -38,10 +63,20 @@ function runCpuStep() {
   switch (st.turnPhase) {
     case 'idle':
     case 'roulette': {
-      const n = randomInt(ROULETTE_MIN, ROULETTE_MAX);
+      // まちづくり: 振る前にカードを検討（急行・牛歩・保険・ぶっとび…）
+      if (st.cityCards && st.turnPhase === 'idle') {
+        const pick = chooseCpuCard(st.cityCards, st.currentPlayerIndex, cardContext(false));
+        if (pick && !st.playCityCard(pick.index, pick.target)) {
+          // ぶっとびで移動したら到着処理へ進む（振らない）
+          if (useGameStore.getState().turnPhase !== 'idle') return;
+        }
+      }
+      const st2 = useGameStore.getState();
+      const faces = st2.cityCards ? rollDiceFaces(st2.pendingDiceCount, st2.pendingDiceCap) : [randomInt(ROULETTE_MIN, ROULETTE_MAX)];
+      const n = faces.reduce((a, b) => a + b, 0);
       playDiceRoll();
       window.setTimeout(playDiceLand, 350);
-      st.announce(`${player.name}のサイコロ`, `🎲 ${n} が出た`);
+      st.announce(`${player.name}のサイコロ`, faces.length > 1 ? `🎲 ${faces.join('＋')}＝${n}` : `🎲 ${n} が出た`);
       st.rollDice(n);
       return;
     }
@@ -55,6 +90,8 @@ function runCpuStep() {
         turn: st.turn,
         maxTurns: st.settings.maxTurns,
         goalClaims: st.cityGoalClaims,
+        binboHolder: st.city?.binbo?.playerIndex ?? null,
+        playerNodes: st.players.map(p => p.currentNode),
       });
       st.selectPath(idx);
       return;
@@ -116,9 +153,19 @@ function runCpuStep() {
       return;
     }
     case 'city': {
-      if (!st.city || st.cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT) {
+      if (!st.city || st.cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT + st.cityBonusActions) {
         st.setTurnPhase('action_choice');
         return;
+      }
+      // 町に入った最初の一手でカードを検討（誘致・地上げ・工事券）
+      if (st.cityCards && st.cityActionsThisTurn === 0 && !cpuTownCardTried.has(`${st.turn}:${st.currentPlayerIndex}`)) {
+        cpuTownCardTried.add(`${st.turn}:${st.currentPlayerIndex}`);
+        const pick = chooseCpuCard(st.cityCards, st.currentPlayerIndex, cardContext(true));
+        if (pick && !st.playCityCard(pick.index, pick.target)) return;
+      }
+      // 県庁なら名産を検討（空きは買う・独占が完成するなら買収も）
+      if (shouldBuySpecialty(st.city.specialties, player.currentNode, st.currentPlayerIndex, player.money, player.cpuStyle ?? 'steady')) {
+        if (!st.cityBuySpecialty()) return;
       }
       const monthsLeft = st.settings.maxTurns > 0 ? st.settings.maxTurns - st.turn + 1 : 24;
       const act = chooseCityAction(st.city, player.currentNode, st.currentPlayerIndex, player.money, player.cpuStyle ?? 'steady', monthsLeft);
@@ -165,7 +212,7 @@ function runCpuStep() {
 }
 
 export default function CpuDriver() {
-  const { player, turnPhase, nodeActions, cityActions, capResult, cityOutcome, money } = useGameStore(
+  const { player, turnPhase, nodeActions, cityActions, capResult, cityOutcome, money, handSize, bonus, city } = useGameStore(
     useShallow(s => ({
       player: s.players[s.currentPlayerIndex],
       turnPhase: s.turnPhase,
@@ -174,6 +221,9 @@ export default function CpuDriver() {
       capResult: s.lastCapitalResult,
       cityOutcome: s.lastCityEventOutcome,
       money: s.players[s.currentPlayerIndex]?.money,
+      handSize: s.cityCards?.hands[s.currentPlayerIndex]?.length ?? 0,
+      bonus: s.cityBonusActions,
+      city: s.city,
     })),
   );
   const isCpu = !!player?.isCpu;
@@ -185,7 +235,7 @@ export default function CpuDriver() {
     const t = window.setTimeout(runCpuStep, delay);
     return () => clearTimeout(t);
     // 段階や状態が変わるたびに次の1手を予約する
-  }, [isCpu, turnPhase, nodeActions, cityActions, capResult, cityOutcome, money, player?.currentNode]);
+  }, [isCpu, turnPhase, nodeActions, cityActions, capResult, cityOutcome, money, player?.currentNode, handSize, bonus, city]);
 
   // 決算の画面は人が閉じる（覆いを掛けない）
   if (!isCpu || turnPhase === 'city_report' || turnPhase === 'city_yearend') return null;

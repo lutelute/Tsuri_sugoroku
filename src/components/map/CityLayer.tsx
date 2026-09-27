@@ -5,6 +5,8 @@ import { computeAllStats, BUILDING_INFO, getTownInfo, effectiveLandValue, TIER_L
 import type { CityState } from '../../game/city';
 import { nodeRadius } from './mapTheme';
 import type { DataMapMode } from './cityMapModes';
+import { SpecialtyShapes } from '../city/SpecialtyIcon';
+import { CITY_SPECIALTIES } from '../../data/citySpecialties';
 
 // ===== データマップ（ノードの下に敷く） =====
 export const CityDataLayer = memo(function CityDataLayer({ city, mode }: { city: CityState; mode: DataMapMode }) {
@@ -123,6 +125,30 @@ export const CitySkyline = memo(function CitySkyline({ city, colors }: { city: C
                 +{empty}
               </text>
             )}
+          </g>
+        );
+      })}
+    </g>
+  );
+});
+
+// ===== 名産（持ち主のいる県庁に小さな印） =====
+export const SpecialtyMarks = memo(function SpecialtyMarks({ owners, colors }: { owners?: Record<string, number>; colors: string[] }) {
+  if (!owners) return null;
+  return (
+    <g aria-hidden="true" className="pointer-events-none">
+      {Object.entries(owners).map(([nodeId, owner]) => {
+        const n = NODE_MAP.get(nodeId);
+        const icon = CITY_SPECIALTIES[nodeId]?.icon;
+        if (!n || !icon) return null;
+        const x = n.x + nodeRadius(n) + 2;
+        const y = n.y + 2;
+        return (
+          <g key={nodeId} transform={`translate(${x} ${y})`}>
+            <circle cx={6} cy={6} r={7.5} fill="#fbf6e8" stroke={colors[owner] ?? '#fff'} strokeWidth={2} />
+            <g transform="translate(0.5 0.5) scale(0.46)">
+              <SpecialtyShapes icon={icon} />
+            </g>
           </g>
         );
       })}

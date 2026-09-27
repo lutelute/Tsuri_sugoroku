@@ -1,6 +1,8 @@
 import type { CityState, CityReport, CityEventCard, CityDisasterReport } from './city';
 import type { CpuStyle } from './cpuAI';
 import type { YearEndResult, CityTitle } from './cityAwards';
+import type { CardState } from './cityCards';
+import type { BinboMischiefKind } from './binbo';
 
 // ===== ノード関連 =====
 
@@ -299,6 +301,17 @@ export interface GameState {
   cityTitleHistory: { year: number; titles: CityTitle[] }[];
   /** 釣り旅: 最初にゴールした巡（ここから GOAL_CLOSE_ROUNDS 巡で終了） */
   firstFinishTurn: number | null;
+  /** まちづくり: この訪問で追加で行える工事の回数（目的地一番乗り・工事券） */
+  cityBonusActions: number;
+  /** まちづくり: カード（手札・牛歩・保険・地上げ） */
+  cityCards: CardState | null;
+  /** このターンのサイコロの個数（急行=2・特急=3）と、1個あたりの出目の上限（牛歩=2） */
+  pendingDiceCount: number;
+  pendingDiceCap: number | null;
+  /** まちづくり: 貧乏神がとりついた・移ったお知らせ */
+  cityBinboToast: { reason: 'destination' | 'pass'; playerIndex: number; fromIndex?: number; great: boolean; seq: number } | null;
+  /** まちづくり: 月末の貧乏神の悪さ（寸劇カードで見せる） */
+  cityBinboEvent: { playerIndex: number; kind: BinboMischiefKind; message: string; great: boolean; moneyDelta: number; giveTo?: number } | null;
 }
 
 export interface MoveRecord {

@@ -15,7 +15,7 @@ import { REGION_ACCENT, REGION_LAND, REGION_NAME, MAP_BOUNDS } from './mapTheme'
 import type { GeoRegion } from '../../data/japanGeo';
 import { useMapCamera } from './useMapCamera';
 import { LABEL_LAYOUT } from './labelLayout';
-import { CityDataLayer, CitySkyline, DestinationMarker } from './CityLayer';
+import { CityDataLayer, CitySkyline, DestinationMarker, SpecialtyMarks } from './CityLayer';
 import { DATA_MAP_LABEL, DATA_MAP_ORDER } from './cityMapModes';
 import type { DataMapMode } from './cityMapModes';
 import type { Bounds } from './useMapCamera';
@@ -261,6 +261,7 @@ function JapanMapImpl() {
         {isPathSelection && <ReachableRoutes paths={reachableNodes} />}
         <NodesLayer reachableSteps={reachableSteps} currentNode={curNodeId} />
         {city && <CitySkyline city={city} colors={playerColors} />}
+        {city && <SpecialtyMarks owners={city.specialties} colors={playerColors} />}
         <LabelsLayer reachable={reachableSet} />
         {city && <DestinationMarker nodeId={city.destination} reward={city.destinationReward} />}
         {players.map((player, i) => (
@@ -273,6 +274,7 @@ function JapanMapImpl() {
             move={lastMove}
             stackIndex={stackInfo[i].stackIndex}
             stackSize={stackInfo[i].stackSize}
+            binbo={city?.binbo?.playerIndex === i ? (city.binbo.months >= 12 ? 'great' : 'normal') : null}
           />
         ))}
       </svg>

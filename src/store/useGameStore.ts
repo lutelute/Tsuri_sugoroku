@@ -17,16 +17,25 @@ import { saveUserEquipment, saveUserMoney, saveUserEncyclopedia, loadUserEncyclo
 import type { PlayerEquipment } from '../game/types';
 import {
   createInitialCityState, isTown, build as cityBuildFn, upgrade as cityUpgradeFn, acquire as cityAcquireFn,
-  renovate as cityRenovateFn, recordInspection, TIER_LABEL, getTownInfo,
+  renovate as cityRenovateFn, recordInspection, TIER_LABEL, getTownInfo, startBoom, visitorFees, CITY_ECONOMY, plotValue,
   simulateRound, drawCityEvent, applyCityEvent, pickDestination, portFee,
   CITY_INITIAL_MONEY, CITY_START_NODE, CITY_ACTIONS_PER_VISIT, CITY_DEFAULT_MONTHS,
 } from '../game/city';
-import type { BuildingKind, CityReport } from '../game/city';
+import type { BuildingKind, CityReport, CityState } from '../game/city';
 import type { YearEndResult } from '../game/cityAwards';
 import { random } from '../utils/random';
 import { CPU_STYLES, CPU_STYLE_LABEL, cpuCatchChance } from '../game/cpuAI';
 import { createCaughtFish } from '../game/fishing';
 import { computeYearEnd, isYearEndTurn } from '../game/cityAwards';
+import {
+  createCardState, drawCard, addCard, buyCard, playCard, diceCap, tickSlow, consumeLandGrab, landGrabPrice,
+  pickWarpDestination, emptyPlotIndex, suggestFreeBuildKind, freeBuild, protectInsured,
+  CARD_DROP_VILLAGE, CARD_DROP_ROUTE, CARD_INFO,
+} from '../game/cityCards';
+import type { CityCardId, CardState } from '../game/cityCards';
+import { attachOnDestination, transferOnMove, tickMonth, binboMischief, isGreat, becameGreat } from '../game/binbo';
+import { buySpecialty } from '../game/citySpecialties';
+import type { CityDisasterReport } from '../game/city';
 import { calendarLabel } from '../game/city';
 import { getEquippedItem } from '../game/equipment';
 
@@ -69,12 +78,20 @@ interface GameActions {
   cityUpgrade: (plotIndex: number) => string | null;
   cityAcquire: (plotIndex: number) => string | null;
   cityRenovate: (plotIndex: number) => string | null;
+  /** まちづくり: 手札のカードを使う（牛歩は target に相手の番号） */
+  playCityCard: (index: number, target?: number) => string | null;
+  /** まちづくり: カード売り場で買う */
+  buyCityCard: (id: CityCardId) => string | null;
+  /** まちづくり: 今いる県庁の名産を買う（他人のものは買収） */
+  cityBuySpecialty: () => string | null;
+  dismissBinboToast: () => void;
+  acknowledgeBinboEvent: () => void;
   applyCityEventCard: () => void;
   acknowledgeCityEvent: () => void;
   acknowledgeCityReport: () => void;
   acknowledgeCityYearEnd: () => void;
   dismissCityToast: () => void;
-  devCityCheat: (kind: 'money' | 'simulate' | 'quake' | 'kaiju' | 'yearend') => void;
+  devCityCheat: (kind: 'money' | 'simulate' | 'quake' | 'kaiju' | 'yearend' | 'cards' | 'binbo' | 'binboAct' | 'dest') => void;
   /** CPU: ミニゲームを遊ばずに確率で1回釣る */
   cpuFish: () => void;
   /** 画面上部のお知らせ（CPU の行動報告など） */
@@ -144,6 +161,12 @@ const initialState: GameState = {
   cityYearEnd: null,
   cityTitleHistory: [],
   firstFinishTurn: null,
+  cityBonusActions: 0,
+  cityCards: null,
+  pendingDiceCount: 1,
+  pendingDiceCap: null,
+  cityBinboToast: null,
+  cityBinboEvent: null,
 };
 
 /** まちづくり: ゴール賞金（着順）。1人1回だけ */
@@ -166,6 +189,38 @@ function claimCityGoal(claims: number[], playerIndex: number): { claims: number[
   return { claims: [...claims, playerIndex], reward: CITY_GOAL_REWARDS[order] ?? CITY_GOAL_REWARDS[CITY_GOAL_REWARDS.length - 1], order };
 }
 
+/** まちづくり: 災害の前後で保険を効かせる（保険に入っている人の壊れた建物を元に戻す） */
+function applyInsurance(
+  before: CityState, after: CityState, disasters: CityDisasterReport[], cards: CardState | null,
+): { city: CityState; disasters: CityDisasterReport[]; cards: CardState | null; protectedPlayers: number[] } {
+  if (!cards || !disasters.length) return { city: after, disasters, cards, protectedPlayers: [] };
+  let city = after;
+  let cs = cards;
+  const out: CityDisasterReport[] = [];
+  const saved: number[] = [];
+  for (const d of disasters) {
+    const r = protectInsured(before, city, d, cs);
+    city = r.city;
+    cs = r.cs;
+    out.push(r.report);
+    saved.push(...r.protectedPlayers);
+  }
+  return { city, disasters: out, cards: cs, protectedPlayers: [...new Set(saved)] };
+}
+
+/** まちづくり: 移動経路が決まったら、貧乏神が他の駒へ移るかを判定する */
+function binboAfterMove(path: string[]) {
+  const st = useGameStore.getState();
+  const city = st.city;
+  if (!city?.binbo || city.binbo.playerIndex === null || st.settings.mode !== 'city') return;
+  const r = transferOnMove(city.binbo, st.currentPlayerIndex, path, st.players.map(p => p.currentNode));
+  if (r.to === null) return;
+  useGameStore.setState({
+    city: { ...city, binbo: r.binbo },
+    cityBinboToast: { reason: 'pass', playerIndex: r.to, fromIndex: st.currentPlayerIndex, great: isGreat(r.binbo), seq: (st.cityBinboToast?.seq ?? 0) + 1 },
+  });
+}
+
 /** 手番の切り替え時に毎回リセットする値 */
 const TURN_RESET = {
   rouletteResult: null,
@@ -177,6 +232,9 @@ const TURN_RESET = {
   currentCityEvent: null,
   lastCityEventOutcome: null,
   capitalDoneThisTurn: false,
+  cityBonusActions: 0,
+  pendingDiceCount: 1,
+  pendingDiceCap: null as number | null,
 };
 
 function isCityMode(settings: GameSettings): boolean {
@@ -231,13 +289,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
       cityYearEnd: null,
       cityTitleHistory: [],
       firstFinishTurn: null,
+      cityBonusActions: 0,
+      cityCards: isCityMode(settings) ? createCardState(players.length) : null,
+      pendingDiceCount: 1,
+      pendingDiceCap: null,
+      cityBinboToast: null,
+      cityBinboEvent: null,
     });
   },
 
   rollDice: (result) => {
     const { players, currentPlayerIndex } = get();
     const player = players[currentPlayerIndex];
-    const paths = calculateReachableNodes(player.currentNode, result);
+    // まちづくり: 目的地は通過中でも止まれる
+    const city = get().city;
+    const stops = isCityMode(get().settings) && city?.destination ? [city.destination] : [];
+    const paths = calculateReachableNodes(player.currentNode, result, stops);
 
     if (paths.length === 0) {
       set({ rouletteResult: result, turnPhase: 'action_choice', reachableNodes: [] });
@@ -254,6 +321,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         boatFishingRemaining: 0,
         lastMove: { playerIndex: currentPlayerIndex, path: paths[0], seq: (get().lastMove?.seq ?? 0) + 1 },
       });
+      binboAfterMove(paths[0]);
     } else {
       set({
         rouletteResult: result,
@@ -280,6 +348,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       boatFishingRemaining: 0,
       lastMove: { playerIndex: currentPlayerIndex, path, seq: (get().lastMove?.seq ?? 0) + 1 },
     });
+    binboAfterMove(path);
   },
 
   executeNodeAction: () => {
@@ -626,6 +695,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // イベントでの移動も駒が進んで見えるように（瞬間移動させない）
     if (updatedPlayer.currentNode !== prevNode) {
       set({ lastMove: { playerIndex: currentPlayerIndex, path: [prevNode, updatedPlayer.currentNode], seq: (get().lastMove?.seq ?? 0) + 1 } });
+      binboAfterMove([prevNode, updatedPlayer.currentNode]);
     }
 
     // イベントで魚を獲得した場合は図鑑も更新
@@ -840,10 +910,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (refreshed.extraTurn) {
       const newPlayers = [...get().players];
       newPlayers[idx] = { ...refreshed, extraTurn: false };
+      const cards = get().cityCards ? tickSlow(get().cityCards!, idx) : null;
       set({
         players: newPlayers,
         turnPhase: 'idle',
         ...TURN_RESET,
+        cityCards: cards,
+        pendingDiceCap: cards ? diceCap(cards, idx) : null,
       });
       saveGameState(get());
       return;
@@ -876,6 +949,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   nextPlayer: () => {
     const { players, currentPlayerIndex, turn, settings } = get();
     const len = players.length;
+    // カード: 手番を終えた人の牛歩を1つ減らす
+    let cards = get().cityCards ? tickSlow(get().cityCards!, currentPlayerIndex) : null;
     // ループ内で逐次 set せず、走査用の作業コピーを1つ作り、最後に一度だけ反映する。
     // （複数プレイヤーが同時に skipNextTurn の場合に解除が巻き戻るバグを防ぐ）
     const workingPlayers = players.map(p => ({ ...p }));
@@ -908,14 +983,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
     let cityNext = city;
     let yearEnd: YearEndResult | null = null;
     let titleHistory = get().cityTitleHistory;
+    let binboEvent: GameState['cityBinboEvent'] = null;
     if (city && isCityMode(settings) && newTurn > turn) {
       for (let t = turn; t < newTurn; t++) {
-        const sim = simulateRound(cityNext!, workingPlayers.length, t, workingPlayers.map(p => p.money));
+        const before = cityNext!;
+        const sim = simulateRound(before, workingPlayers.length, t, workingPlayers.map(p => p.money));
         sim.incomes.forEach((v, i) => {
           workingPlayers[i].money = Math.max(0, workingPlayers[i].money + v);
         });
-        cityNext = sim.state;
-        cityReport = sim.report;
+        // 保険: 季節の災害で壊れた建物を守る
+        const ins = applyInsurance(before, sim.state, sim.report.disasters, cards);
+        cards = ins.cards;
+        cityNext = ins.city;
+        cityReport = { ...sim.report, disasters: ins.disasters };
+        if (ins.protectedPlayers.length) {
+          cityReport = { ...cityReport, headlines: [...cityReport.headlines, `保険で守られた: ${ins.protectedPlayers.map(i => workingPlayers[i]?.name).join('・')}`] };
+        }
+        // 貧乏神: 月を数え（12か月で大貧乏神）、とりついた人に悪さをする
+        const prevB = cityNext?.binbo;
+        if (cityNext && prevB && prevB.playerIndex !== null) {
+          const b = tickMonth(prevB);
+          const who = b.playerIndex!;
+          const mm = binboMischief(b, { ...cityNext, binbo: b }, who, workingPlayers.map(p => p.money), workingPlayers.map(p => p.name));
+          mm.moneyDeltas.forEach((d, i) => {
+            if (workingPlayers[i]) workingPlayers[i].money = Math.max(0, workingPlayers[i].money + d);
+          });
+          cityNext = { ...mm.city, binbo: b };
+          const became = becameGreat(prevB, b);
+          if (mm.kind !== 'none' || became) {
+            binboEvent = { playerIndex: who, kind: mm.kind, message: became ? `貧乏神が大貧乏神に化けた！ ${mm.message}` : mm.message, great: isGreat(b), moneyDelta: mm.moneyDeltas[who] ?? 0, giveTo: mm.giveTo };
+          }
+        }
         // 3月は年度末の大決算: 番付と称号（称号は賞金/罰金つき）
         if (isYearEndTurn(t)) {
           yearEnd = computeYearEnd(cityNext!, workingPlayers.map(p => p.money), t, CITY_INITIAL_MONEY);
@@ -938,7 +1036,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // 最大ターン到達: ラウンドが maxTurns を超えた時点で終了（全員が同数ラウンドをプレイ済み）
     if (settings.maxTurns > 0 && newTurn > settings.maxTurns) {
-      set({ players: workingPlayers, city: cityNext, cityReport, cityYearEnd: yearEnd, cityTitleHistory: titleHistory });
+      set({ players: workingPlayers, city: cityNext, cityReport, cityYearEnd: yearEnd, cityTitleHistory: titleHistory, cityCards: cards });
       get().endGame();
       return;
     }
@@ -960,6 +1058,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       cityReport,
       cityYearEnd: yearEnd,
       cityTitleHistory: titleHistory,
+      cityCards: cards,
+      pendingDiceCap: cards ? diceCap(cards, nextIndex) : null,
+      cityBinboEvent: binboEvent ?? get().cityBinboEvent,
     });
     const ups = (cityReport?.tierChanges ?? []).filter(c => c.to > c.from);
     if (ups.length && (notable || yearEnd)) {
@@ -997,6 +1098,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       boatFishingRemaining: 0,
       cityActionsThisTurn: 0,
       capitalDoneThisTurn: false,
+      cityBonusActions: 0,
     });
   },
 
@@ -1039,6 +1141,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       cityYearEnd: saved.cityYearEnd ?? null,
       cityTitleHistory: saved.cityTitleHistory ?? [],
       firstFinishTurn: saved.firstFinishTurn ?? null,
+      cityBonusActions: saved.cityBonusActions ?? 0,
+      cityCards: saved.cityCards ?? (saved.city ? createCardState(saved.players.length) : null),
+      pendingDiceCount: saved.pendingDiceCount ?? 1,
+      pendingDiceCap: saved.pendingDiceCap ?? null,
+      cityBinboToast: null,
+      cityBinboEvent: saved.cityBinboEvent ?? null,
     });
   },
 
@@ -1074,7 +1182,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   cityBuild: (plotIndex, kind) => {
     const { city, players, currentPlayerIndex, cityActionsThisTurn, turn } = get();
     if (!city) return 'まちづくりモードではない';
-    if (cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT) return `1回の訪問で行える工事は${CITY_ACTIONS_PER_VISIT}回まで`;
+    if (cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT + get().cityBonusActions) return `1回の訪問で行える工事は${CITY_ACTIONS_PER_VISIT + get().cityBonusActions}回まで`;
     const player = players[currentPlayerIndex];
     const r = cityBuildFn(city, player.currentNode, plotIndex, kind, currentPlayerIndex, player.money, turn);
     if (!r.ok) return r.reason;
@@ -1087,7 +1195,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   cityUpgrade: (plotIndex) => {
     const { city, players, currentPlayerIndex, cityActionsThisTurn } = get();
     if (!city) return 'まちづくりモードではない';
-    if (cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT) return `1回の訪問で行える工事は${CITY_ACTIONS_PER_VISIT}回まで`;
+    if (cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT + get().cityBonusActions) return `1回の訪問で行える工事は${CITY_ACTIONS_PER_VISIT + get().cityBonusActions}回まで`;
     const player = players[currentPlayerIndex];
     const r = cityUpgradeFn(city, player.currentNode, plotIndex, currentPlayerIndex, player.money);
     if (!r.ok) return r.reason;
@@ -1100,23 +1208,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
   cityAcquire: (plotIndex) => {
     const { city, players, currentPlayerIndex, cityActionsThisTurn } = get();
     if (!city) return 'まちづくりモードではない';
-    if (cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT) return `1回の訪問で行える工事は${CITY_ACTIONS_PER_VISIT}回まで`;
+    if (cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT + get().cityBonusActions) return `1回の訪問で行える工事は${CITY_ACTIONS_PER_VISIT + get().cityBonusActions}回まで`;
     const player = players[currentPlayerIndex];
-    const r = cityAcquireFn(city, player.currentNode, plotIndex, currentPlayerIndex, player.money);
-    if (!r.ok) return r.reason;
-    const newPlayers = [...players];
-    newPlayers[currentPlayerIndex] = { ...player, money: player.money - r.cost };
-    if (r.prevOwner !== undefined && newPlayers[r.prevOwner]) {
-      newPlayers[r.prevOwner] = { ...newPlayers[r.prevOwner], money: newPlayers[r.prevOwner].money + r.cost };
+    // 地上げ: 有効なら買収価格が価値の1.1倍になる
+    let cards = get().cityCards;
+    const town = city.towns[player.currentNode];
+    const plot = town?.plots[plotIndex];
+    let price: number | null = null;
+    if (cards && plot && plot.owner !== currentPlayerIndex) {
+      const lg = consumeLandGrab(cards, currentPlayerIndex);
+      if (lg.used) {
+        price = landGrabPrice(plotValue(plot, player.currentNode, town));
+        if (player.money < price) return 'お金が足りない';
+        cards = lg.cs;
+      }
     }
-    set({ city: r.state, players: newPlayers, cityActionsThisTurn: cityActionsThisTurn + 1 });
+    const r = cityAcquireFn(city, player.currentNode, plotIndex, currentPlayerIndex, price !== null ? Infinity : player.money);
+    if (!r.ok) return r.reason;
+    const cost = price ?? r.cost;
+    const newPlayers = [...players];
+    newPlayers[currentPlayerIndex] = { ...player, money: player.money - cost };
+    if (r.prevOwner !== undefined && newPlayers[r.prevOwner]) {
+      newPlayers[r.prevOwner] = { ...newPlayers[r.prevOwner], money: newPlayers[r.prevOwner].money + cost };
+    }
+    set({ city: r.state, players: newPlayers, cityActionsThisTurn: cityActionsThisTurn + 1, cityCards: cards });
     return null;
   },
 
   cityRenovate: (plotIndex) => {
     const { city, players, currentPlayerIndex, cityActionsThisTurn } = get();
     if (!city) return 'まちづくりモードではない';
-    if (cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT) return `1回の訪問で行える工事は${CITY_ACTIONS_PER_VISIT}回まで`;
+    if (cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT + get().cityBonusActions) return `1回の訪問で行える工事は${CITY_ACTIONS_PER_VISIT + get().cityBonusActions}回まで`;
     const player = players[currentPlayerIndex];
     const r = cityRenovateFn(city, player.currentNode, plotIndex, currentPlayerIndex, player.money);
     if (!r.ok) return r.reason;
@@ -1126,6 +1248,95 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return null;
   },
 
+  playCityCard: (index, target) => {
+    const st = get();
+    const cards = st.cityCards;
+    if (!cards || !st.city) return 'まちづくりモードではない';
+    const pi = st.currentPlayerIndex;
+    const player = st.players[pi];
+    const timing = st.turnPhase === 'idle' ? 'before_roll' : st.turnPhase === 'city' ? 'in_town' : null;
+    if (!timing) return '今はカードを使えない';
+    const r = playCard(cards, pi, index, target, {
+      timing,
+      hasEmptyPlot: emptyPlotIndex(st.city, player.currentNode) >= 0,
+      pendingDice: st.pendingDiceCount,
+    });
+    if ('error' in r) return r.error;
+    const e = r.effect;
+    const name = CARD_INFO[r.card].name;
+    switch (e.kind) {
+      case 'dice':
+        set({ cityCards: r.cs, pendingDiceCount: e.count });
+        break;
+      case 'warp': {
+        const dest = pickWarpDestination(player.currentNode);
+        const newPlayers = [...st.players];
+        newPlayers[pi] = { ...player, currentNode: dest };
+        set({
+          cityCards: r.cs,
+          players: newPlayers,
+          turnPhase: 'node_action',
+          lastMove: { playerIndex: pi, path: [player.currentNode, dest], seq: (st.lastMove?.seq ?? 0) + 1 },
+        });
+        binboAfterMove([player.currentNode, dest]);
+        break;
+      }
+      case 'slow':
+      case 'land_grab':
+      case 'insurance':
+        set({ cityCards: r.cs });
+        break;
+      case 'build_bonus':
+        set({ cityCards: r.cs, cityBonusActions: st.cityBonusActions + e.extra });
+        break;
+      case 'free_build': {
+        const idx = emptyPlotIndex(st.city, player.currentNode);
+        const kind = idx >= 0 ? suggestFreeBuildKind(st.city, player.currentNode, idx) : null;
+        if (idx < 0 || !kind) return '空き区画がない';
+        const b = freeBuild(st.city, player.currentNode, idx, kind, pi, st.turn);
+        if (!b.ok) return b.reason;
+        set({ cityCards: r.cs, city: b.state });
+        break;
+      }
+    }
+    get().announce(`${player.name}：${name}`, r.message);
+    return null;
+  },
+
+  buyCityCard: (id) => {
+    const st = get();
+    if (!st.cityCards) return 'まちづくりモードではない';
+    const pi = st.currentPlayerIndex;
+    const player = st.players[pi];
+    const r = buyCard(st.cityCards, pi, id, player.money);
+    if ('error' in r) return r.error;
+    const newPlayers = [...st.players];
+    newPlayers[pi] = { ...player, money: player.money - r.cost };
+    set({ cityCards: r.cs, players: newPlayers });
+    return null;
+  },
+
+  cityBuySpecialty: () => {
+    const st = get();
+    if (!st.city) return 'まちづくりモードではない';
+    if (st.cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT + st.cityBonusActions) return `1回の訪問で行える工事は${CITY_ACTIONS_PER_VISIT + st.cityBonusActions}回まで`;
+    const pi = st.currentPlayerIndex;
+    const player = st.players[pi];
+    const r = buySpecialty(st.city.specialties, player.currentNode, pi, player.money);
+    if (!r.ok) return r.reason;
+    const newPlayers = [...st.players];
+    newPlayers[pi] = { ...player, money: player.money - r.cost };
+    if (r.prevOwner !== undefined && newPlayers[r.prevOwner]) {
+      newPlayers[r.prevOwner] = { ...newPlayers[r.prevOwner], money: newPlayers[r.prevOwner].money + r.cost };
+    }
+    set({ city: { ...st.city, specialties: { ...r.owners } }, players: newPlayers, cityActionsThisTurn: st.cityActionsThisTurn + 1 });
+    get().announce(r.monopolyFormed ? `${player.name}：地方独占！` : `${player.name}：名産を手に入れた`, r.message);
+    return null;
+  },
+
+  dismissBinboToast: () => set({ cityBinboToast: null }),
+  acknowledgeBinboEvent: () => set({ cityBinboEvent: null }),
+
   applyCityEventCard: () => {
     const { city, currentCityEvent, players, currentPlayerIndex, turn } = get();
     if (!city || !currentCityEvent) return;
@@ -1133,7 +1344,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const out = applyCityEvent(city, currentCityEvent, currentPlayerIndex, player.currentNode, turn);
     const newPlayers = [...players];
     newPlayers[currentPlayerIndex] = { ...player, money: Math.max(0, player.money + out.moneyDelta) };
-    set({ city: out.state, players: newPlayers, lastCityEventOutcome: { message: out.message, moneyDelta: out.moneyDelta, disaster: out.disaster } });
+    // 保険: まちの出来事の災害で壊れた建物を守る
+    const ins = applyInsurance(city, out.state, out.disaster ? [out.disaster] : [], get().cityCards);
+    const saved = ins.protectedPlayers.map(i => players[i]?.name).filter(Boolean);
+    const message = saved.length ? `${out.message}（保険で守られた: ${saved.join('・')}）` : out.message;
+    set({
+      city: ins.city,
+      players: newPlayers,
+      cityCards: ins.cards,
+      lastCityEventOutcome: { message, moneyDelta: out.moneyDelta, disaster: ins.disasters[0] ?? out.disaster },
+    });
   },
 
   acknowledgeCityEvent: () => {
@@ -1186,6 +1406,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const newPlayers = [...players];
       newPlayers[currentPlayerIndex] = { ...newPlayers[currentPlayerIndex], money: newPlayers[currentPlayerIndex].money + 50000 };
       set({ players: newPlayers });
+    } else if (kind === 'cards') {
+      let cs = get().cityCards;
+      if (!cs) return;
+      for (const id of ['kyuko', 'gyuho', 'kojiken', 'hoken'] as CityCardId[]) cs = addCard(cs, currentPlayerIndex, id).cs;
+      set({ cityCards: cs });
+    } else if (kind === 'binbo') {
+      set({ city: { ...city, binbo: { playerIndex: currentPlayerIndex, months: 11 } } });
+    } else if (kind === 'binboAct') {
+      // 月末を待たずに、とりついている人へ悪さをさせる（確かめ用。とりついていなければ手番の人につける）
+      const b = city.binbo && city.binbo.playerIndex !== null ? city.binbo : { playerIndex: currentPlayerIndex, months: 0 };
+      const who = b.playerIndex!;
+      const mm = binboMischief(b, { ...city, binbo: b }, who, players.map(p => p.money), players.map(p => p.name));
+      set({
+        city: { ...mm.city, binbo: b },
+        players: players.map((p, i) => ({ ...p, money: Math.max(0, p.money + (mm.moneyDeltas[i] ?? 0)) })),
+        cityBinboEvent: { playerIndex: who, kind: mm.kind, message: mm.message, great: isGreat(b), moneyDelta: mm.moneyDeltas[who] ?? 0, giveTo: mm.giveTo },
+      });
+    } else if (kind === 'dest') {
+      if (city.destination) get().warpCurrentPlayerTo(city.destination);
     } else if (kind === 'yearend') {
       const ye = computeYearEnd(city, players.map(p => p.money), turn, CITY_INITIAL_MONEY);
       set({ cityYearEnd: ye, turnPhase: 'city_yearend' });
@@ -1219,12 +1458,35 @@ function executeCityNodeAction(nodeId: string) {
   let toast: { title: string; body: string } | null = null;
 
   // 目的地に一番乗り → 賞金 + 次の目的地
+  let bonusActions = st.cityBonusActions;
+  let binboToast = st.cityBinboToast;
   if (city.destination === nodeId) {
     p.money += city.destinationReward;
-    const nd = pickDestination(nodeId, nodeId);
+    const nd = pickDestination(nodeId, nodeId, st.turn);
     const nextName = NODE_MAP.get(nd.nodeId)?.name ?? '';
-    toast = { title: `目的地「${node.name}」に一番乗り！`, body: `賞金 ¥${city.destinationReward.toLocaleString()} 獲得。次の目的地は「${nextName}」（¥${nd.reward.toLocaleString()}）` };
-    nextCity = { ...city, destination: nd.nodeId, destinationReward: nd.reward };
+    toast = { title: `目的地「${node.name}」に一番乗り！`, body: `賞金 ¥${city.destinationReward.toLocaleString()} 獲得。この町に特需が起き、工事が1回多くできる。次の目的地は「${nextName}」（¥${nd.reward.toLocaleString()}）` };
+    nextCity = startBoom({ ...city, destination: nd.nodeId, destinationReward: nd.reward }, nodeId);
+    bonusActions += CITY_ECONOMY.destinationBonusActions;
+    // 貧乏神: 目的地から一番遠い人にとりつく（1人プレイでは出ない）
+    const prevB = nextCity.binbo;
+    const nb = attachOnDestination(prevB, currentPlayerIndex, players.map(pl => pl.currentNode), nodeId, players.length, players.map(pl => pl.money));
+    nextCity = { ...nextCity, binbo: nb };
+    if (nb.playerIndex !== null && nb.playerIndex !== (prevB?.playerIndex ?? null)) {
+      binboToast = { reason: 'destination', playerIndex: nb.playerIndex, great: isGreat(nb), seq: (st.cityBinboToast?.seq ?? 0) + 1 };
+    }
+  }
+
+  // 客としての買い物代: 他人の商業地・観光名所に払う（持ち主の収入になる）
+  const fees = visitorFees(nextCity, nodeId, currentPlayerIndex, p.money);
+  if (fees.total > 0) {
+    p.money = Math.max(0, p.money - fees.total);
+    for (const pay of fees.payments) {
+      if (newPlayers[pay.owner] && pay.owner !== currentPlayerIndex) {
+        newPlayers[pay.owner] = { ...newPlayers[pay.owner], money: newPlayers[pay.owner].money + pay.amount };
+      }
+    }
+    const who = fees.payments.map(x => players[x.owner]?.name).filter(Boolean).join('・');
+    toast = toast ?? { title: `${node.name}で買い物`, body: `¥${fees.total.toLocaleString()} を${who}の店へ（他人の商業地・観光名所がある町）` };
   }
 
   // 視察: 自分の建物がある町に止まると、次の月末にその町の自分の建物が発展しやすくなる
@@ -1238,6 +1500,8 @@ function executeCityNodeAction(nodeId: string) {
   const currentEvent = null;
   let currentCityEvent = null;
   let goalClaims = st.cityGoalClaims;
+  let cards = st.cityCards;
+  let cardDrawn = false;
 
   switch (node.type) {
     case 'event_good':
@@ -1247,10 +1511,12 @@ function executeCityNodeAction(nodeId: string) {
       const kind = node.type === 'event_good' ? 'good' : node.type === 'event_bad' ? 'bad' : 'random';
       currentCityEvent = drawCityEvent(kind);
       phase = 'city_event';
+      if (cards && random() < CARD_DROP_VILLAGE) cardDrawn = true;
       break;
     }
     case 'route': {
       // 中継マス: 3割で小さな道中イベント
+      if (cards && random() < CARD_DROP_ROUTE) cardDrawn = true;
       if (random() < 0.3) {
         const ev = ROAD_EVENTS[Math.floor(random() * ROAD_EVENTS.length)];
         p.money = Math.max(0, p.money + ev.amount);
@@ -1278,8 +1544,18 @@ function executeCityNodeAction(nodeId: string) {
       phase = isTown(node) ? 'city' : 'action_choice';
   }
 
+  // カードを1枚引く（村マスの半分・中継マスの一部）
+  if (cards && cardDrawn) {
+    const card = drawCard();
+    const added = addCard(cards, currentPlayerIndex, card);
+    cards = added.cs;
+    const extra = added.discarded ? `（手札がいっぱいなので「${CARD_INFO[added.discarded].name}」を捨てた）` : '';
+    toast = toast ?? { title: `カード「${CARD_INFO[card].name}」を手に入れた`, body: `${CARD_INFO[card].desc}${extra}` };
+  }
+
   newPlayers[currentPlayerIndex] = p;
   store.setState({
+    cityCards: cards,
     players: newPlayers,
     city: nextCity,
     turnPhase: phase,
@@ -1288,6 +1564,8 @@ function executeCityNodeAction(nodeId: string) {
     lastCityEventOutcome: null,
     cityToast: toast ? { ...toast, seq: (st.cityToast?.seq ?? 0) + 1 } : st.cityToast,
     cityGoalClaims: goalClaims,
+    cityBonusActions: bonusActions,
+    cityBinboToast: binboToast,
   });
 }
 

@@ -267,3 +267,20 @@ idle → roulette → path_selection(分岐あり) or node_action →
 
 ### ふりがな
 - 単漢字の金・来・回・光・先は誤読の元なので登録しない（熟語で登録）。新しい語を出すときは `furigana.ts` に熟語で足す。
+
+## v4.2.0 まちづくり第2弾：桃鉄の遊び（2026-09-27）
+
+カード係・名産係・貧乏神係・難易度調整係が桃鉄の核を足し、リーダーがストアと画面に統合した。詳細は `CHANGELOG.md`。
+
+### 追加された主なモジュール
+- `src/game/cityCards.ts`: カード（急行/特急/ぶっとび/牛歩/地上げ/工事券/保険/誘致）。使うのは `playCard`（`use〜` という名前は react-hooks の lint に引っかかるので付けない）。手札は `MAX_HAND`(4)、売り場は `CARD_SHOP_CLASSES`（大都市・商都）。UI は `components/city/CardHand/CardPlayBar/CardShop.tsx`。
+- `src/data/citySpecialties.ts` + `src/game/citySpecialties.ts`: 22県庁の名産（物件）。経済は `SPECIALTY_ECONOMY`。地方独占で収入2倍・称号「○○の顔役」（`cityAwards.ts` の kaoyaku）。UI は `SpecialtyCard/SpecialtyIcon.tsx`、地図は `CityLayer.tsx` の `SpecialtyMarks`。
+- `src/game/binbo.ts`: 貧乏神（`CityState.binbo`）。目的地の一番乗りで一番遠い人に `attachOnDestination`、移動時に `transferOnMove`（ストアの `binboAfterMove(path)` を全ての移動経路で呼ぶこと）、月末に `tickMonth`→`binboMischief`。数値は `BINBO`。UI は `BinboFigure/BinboOverlay/BinboAttachToast.tsx`。
+- `city.ts`: 季節（`SEASONS`/`seasonOf`）、町の利用料（`visitorFees`）、目的地の特需（`startBoom`・`CityState.booms`）、年度で上がる目的地賞金（`destinationYearMul`）。
+- `pathfinding.getReachableNodes(start, steps, stopNodes)`: 目的地は途中で止まれる（通り抜けも可）。
+
+### 実装上の注意
+- GameScreen の直下に並ぶお知らせは key に接頭辞を付ける（`toast-${seq}` と `binbo-${seq}`）。同じ seq で key が衝突すると React が DOM を複製する。
+- 貧乏神のお知らせは瓦版が消えてから出す（重なり防止）。
+- 数値を変えたら `balance.city.sim.test.ts` を必ず通す（名産・利用料・目的地・貧乏神も含めて計測している）。
+- DevPanel: カード配布 / 貧乏神（あと1か月で大貧乏神）/ 貧乏神の悪さ（その場で月末の悪さ）/ 目的地へワープ。

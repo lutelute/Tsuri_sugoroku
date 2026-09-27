@@ -72,14 +72,18 @@ export default function CityYearEndOverlay() {
               {ye.titles.map((t, i) => {
                 const p = players[t.playerIndex];
                 return (
-                  <div key={t.id} className="fx-rise flex items-center gap-2 rounded-lg border px-2 py-1.5 bg-white/40" style={{ borderColor: p?.color, '--d': `${900 + i * 180}ms` } as React.CSSProperties}>
+                  <div key={`${t.id}-${t.name}`} className="fx-rise flex items-center gap-2 rounded-lg border px-2 py-1.5 bg-white/40" style={{ borderColor: p?.color, '--d': `${900 + i * 180}ms` } as React.CSSProperties}>
                     <Stamp tone={t.prize < 0 ? 'sumi' : 'shu'} size={40} delay={1000 + i * 180} tilt={-8}>{t.name}</Stamp>
                     <span className="min-w-0 leading-tight">
                       <span className="block text-xs font-bold text-[#2a2118] truncate">{p?.name}</span>
                       <span className="block text-[10px] text-[#6b5a44] truncate"><Ruby>{t.reason}</Ruby></span>
-                      <span className={`block text-[11px] font-bold tabular-nums ${t.prize >= 0 ? 'text-[#1f6b3a]' : 'text-[#a92e1d]'}`}>
-                        {t.prize >= 0 ? '+' : '−'}¥{Math.abs(t.prize).toLocaleString()}
-                      </span>
+                      {t.prize === 0 ? (
+                        <span className="block text-[11px] font-bold text-[#7a5a2a]"><Ruby>名誉</Ruby></span>
+                      ) : (
+                        <span className={`block text-[11px] font-bold tabular-nums ${t.prize > 0 ? 'text-[#1f6b3a]' : 'text-[#a92e1d]'}`}>
+                          {t.prize > 0 ? '+' : '−'}¥{Math.abs(t.prize).toLocaleString()}
+                        </span>
+                      )}
                     </span>
                   </div>
                 );

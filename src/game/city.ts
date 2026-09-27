@@ -10,6 +10,8 @@ import type { BoardNode, NodeType, Region } from './types';
 import { BOARD_NODES, NODE_MAP } from '../data/boardNodes';
 import { buildAdjacencyList } from '../data/boardEdges';
 import { random } from '../utils/random';
+import { specialtyIncomes, playerSpecialtyValue } from './citySpecialties';
+import type { BinboState } from './binbo';
 
 // ===== 型 =====
 
@@ -92,6 +94,12 @@ export interface CityState {
   history: CityHistoryPoint[];
   /** 今月視察した町（次の月末、その町の持ち主の建物は発展判定を多く受ける） */
   inspections?: { nodeId: string; playerIndex: number }[];
+  /** 特需（目的地に一番乗りされた町など）: 残り月数のあいだ需要が上乗せされる */
+  booms?: { nodeId: string; monthsLeft: number }[];
+  /** 名産の持ち主（県庁の nodeId → playerIndex） */
+  specialties?: Record<string, number>;
+  /** 貧乏神（とりついている人と月数） */
+  binbo?: BinboState;
 }
 
 export type DisasterKind = 'quake' | 'typhoon' | 'fire' | 'kaiju';
@@ -119,17 +127,17 @@ export const CITY_ECONOMY = {
   /** 電気のない住宅の収入・人口の倍率 */
   resUnpoweredMul: 0.7,
   /** 商業: 等級1・地価1.0あたりの月収（客の入り 0.3〜1.6 倍） */
-  comIncome: 125,
+  comIncome: 135,
   comUnpoweredMul: 0.3,
   /** 工業: 等級1・地価1.0あたりの月収（働き手 0.4〜1.12 倍） */
-  indIncome: 160,
+  indIncome: 185,
   indUnpoweredMul: 0.2,
   /** 観光名所: 等級1あたりの月収（幸福度で 0.4〜1.5 倍） */
-  tourismIncome: 330,
+  tourismIncome: 310,
   /** 観光収入に地価を掛けるか（false だと地価の高い町ほど割に合わない） */
   tourismUsesLandValue: true,
   /** 発電所: 送電先（建物のある町）1つあたりの送電料・上限・維持費 */
-  powerPerTown: 90,
+  powerPerTown: 110,
   powerMaxTowns: 12,
   powerUpkeep: 250,
   /** 漁港: 固定の月収と、釣果の売上に対する水揚げ手数料の率 */
@@ -203,7 +211,48 @@ export const CITY_ECONOMY = {
   landPollutionCoef: 0.03,
   landMin: 0.75,
   landMax: 1.35,
+  /**
+   * 客としての買い物代: 他人の商業（等級×これ×地価）・観光（等級×これ）。独占された町は倍。所持金のこの割合まで。
+   * v4.1 第2弾: 季節の暦で観光・商業が年平均1〜2割伸び、工業は伸びないため、観光を下げて商工業・送電料を上げた
+   * （商135・工185・観光310・送電110）。買い物代は1局¥7,000ほどで目立たなかったので 120/200 → 180/300。
+   */
+  visitorComFee: 180,
+  visitorTourismFee: 300,
+  visitorMonopolyMul: 2,
+  visitorMaxRate: 0.25,
+  /** 目的地: 年ごとの賞金倍率（1年目から） / 一番乗りされた町の特需（月数・需要の上乗せ） / 一番乗りした人の追加工事 */
+  destinationYearMul: [1.0, 1.3, 1.6, 1.9],
+  destinationBoomMonths: 6,
+  destinationBoomDemand: 1.0,
+  destinationBonusActions: 1,
 };
+
+/** 季節の暦: 月ごとの行事と収入の倍率（正の収入だけに掛ける） */
+export interface SeasonInfo {
+  name: string;
+  desc: string;
+  mul: (kind: BuildingKind, cls: TownClass, region: Region) => number;
+}
+
+export const SEASONS: Record<number, SeasonInfo> = {
+  4: { name: '花見', desc: '観光1.5倍・商業1.1倍', mul: k => (k === 'tourism' ? 1.5 : k === 'com' ? 1.1 : 1) },
+  5: { name: '大型連休', desc: '観光1.3倍', mul: k => (k === 'tourism' ? 1.3 : 1) },
+  6: { name: '梅雨', desc: '観光0.8倍', mul: k => (k === 'tourism' ? 0.8 : 1) },
+  7: { name: '夏祭り', desc: '都市の商業1.2倍', mul: (k, c) => (k === 'com' && (c === 'city' || c === 'metro') ? 1.2 : 1) },
+  8: { name: '花火・お盆', desc: '観光1.4倍・港町の商業1.2倍・台風に注意', mul: (k, c) => (k === 'tourism' ? 1.4 : k === 'com' && c === 'port' ? 1.2 : 1) },
+  9: { name: '台風', desc: '台風に注意', mul: () => 1 },
+  10: { name: '紅葉', desc: '観光1.5倍・温泉町1.3倍', mul: (k, c) => (k === 'tourism' ? 1.5 : c === 'onsen' ? 1.3 : 1) },
+  11: { name: '紅葉', desc: '観光1.5倍・温泉町1.3倍', mul: (k, c) => (k === 'tourism' ? 1.5 : c === 'onsen' ? 1.3 : 1) },
+  12: { name: '年末商戦', desc: '商業1.5倍', mul: k => (k === 'com' ? 1.5 : 1) },
+  1: { name: '初売り', desc: '商業1.3倍', mul: k => (k === 'com' ? 1.3 : 1) },
+  2: { name: '雪まつり', desc: '北海道の観光2倍・北国の住宅0.9倍', mul: (k, _c, r) => (k === 'tourism' && r === 'hokkaido' ? 2 : k === 'res' && (r === 'hokkaido' || r === 'tohoku') ? 0.9 : 1) },
+  3: { name: '年度末', desc: '大決算', mul: () => 1 },
+};
+
+export function seasonOf(turn: number): SeasonInfo & { month: number } {
+  const month = ((turn - 1 + 3) % 12) + 1;
+  return { ...SEASONS[month], month };
+}
 
 export const TIER_LABEL = ['', '壱', '弐', '参'];
 
@@ -483,6 +532,7 @@ export function computePowered(state: CityState): Set<string> {
 
 export function computeAllStats(state: CityState): Map<string, TownStats> {
   const powered = computePowered(state);
+  const boomed = new Set((state.booms ?? []).filter(b => b.monthsLeft > 0).map(b => b.nodeId));
   // 1. 町ごとの素の値
   const base = new Map<string, { R: number; C: number; I: number; P: number; T: number; port: boolean; cls: TownClass }>();
   for (const [id, town] of Object.entries(state.towns)) {
@@ -532,9 +582,10 @@ export function computeAllStats(state: CityState): Map<string, TownStats> {
     const h = hap.get(id) ?? 0;
     const E = CITY_ECONOMY;
     const cd = E.classDemand[b.cls];
-    const r = (jobsNear - popNear * E.demandResPop) / 100 + (h - 4) * E.demandResHappiness + E.demandResBase + cd.r;
-    const c = (popNear * E.demandComPop - b.C * E.demandComPer) / 100 + (b.port ? E.demandComPort : 0) + (isPowered ? 0 : -1.5) + cd.c;
-    const i = (popNear * E.demandIndPop - b.I * E.demandIndPer) / 100 + E.demandIndBase + (isPowered ? 0 : -1.5) + cd.i;
+    const boom = boomed.has(id) ? E.destinationBoomDemand : 0;
+    const r = (jobsNear - popNear * E.demandResPop) / 100 + (h - 4) * E.demandResHappiness + E.demandResBase + cd.r + boom;
+    const c = (popNear * E.demandComPop - b.C * E.demandComPer) / 100 + (b.port ? E.demandComPort : 0) + (isPowered ? 0 : -1.5) + cd.c + boom;
+    const i = (popNear * E.demandIndPop - b.I * E.demandIndPer) / 100 + E.demandIndBase + (isPowered ? 0 : -1.5) + cd.i + boom;
     out.set(id, {
       population: pop.get(id) ?? 0,
       jobs: b.C * 50 + b.I * 80 + b.T * 30,
@@ -663,18 +714,26 @@ export function simulateRound(state: CityState, playerCount: number, turn: numbe
   const upkeep = Array.from({ length: playerCount }, () => 0);
   const popBefore = Array.from({ length: playerCount }, (_, i) => playerPopulation(state, i, stats));
 
+  const season = seasonOf(turn);
   for (const [id, town] of Object.entries(state.towns)) {
     const s = stats.get(id);
     if (!s) continue;
     const mono = monopolyOwner(town);
+    const tinfo = getTownInfo(id);
     for (const p of town.plots) {
       if (!p || p.owner >= playerCount) continue;
       let v = plotIncome(p, id, s, poweredWithBuildings.get(id) ?? 0);
+      if (v > 0 && tinfo) v = Math.round(v * season.mul(p.kind, tinfo.cls, tinfo.region)); // 季節の行事
       if (v > 0 && mono === p.owner) v = Math.round(v * CITY_ECONOMY.monopolyMul); // 独占ボーナス
       if (v >= 0) income[p.owner] += v;
       else upkeep[p.owner] += -v;
     }
   }
+
+  // 名産の月収（季節で上下・地方独占で倍）
+  specialtyIncomes(state.specialties, playerCount, season.month).forEach((v, i) => {
+    income[i] += v;
+  });
 
   // 景気バフ
   const buffs: CityBuff[] = [];
@@ -748,7 +807,8 @@ export function simulateRound(state: CityState, playerCount: number, turn: numbe
     towns[id] = changed ? { ...town, plots } : town;
   }
 
-  let next: CityState = { ...state, towns, buffs, inspections: [] };
+  const booms = (state.booms ?? []).map(b => ({ ...b, monthsLeft: b.monthsLeft - 1 })).filter(b => b.monthsLeft > 0);
+  let next: CityState = { ...state, towns, buffs, inspections: [], booms };
 
   // 季節の災害（8〜9月は台風、まれに地震）
   const disasters: CityDisasterReport[] = [];
@@ -813,11 +873,13 @@ export function simulateRound(state: CityState, playerCount: number, turn: numbe
   if (bestTown && bestPop >= 300) headlines.push(`人口日本一の町は${getTownInfo(bestTown)?.name}（${bestPop.toLocaleString()}人）`);
   const unpoweredTowns = Object.entries(next.towns).filter(([id, t]) => t.plots.some(p => p && (p.kind === 'com' || p.kind === 'ind')) && !powered.has(id)).length;
   if (unpoweredTowns > 0) headlines.push(`電気の来ていない商工業の町が${unpoweredTowns}つ。発電所が求められている`);
+  const nextSeason = seasonOf(turn + 1);
+  headlines.push(`来月は${nextSeason.month}月「${nextSeason.name}」（${nextSeason.desc}）`);
 
   // 履歴
   const popAfter = Array.from({ length: playerCount }, (_, i) => playerPopulation(next, i, allStats));
   const net = income.map((v, i) => v - upkeep[i]);
-  const assets = Array.from({ length: playerCount }, (_, i) => (moneys[i] ?? 0) + net[i] + playerPropertyValue(next, i));
+  const assets = Array.from({ length: playerCount }, (_, i) => (moneys[i] ?? 0) + net[i] + playerPropertyValue(next, i) + playerSpecialtyValue(next.specialties, i));
   next = { ...next, history: [...next.history, { turn, assets, population: popAfter }].slice(-120) };
 
   return {
@@ -893,7 +955,7 @@ export function applyDisaster(
       damages.push({ nodeId: id, kind: p.kind, owner: p.owner, destroyed: np === null });
       return np;
     });
-    if (changed) towns[id] = { plots };
+    if (changed) towns[id] = { ...t, plots };
   };
 
   if (kind === 'quake') {
@@ -923,7 +985,7 @@ export function applyDisaster(
       const p = t.plots[pick.idx]!;
       const plots = [...t.plots];
       plots[pick.idx] = null;
-      towns[pick.id] = { plots };
+      towns[pick.id] = { ...t, plots };
       damages.push({ nodeId: pick.id, kind: p.kind, owner: p.owner, destroyed: true });
       area = getTownInfo(pick.id)?.name ?? area;
     }
@@ -943,7 +1005,7 @@ export function applyDisaster(
           const p = t.plots[best]!;
           const plots = [...t.plots];
           plots[best] = null;
-          towns[cur] = { plots };
+          towns[cur] = { ...t, plots };
           damages.push({ nodeId: cur, kind: p.kind, owner: p.owner, destroyed: true });
         }
       }
@@ -961,13 +1023,49 @@ export function applyDisaster(
 const DESTINATION_CANDIDATES = BOARD_NODES.filter(n => n.type === 'capital').map(n => n.id);
 
 /** 次の目的地を選ぶ。賞金は前の地点からの距離に比例 */
-export function pickDestination(current: string | null, from: string): { nodeId: string; reward: number } {
+export function pickDestination(current: string | null, from: string, turn = 1): { nodeId: string; reward: number } {
   const dist = distancesFrom(from);
   const pool = DESTINATION_CANDIDATES.filter(id => id !== current && id !== from && (dist.get(id) ?? 0) >= 6);
   const list = pool.length ? pool : DESTINATION_CANDIDATES.filter(id => id !== current);
   const nodeId = list[Math.floor(random() * list.length)];
   const d = dist.get(nodeId) ?? 10;
-  return { nodeId, reward: Math.round((2000 + d * 220) / 100) * 100 };
+  // 年を追うごとに賞金が上がる（後半ほど目的地レースが熱くなる）
+  const muls = CITY_ECONOMY.destinationYearMul;
+  const yearIdx = Math.min(muls.length - 1, Math.floor((turn - 1) / 12));
+  return { nodeId, reward: Math.round(((2000 + d * 220) * muls[yearIdx]) / 100) * 100 };
+}
+
+/** 目的地に一番乗りされた町に特需を起こす */
+export function startBoom(state: CityState, nodeId: string): CityState {
+  const booms = (state.booms ?? []).filter(b => b.nodeId !== nodeId);
+  return { ...state, booms: [...booms, { nodeId, monthsLeft: CITY_ECONOMY.destinationBoomMonths }] };
+}
+
+/**
+ * 客としての買い物代: 他人の商業地・観光名所がある町に止まると払う。独占された町は倍。所持金の一定割合まで。
+ * 自分の建物のぶんは払わない。空き家は営業していないので払わない。
+ */
+export function visitorFees(state: CityState, nodeId: string, visitorIndex: number, visitorMoney: number): { payments: { owner: number; amount: number }[]; total: number } {
+  const town = state.towns[nodeId];
+  if (!town) return { payments: [], total: 0 };
+  const E = CITY_ECONOMY;
+  const lv = effectiveLandValue(nodeId, town);
+  const mono = monopolyOwner(town);
+  const byOwner = new Map<number, number>();
+  for (const p of town.plots) {
+    if (!p || p.owner === visitorIndex || p.vacant) continue;
+    let fee = p.kind === 'com' ? p.level * E.visitorComFee * lv : p.kind === 'tourism' ? p.level * E.visitorTourismFee : 0;
+    if (fee <= 0) continue;
+    if (mono === p.owner) fee *= E.visitorMonopolyMul;
+    byOwner.set(p.owner, (byOwner.get(p.owner) ?? 0) + fee);
+  }
+  let total = [...byOwner.values()].reduce((a, b) => a + b, 0);
+  if (total <= 0) return { payments: [], total: 0 };
+  const cap = Math.floor(visitorMoney * E.visitorMaxRate);
+  const scale = total > cap ? cap / total : 1;
+  const payments = [...byOwner.entries()].map(([owner, amt]) => ({ owner, amount: Math.round((amt * scale) / 10) * 10 })).filter(x => x.amount > 0);
+  total = payments.reduce((a, b) => a + b.amount, 0);
+  return { payments, total };
 }
 
 // ===== まちのイベントカード =====
@@ -1070,7 +1168,7 @@ export function applyCityEvent(state: CityState, card: CityEventCard, playerInde
           }
           return p;
         });
-        if (changed) towns[id] = { plots };
+        if (changed) towns[id] = { ...t, plots };
       }
       return { state: { ...state, towns }, moneyDelta: 0, message: grown ? `建物が${grown}つ発展した！` : '発展できる建物がなかった…' };
     }
@@ -1089,7 +1187,7 @@ export interface CityScore {
 }
 
 export function cityScore(state: CityState, playerIndex: number, money: number): CityScore {
-  const property = playerPropertyValue(state, playerIndex);
+  const property = playerPropertyValue(state, playerIndex) + playerSpecialtyValue(state.specialties, playerIndex);
   let monopolies = 0;
   for (const t of Object.values(state.towns)) if (monopolyOwner(t) === playerIndex) monopolies++;
   return {

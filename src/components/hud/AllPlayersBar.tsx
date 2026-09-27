@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { calculateScore } from '../../game/scoring';
 import { cityScore } from '../../game/city';
+import { isGreat, monthsUntilGreat } from '../../game/binbo';
 import type { CityScore } from '../../game/city';
 import { getEquippedLevel } from '../../game/equipment';
 import type { Player, TurnPhase } from '../../game/types';
@@ -27,9 +28,13 @@ interface PlayerCardProps {
   turnKey: string;
   score: number | null;
   city: CityScore | null;
+  /** まちづくり: 手札の枚数・牛歩中か・貧乏神（あと何か月で大貧乏神か） */
+  handSize?: number;
+  slowed?: boolean;
+  binbo?: { great: boolean; monthsLeft: number | null } | null;
 }
 
-const PlayerCard = memo(function PlayerCard({ player: p, active, hold, turnKey, score, city }: PlayerCardProps) {
+const PlayerCard = memo(function PlayerCard({ player: p, active, hold, turnKey, score, city, handSize, slowed, binbo }: PlayerCardProps) {
   // 欄の音は増えたときだけ（買い物などの減額は店の画面で鳴らし済み）
   const { shown, pops, removePop, last } = useMoneyDelta(p.money, hold, undefined, 'gain');
   return (
@@ -66,6 +71,16 @@ const PlayerCard = memo(function PlayerCard({ player: p, active, hold, turnKey, 
             <span title="総資産（所持金＋建物）"><Ruby>総資産</Ruby> <b className="text-washi tabular-nums">¥{city.assets.toLocaleString()}</b></span>
             <span title="人口"><Ruby>人口</Ruby> <b className="text-emerald-300 tabular-nums">{city.population.toLocaleString()}</b></span>
             <span title="建物の数" className="text-washi/50">🏠{city.buildings}</span>
+            {(handSize ?? 0) > 0 && <span title="カードの手札" className="text-kin-300/80">🎴{handSize}</span>}
+            {slowed && <span title="牛歩（出目は2まで）" className="text-shu-300 font-mincho"><Ruby>牛歩</Ruby></span>}
+            {binbo && (
+              <span
+                title={binbo.great ? '大貧乏神がとりついている' : `貧乏神がとりついている${binbo.monthsLeft !== null ? `（大貧乏神まであと${binbo.monthsLeft}か月）` : ''}`}
+                className={`font-mincho font-bold px-1 rounded ${binbo.great ? 'bg-purple-900/80 text-purple-100' : 'bg-sumi/70 text-washi'}`}
+              >
+                {binbo.great ? '大貧' : '貧'}
+              </span>
+            )}
           </>
         ) : (
           <>
@@ -87,7 +102,7 @@ const PlayerCard = memo(function PlayerCard({ player: p, active, hold, turnKey, 
 
 // 画面下のプレイヤー欄（コンパクト版）。釣りモードは現在の得点、まちづくりモードは総資産と人口を表示。
 export default function AllPlayersBar() {
-  const { players, currentPlayerIndex, encyclopedias, city, turnPhase, turn } = useGameStore(
+  const { players, currentPlayerIndex, encyclopedias, city, turnPhase, turn, cards } = useGameStore(
     useShallow(s => ({
       players: s.players,
       currentPlayerIndex: s.currentPlayerIndex,
@@ -95,6 +110,7 @@ export default function AllPlayersBar() {
       city: s.city,
       turnPhase: s.turnPhase,
       turn: s.turn,
+      cards: s.cityCards,
     })),
   );
   const hold = COVERED_PHASES.has(turnPhase);
@@ -116,6 +132,9 @@ export default function AllPlayersBar() {
           turnKey={`${turn}-${currentPlayerIndex}`}
           score={scores[i]}
           city={citySc ? citySc[i] : null}
+          handSize={cards?.hands[i]?.length ?? 0}
+          binbo={city?.binbo?.playerIndex === i ? { great: isGreat(city.binbo), monthsLeft: monthsUntilGreat(city.binbo) } : null}
+          slowed={!!cards?.slow.some(x => x.playerIndex === i && x.turnsLeft > 0)}
         />
       ))}
     </div>

@@ -23,6 +23,9 @@ import CityOverlay from '../city/CityOverlay';
 import CityEventOverlay from '../city/CityEventOverlay';
 import CityReportOverlay from '../city/CityReportOverlay';
 import CityYearEndOverlay from '../city/CityYearEndOverlay';
+import CardPlayBar from '../city/CardPlayBar';
+import BinboOverlay from '../city/BinboOverlay';
+import BinboAttachToast from '../city/BinboAttachToast';
 import { isTown, calendarLabel } from '../../game/city';
 import TurnBanner from '../fx/TurnBanner';
 import StepCountdown from '../fx/StepCountdown';
@@ -47,10 +50,17 @@ export default function GameScreen() {
   const {
     turnPhase, players, currentPlayerIndex, nodeActionsThisTurn,
     setTurnPhase, executeNodeAction, endTurn, doActionAgain, rouletteResult,
-    setScreen, endGame, lastMove, isCity, cityToast, dismissCityToast, turn,
+    setScreen, endGame, lastMove, isCity, cityToast, dismissCityToast, pendingDiceCount, pendingDiceCap,
+    binboToast, binboEvent, dismissBinboToast, acknowledgeBinboEvent, turn,
   } = useGameStore(useShallow(s => ({
     turn: s.turn,
     isCity: s.settings.mode === 'city',
+    pendingDiceCount: s.pendingDiceCount,
+    pendingDiceCap: s.pendingDiceCap,
+    binboToast: s.cityBinboToast,
+    binboEvent: s.cityBinboEvent,
+    dismissBinboToast: s.dismissBinboToast,
+    acknowledgeBinboEvent: s.acknowledgeBinboEvent,
     cityToast: s.cityToast,
     dismissCityToast: s.dismissCityToast,
     turnPhase: s.turnPhase,
@@ -168,7 +178,16 @@ export default function GameScreen() {
 
         {/* === フローティング: サイコロボタン === */}
         {turnPhase === 'idle' && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-xs">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-md flex flex-col items-center gap-2">
+            {/* まちづくり: 振る前に使えるカード（急行・ぶっとび・牛歩・保険・地上げ） */}
+            {isCity && !player?.isCpu && <CardPlayBar timing="before_roll" compact />}
+            {isCity && pendingDiceCount > 1 && (
+              <span className="text-xs font-bold text-kin-200 bg-ai-900/85 border border-kin-500/40 rounded-full px-3 py-0.5"><Ruby>サイコロ</Ruby>{pendingDiceCount}<Ruby>個で振る</Ruby></span>
+            )}
+            {isCity && pendingDiceCap !== null && (
+              <span className="text-xs font-bold text-shu-200 bg-ai-900/85 border border-shu-500/40 rounded-full px-3 py-0.5"><Ruby>牛歩中</Ruby>：<Ruby>出目は</Ruby>{pendingDiceCap}<Ruby>まで</Ruby></span>
+            )}
+            <div className="w-full max-w-xs">
             <Button
               onClick={() => setTurnPhase('roulette')}
               variant="gold"
@@ -177,6 +196,7 @@ export default function GameScreen() {
             >
               <span className="inline-flex items-center justify-center gap-2"><Icon name="dice" size={20} /> <Ruby>サイコロを振る</Ruby></span>
             </Button>
+            </div>
           </div>
         )}
 
@@ -284,10 +304,37 @@ export default function GameScreen() {
       {turnPhase === 'city_report' && <CityReportOverlay />}
       {turnPhase === 'city_yearend' && <CityYearEndOverlay />}
 
+      {/* 貧乏神: 月末の悪さ（決算の画面を閉じた後に見せる） */}
+      {binboEvent && turnPhase !== 'city_report' && turnPhase !== 'city_yearend' && players[binboEvent.playerIndex] && (
+        <BinboOverlay
+          playerName={players[binboEvent.playerIndex].name}
+          playerColor={players[binboEvent.playerIndex].color}
+          kind={binboEvent.kind}
+          message={binboEvent.message}
+          great={binboEvent.great}
+          moneyDelta={binboEvent.moneyDelta}
+          targetColor={binboEvent.giveTo !== undefined ? players[binboEvent.giveTo]?.color : undefined}
+          onClose={acknowledgeBinboEvent}
+        />
+      )}
+      {/* 貧乏神: とりついた・移ったお知らせ（瓦版と重ならないよう、瓦版が消えてから出す） */}
+      {binboToast && !cityToast && players[binboToast.playerIndex] && (
+        <BinboAttachToast
+          key={`binbo-${binboToast.seq}`}
+          playerName={players[binboToast.playerIndex].name}
+          playerColor={players[binboToast.playerIndex].color}
+          great={binboToast.great}
+          reason={binboToast.reason}
+          fromName={binboToast.fromIndex !== undefined ? players[binboToast.fromIndex]?.name : undefined}
+          seq={binboToast.seq}
+          onDone={dismissBinboToast}
+        />
+      )}
+
       {/* まちづくり: 目的地到着などのお知らせ（瓦版） */}
       {cityToast && (
         <CityToastCard
-          key={cityToast.seq}
+          key={`toast-${cityToast.seq}`}
           title={cityToast.title}
           body={cityToast.body}
           seq={cityToast.seq}

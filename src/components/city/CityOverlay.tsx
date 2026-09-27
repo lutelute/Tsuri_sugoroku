@@ -6,10 +6,14 @@ import { NODE_MAP } from '../../data/boardNodes';
 import {
   getTownInfo, computeAllStats, plotIncome, poweredTownsWithBuildings, buildCost, upgradeCost, acquireCost, renovateCost,
   isUpgradable, canBuild, monopolyOwner, effectiveLandValue, BUILDING_INFO, TOWN_CLASS_INFO, MAX_BUILDING_LEVEL,
-  CITY_ACTIONS_PER_VISIT, CITY_ECONOMY, TIER_LABEL,
+  CITY_ACTIONS_PER_VISIT, CITY_ECONOMY, TIER_LABEL, calendarLabel,
 } from '../../game/city';
 import type { BuildingKind, TownStats } from '../../game/city';
 import BuildingGlyph from './BuildingGlyph';
+import CardPlayBar from './CardPlayBar';
+import CardShop from './CardShop';
+import SpecialtyCard from './SpecialtyCard';
+import { hasCardShop } from '../../game/cityCards';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
@@ -43,12 +47,13 @@ function Stat({ label, value, tone = 'text-washi' }: { label: string; value: Rea
 }
 
 export default function CityOverlay() {
-  const { city, players, currentPlayerIndex, cityActionsThisTurn, capitalDoneThisTurn, cityBuild, cityUpgrade, cityAcquire, cityRenovate, setTurnPhase } = useGameStore(
+  const { city, players, currentPlayerIndex, cityActionsThisTurn, cityBonusActions, capitalDoneThisTurn, cityBuild, cityUpgrade, cityAcquire, cityRenovate, setTurnPhase } = useGameStore(
     useShallow(s => ({
       city: s.city,
       players: s.players,
       currentPlayerIndex: s.currentPlayerIndex,
       cityActionsThisTurn: s.cityActionsThisTurn,
+      cityBonusActions: s.cityBonusActions,
       capitalDoneThisTurn: s.capitalDoneThisTurn,
       cityBuild: s.cityBuild,
       cityUpgrade: s.cityUpgrade,
@@ -58,6 +63,11 @@ export default function CityOverlay() {
     })),
   );
   const [selected, setSelected] = useState<number | null>(null);
+  const [showShop, setShowShop] = useState(false);
+  const buyCityCard = useGameStore(s => s.buyCityCard);
+  const cityBuySpecialty = useGameStore(s => s.cityBuySpecialty);
+  const turn = useGameStore(s => s.turn);
+  const handSize = useGameStore(s => s.cityCards?.hands[s.currentPlayerIndex]?.length ?? 0);
   const [error, setError] = useState<string | null>(null);
 
   const player = players[currentPlayerIndex];
@@ -69,7 +79,8 @@ export default function CityOverlay() {
 
   const town = city.towns[nodeId];
   const st: TownStats = stats.get(nodeId)!;
-  const actionsLeft = CITY_ACTIONS_PER_VISIT - cityActionsThisTurn;
+  const actionsMax = CITY_ACTIONS_PER_VISIT + cityBonusActions;
+  const actionsLeft = actionsMax - cityActionsThisTurn;
   const mono = monopolyOwner(town);
   const sel = selected !== null ? town.plots[selected] : undefined;
   const tier = town.tier ?? 0;
@@ -139,6 +150,18 @@ export default function CityOverlay() {
           <p className="text-[11px] text-washi/50 mt-0.5"><Ruby>{node.description ?? ''}</Ruby></p>
         </div>
 
+        {/* 名産（県庁のみ。他のマスでは何も出ない） */}
+        <SpecialtyCard
+          nodeId={nodeId}
+          owners={city.specialties ?? {}}
+          players={players}
+          currentPlayerIndex={currentPlayerIndex}
+          money={player.money}
+          month={calendarLabel(turn).month}
+          onBuy={() => act(() => cityBuySpecialty())}
+          disabled={actionsLeft <= 0}
+        />
+
         {/* 町の状態 */}
         <div className="flex gap-2 items-stretch">
           <div className="grid grid-cols-4 gap-1.5 flex-1">
@@ -159,7 +182,7 @@ export default function CityOverlay() {
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs text-washi/60"><Ruby>区画</Ruby>（<Ruby>タップで選択</Ruby>）</span>
             <span className={`text-xs ${actionsLeft > 0 ? 'text-kin-300' : 'text-washi/40'}`}>
-              <Ruby>工事</Ruby> <span className="tabular-nums">{actionsLeft}</span>/<span className="tabular-nums">{CITY_ACTIONS_PER_VISIT}</span> <Ruby>回</Ruby>
+              <Ruby>工事</Ruby> <span className="tabular-nums">{actionsLeft}</span>/<span className="tabular-nums">{actionsMax}</span> <Ruby>回</Ruby>
             </span>
           </div>
           <div className="grid grid-cols-4 gap-1.5">
@@ -294,6 +317,22 @@ export default function CityOverlay() {
         )}
 
         {error && <p className="text-xs text-shu-400 text-center"><Ruby>{error}</Ruby></p>}
+
+        {/* カード: 町で使える札（工事券・誘致・地上げ）と売り場 */}
+        <CardPlayBar timing="in_town" compact />
+        {hasCardShop(nodeId) && (
+          <Button onClick={() => setShowShop(true)} variant="secondary" size="sm" className="w-full">
+            <span className="inline-flex items-center gap-1.5">🎴 <Ruby>カード売り場</Ruby></span>
+          </Button>
+        )}
+        {showShop && (
+          <CardShop
+            money={player.money}
+            handSize={handSize}
+            onBuy={id => { const err = buyCityCard(id); if (err) setError(err); }}
+            onClose={() => setShowShop(false)}
+          />
+        )}
 
         {/* 寄り道 */}
         {(isFishing || hasShop || isCapital || isRest) && (

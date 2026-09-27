@@ -11,6 +11,8 @@ interface Dice3DProps {
   durationMs: number;
   size?: number;
   onClick?: () => void;
+  /** 複数個振るときの何個目か（回り方と止まる角度を少しずつ変える。0 はこれまでと同じ） */
+  spinSeed?: number;
 }
 
 function Face({ value, half }: { value: number; half: number }) {
@@ -28,17 +30,19 @@ function Face({ value, half }: { value: number; half: number }) {
 }
 
 /** 和紙色の立方体サイコロ。振ると放り上げられ、転がって出目の面で止まる。 */
-export default function Dice3D({ value, rollId, rolling, durationMs, size = 104, onClick }: Dice3DProps) {
+export default function Dice3D({ value, rollId, rolling, durationMs, size = 104, onClick, spinSeed = 0 }: Dice3DProps) {
   const half = size / 2;
   let rx = IDLE_ROT[0];
   let ry = IDLE_ROT[1];
   if (rollId > 0) {
     const [fx, fy] = FACE_ROT[value] ?? FACE_ROT[1];
     // 振るたびに回転数を変える（見た目だけ・決定論的）
-    const kx = 2 + Math.floor(hash01(rollId, value, 1) * 2);
-    const ky = 2 + Math.floor(hash01(rollId, value, 2) * 2);
+    const kx = 2 + Math.floor(hash01(rollId, value, 1 + 16 * spinSeed) * 2);
+    const ky = 2 + Math.floor(hash01(rollId, value, 2 + 16 * spinSeed) * 2);
+    // 2個目以降は止まる向きを少しだけずらし、並んだサイコロが揃いすぎないようにする（±8°）
+    const tilt = spinSeed ? (hash01(spinSeed, rollId, 3) - 0.5) * 16 : 0;
     rx = fx + REST_TILT[0] + 360 * kx * rollId;
-    ry = fy + REST_TILT[1] + 360 * ky * rollId;
+    ry = fy + REST_TILT[1] + tilt + 360 * ky * rollId;
   }
   const idle = rollId === 0;
 

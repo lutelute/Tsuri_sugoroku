@@ -39,16 +39,25 @@ export function computeDistanceToGoal(): Map<string, number> {
   return dist;
 }
 
-export function getReachableNodes(startNode: string, steps: number): string[][] {
+/**
+ * steps 歩で行ける経路の一覧（終点ごとに最短のもの）。
+ * stopNodes（まちづくりの目的地など）は、ゴールと同じく歩数が残っていても止まれる（そこを終点にする経路も加える）。
+ */
+export function getReachableNodes(startNode: string, steps: number, stopNodes: string[] = []): string[][] {
   if (steps <= 0) return [[startNode]];
 
   const paths: string[][] = [];
+  const stops = new Set(stopNodes);
 
   function dfs(current: string, remaining: number, path: string[]) {
     // goalノードに到達した場合、残りステップがあっても停止
     if (current === 'goal' && path.length > 1) {
       paths.push([...path]);
       return;
+    }
+    // 目的地: ぴったりでなくても止まれる（通り抜けることもできる）
+    if (stops.has(current) && path.length > 1 && remaining > 0) {
+      paths.push([...path]);
     }
 
     // 残り0歩 → 終点

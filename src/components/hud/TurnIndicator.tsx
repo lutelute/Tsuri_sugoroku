@@ -2,7 +2,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { NODE_MAP } from '../../data/boardNodes';
 import { computeDistanceToGoal } from '../../utils/pathfinding';
-import { calendarLabel } from '../../game/city';
+import { calendarLabel, seasonOf } from '../../game/city';
 import { GOAL_CLOSE_ROUNDS } from '../../game/constants';
 import Ruby from '../shared/Ruby';
 
@@ -56,7 +56,7 @@ export default function TurnIndicator() {
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <span className="font-mincho text-washi/60 whitespace-nowrap">
           {isCity ? (
-            <>{cal.year}<Ruby>年目</Ruby> {cal.month}<Ruby>月</Ruby>{maxTurns > 0 && <span className="text-washi/35 text-xs ml-1">(<Ruby>残り</Ruby>{Math.max(0, maxTurns - turn + 1)})</span>}</>
+            <>{cal.year}<Ruby>年目</Ruby> {cal.month}<Ruby>月</Ruby><span className="text-kin-300/80 text-xs ml-1" title={seasonOf(turn).desc}>・<Ruby>{seasonOf(turn).name}</Ruby></span>{maxTurns > 0 && <span className="text-washi/35 text-xs ml-1">(<Ruby>残り</Ruby>{Math.max(0, maxTurns - turn + 1)})</span>}</>
           ) : (
             <>{turn}{maxTurns > 0 ? `/${maxTurns}` : ''} <Ruby>巡目</Ruby></>
           )}

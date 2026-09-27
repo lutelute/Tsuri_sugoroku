@@ -9,11 +9,12 @@ import type { Player, BoardNode, CapitalEvent, EquipmentType, Fish } from './typ
 import type { CityState, BuildingKind, Plot } from './city';
 import {
   getTownInfo, computeAllStats, plotIncome, poweredTownsWithBuildings, monopolyOwner, distancesFrom,
-  build, upgrade, acquire, renovate, buildCost, canBuild, isUpgradable, MAX_BUILDING_LEVEL, CITY_ECONOMY,
+  build, upgrade, acquire, renovate, buildCost, canBuild, isUpgradable, MAX_BUILDING_LEVEL, CITY_ECONOMY, visitorFees,
 } from './city';
 import { NODE_MAP } from '../data/boardNodes';
 import { EQUIPMENT_DATA } from '../data/equipmentData';
 import { SHOP_TIER_MAX_LEVEL, MAX_EQUIPMENT_LEVEL } from './constants';
+import { isSpecialtyNode, specialtyBuyCost, regionOfSpecialty, regionSpecialtyIds } from './citySpecialties';
 import { getEquippedLevel, getEquipmentLevels, getEquippedItem } from './equipment';
 import { computeDistanceToGoal } from '../utils/pathfinding';
 import { random } from '../utils/random';
@@ -41,6 +42,9 @@ export interface PathContext {
   turn: number;
   maxTurns: number;
   goalClaims: number[];
+  /** 貧乏神がとりついている人と、全員の現在地（押し付け合いの判断） */
+  binboHolder?: number | null;
+  playerNodes?: string[];
 }
 
 function cheapestBuildCost(nodeId: string, city: CityState): number {
@@ -114,6 +118,8 @@ function scoreCityEndpoint(ctx: PathContext, nodeId: string): number {
     if (town.plots.some(p => p && p.owner === ctx.playerIndex && (p.vacant || (p.lowMonths ?? 0) > 0))) s += 3;
     if (mine > 0 && others === 0 && empty > 0 && empty <= 2) s += style === 'monopoly' ? 8 : 5; // 独占が目前
   }
+  // 他人の店の多い町は買い物代がかかる（¥200ごとに1点減点）
+  s -= visitorFees(city, nodeId, ctx.playerIndex, ctx.player.money).total / 200;
   if (node.type === 'event_good') s += 2;
   if (node.type === 'event_bad') s -= 2.5;
   if (node.type === 'goal') s += ctx.goalClaims.includes(ctx.playerIndex) ? -1 : 8;
@@ -126,7 +132,12 @@ export function chooseCpuPath(ctx: PathContext): number {
   let bestScore = -Infinity;
   ctx.paths.forEach((path, i) => {
     const end = path[path.length - 1];
-    const base = ctx.mode === 'city' && ctx.city ? scoreCityEndpoint(ctx, end) : scoreFishingEndpoint(ctx, end);
+    let base = ctx.mode === 'city' && ctx.city ? scoreCityEndpoint(ctx, end) : scoreFishingEndpoint(ctx, end);
+    // 貧乏神がとりついていたら、他の駒のいるマスを通って押し付ける
+    if (ctx.binboHolder === ctx.playerIndex && ctx.playerNodes) {
+      const others = new Set(ctx.playerNodes.filter((_, j) => j !== ctx.playerIndex));
+      if (path.slice(1).some(id => others.has(id))) base += 7;
+    }
     const score = base + random() * 0.9; // 同点を散らす程度の気まぐれ
     if (score > bestScore) {
       bestScore = score;
@@ -273,4 +284,24 @@ export function cpuCatchChance(player: Player, fish: Fish): number {
   const avg = (levels.rod + levels.reel + levels.lure) / 3;
   const noReel = !getEquippedItem(player.equipment, 'reel');
   return Math.max(0.12, Math.min(0.93, 0.78 - RARITY_PENALTY[fish.rarity] + (avg - 1) * 0.055 - (noReel ? 0.2 : 0)));
+}
+
+
+// ===== まちづくり: 名産 =====
+
+/**
+ * 今いる県庁の名産を買うか。空きなら予備費を残して買い、他人のものは独占型か、
+ * 地方独占が完成する・大金持ちのときだけ買収する。
+ */
+export function shouldBuySpecialty(owners: Record<string, number> | undefined, nodeId: string, playerIndex: number, money: number, style: CpuStyle): boolean {
+  if (!isSpecialtyNode(nodeId)) return false;
+  const owner = owners?.[nodeId];
+  if (owner === playerIndex) return false;
+  const cost = specialtyBuyCost(owners, nodeId);
+  const reserve = RESERVE[style];
+  if (owner === undefined) return money - cost >= reserve;
+  const region = regionOfSpecialty(nodeId);
+  const completes = !!region && regionSpecialtyIds(region).every(id => id === nodeId || owners?.[id] === playerIndex);
+  if (completes) return money - cost >= reserve * 0.5;
+  return style === 'monopoly' ? money - cost >= reserve + 4000 : money - cost >= 25000;
 }

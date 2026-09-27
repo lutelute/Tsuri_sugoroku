@@ -40,6 +40,17 @@ describe('getReachableNodes', () => {
     expect(getReachableNodes('start', 0)).toEqual([['start']]);
   });
 
+  it('stopNodes（目的地）は歩数が余っていても途中で止まれる', () => {
+    const two = getReachableNodes('start', 2);
+    const target = two[0][two[0].length - 1];
+    const withStop = getReachableNodes('start', 5, [target]);
+    const hit = withStop.find(p => p[p.length - 1] === target);
+    expect(hit).toBeDefined();
+    expect(hit!.length).toBe(3); // start + 2歩で止まる
+    // 止まらずに5歩進む経路も残る（通り抜けられる）
+    expect(withStop.some(p => p.length === 6)).toBe(true);
+  });
+
   it('終点が一意化されている（同じ終点の重複パスがない）', () => {
     const paths = getReachableNodes('start', 4);
     const endpoints = paths.map(p => p[p.length - 1]);

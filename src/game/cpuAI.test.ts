@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { chooseCpuPath, chooseCityAction, chooseShopPurchase, chooseCapitalChoice, cpuCatchChance, playerMonthlyIncome } from './cpuAI';
+import { chooseCpuPath, chooseCityAction, chooseShopPurchase, chooseCapitalChoice, cpuCatchChance, playerMonthlyIncome, shouldBuySpecialty } from './cpuAI';
 import { createInitialCityState, build, distancesFrom } from './city';
 import type { CityState, BuildingKind } from './city';
 import type { Player, CapitalEvent } from './types';
@@ -114,5 +114,28 @@ describe('CPU: 買い物・祭り・釣り', () => {
     const strong = makePlayer({ equipment: { equipped: { rod: rod.id, reel: reel.id, lure: lure.id }, inventory: [rod, reel, lure] } });
     expect(cpuCatchChance(strong, common)).toBeGreaterThan(cpuCatchChance(weak, common));
     expect(cpuCatchChance(weak, mythical)).toBeLessThan(cpuCatchChance(weak, common));
+  });
+});
+
+describe('CPU: 名産と貧乏神', () => {
+  it('空いている名産は予備費を残せるなら買い、他人の物は独占が完成するときだけ買収する', () => {
+    expect(shouldBuySpecialty({}, 'sapporo', 0, 20000, 'steady')).toBe(true);
+    expect(shouldBuySpecialty({}, 'sapporo', 0, 9500, 'steady')).toBe(false);
+    expect(shouldBuySpecialty({}, 'otaru', 0, 99999, 'steady')).toBe(false); // 名産のないマス
+    // 北海道: 札幌と釧路。釧路を持っていれば、札幌の買収で独占が完成する
+    expect(shouldBuySpecialty({ kushiro: 0, sapporo: 1 }, 'sapporo', 0, 25000, 'steady')).toBe(true);
+    expect(shouldBuySpecialty({ sapporo: 1 }, 'sapporo', 0, 25000, 'steady')).toBe(false);
+  });
+
+  it('貧乏神がとりついていると、他の駒のいるマスを通る道を選ぶ', () => {
+    setRandomSource(() => 0.5);
+    const city = { ...createInitialCityState(), destination: null, destinationReward: 0 };
+    const a = ['tokyo', 'r_choshi_tokyo', 'choshi'];
+    const b = ['tokyo', 'r_nagano_tokyo', 'nagano'];
+    const base = { paths: [a, b], mode: 'city' as const, player: makePlayer(), playerIndex: 0, city, turn: 1, maxTurns: 36, goalClaims: [] };
+    // 相手は銚子への中継マスにいる
+    expect(chooseCpuPath({ ...base, binboHolder: 0, playerNodes: ['tokyo', 'r_choshi_tokyo'] })).toBe(0);
+    // 相手が長野側にいれば、そちらを通る
+    expect(chooseCpuPath({ ...base, binboHolder: 0, playerNodes: ['tokyo', 'r_nagano_tokyo'] })).toBe(1);
   });
 });

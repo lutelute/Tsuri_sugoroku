@@ -3,7 +3,9 @@ import {
   createInitialCityState, getTownInfo, build, upgrade, acquire, buildCost, computeAllStats, computePowered,
   simulateRound, applyDisaster, pickDestination, applyCityEvent, cityScore, monopolyOwner, portFee,
   TOWN_IDS, CITY_EVENT_CARDS, POWER_RANGE, distancesFrom, townNeighbors, calendarLabel, CITY_ECONOMY,
+  visitorFees, startBoom, seasonOf,
 } from './city';
+import { getReachableNodes } from '../utils/pathfinding';
 import type { CityState } from './city';
 import { setRandomSource, resetRandomSource, mulberry32 } from '../utils/random';
 
@@ -254,5 +256,81 @@ describe('まちづくり: 災害・イベント・目的地', () => {
     expect(sc.buildings).toBe(1);
     expect(portFee(s, 'choshi', 1000)).toEqual({ owner: 1, fee: Math.round(1000 * CITY_ECONOMY.portFeeRate) });
     expect(portFee(s, 'tokyo', 1000)).toBeNull();
+  });
+});
+
+describe('まちづくり: 季節・買い物代・目的地（第2弾）', () => {
+  afterEach(() => resetRandomSource());
+
+  it('暦: 12月は年末商戦で商業の収入が増える', () => {
+    setRandomSource(() => 0.99); // 成長・災害を起こさない
+    let s = createInitialCityState();
+    s = place(s, 'tokyo', 0, 'power', 0);
+    s = place(s, 'tokyo', 1, 'res', 0, 3);
+    s = place(s, 'tokyo', 2, 'com', 1, 2);
+    expect(seasonOf(9).month).toBe(12);
+    const nov = simulateRound(s, 2, 8, [0, 0]).incomes[1]; // 11月（紅葉: 商業は変わらない）
+    const dec = simulateRound(s, 2, 9, [0, 0]).incomes[1]; // 12月
+    expect(dec).toBeGreaterThan(nov);
+  });
+
+  it('買い物代: 他人の商業・観光に払い、自分の店と空き家は払わない。所持金の一定割合まで', () => {
+    setRandomSource(mulberry32(3));
+    let s = createInitialCityState();
+    s = place(s, 'tokyo', 0, 'com', 1, 2);
+    s = place(s, 'tokyo', 1, 'tourism', 2, 1);
+    s = place(s, 'tokyo', 2, 'com', 0, 3);
+    const f = visitorFees(s, 'tokyo', 0, 100000);
+    expect(f.payments.map(x => x.owner).sort()).toEqual([1, 2]);
+    expect(f.total).toBeGreaterThan(0);
+    const capped = visitorFees(s, 'tokyo', 0, 1000);
+    expect(capped.total).toBeLessThanOrEqual(Math.floor(1000 * CITY_ECONOMY.visitorMaxRate));
+    // 空き家は払わない
+    const plots = [...s.towns.tokyo.plots];
+    plots[0] = { ...plots[0]!, vacant: true };
+    const s2 = { ...s, towns: { ...s.towns, tokyo: { ...s.towns.tokyo, plots } } };
+    expect(visitorFees(s2, 'tokyo', 0, 100000).payments.map(x => x.owner)).toEqual([2]);
+  });
+
+  it('目的地: 年を追うごとに賞金が上がる', () => {
+    setRandomSource(() => 0.3);
+    const y1 = pickDestination(null, 'tokyo', 1);
+    setRandomSource(() => 0.3);
+    const y3 = pickDestination(null, 'tokyo', 25);
+    expect(y3.nodeId).toBe(y1.nodeId);
+    expect(y3.reward).toBeGreaterThan(y1.reward);
+  });
+
+  it('目的地の特需で需要が上がり、月末ごとに残り月数が減る', () => {
+    setRandomSource(() => 0.99);
+    let s = createInitialCityState();
+    s = place(s, 'sendai', 0, 'res', 0);
+    const before = computeAllStats(s).get('sendai')!.demand.r;
+    s = startBoom(s, 'sendai');
+    expect(computeAllStats(s).get('sendai')!.demand.r).toBeGreaterThan(before);
+    const after = simulateRound(s, 1, 1, [0]).state;
+    expect(after.booms?.[0].monthsLeft).toBe(CITY_ECONOMY.destinationBoomMonths - 1);
+  });
+
+  it('経路: 目的地は歩数が残っていても止まれる', () => {
+    const d = distancesFrom('tokyo');
+    const target = [...d.entries()].find(([id, dist]) => dist === 2 && getTownInfo(id))![0];
+    const without = getReachableNodes('tokyo', 5).map(p => p[p.length - 1]);
+    const withStop = getReachableNodes('tokyo', 5, [target]).map(p => p[p.length - 1]);
+    expect(without.includes(target)).toBe(false);
+    expect(withStop.includes(target)).toBe(true);
+  });
+});
+
+describe('まちづくり: 災害で町の状態が消えない', () => {
+  afterEach(() => resetRandomSource());
+  it('地震で壊れても発展度・地価・もとの区画数は残る', () => {
+    setRandomSource(() => 0);
+    let s = createInitialCityState();
+    s = place(s, 'tokyo', 0, 'res', 0, 2);
+    s = { ...s, towns: { ...s.towns, tokyo: { ...s.towns.tokyo, tier: 2, land: 1.2, base: 8 } } };
+    const r = applyDisaster(s, 'quake', { region: 'kanto' });
+    expect(r.report.damages.length).toBeGreaterThan(0);
+    expect(r.state.towns.tokyo).toMatchObject({ tier: 2, land: 1.2, base: 8 });
   });
 });

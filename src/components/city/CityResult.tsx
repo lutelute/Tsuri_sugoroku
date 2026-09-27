@@ -88,7 +88,7 @@ export default function CityResult({ city, players, titleHistory = [] }: { city:
                 <span className="shrink-0 text-washi/60 font-mincho w-12">{h.year}<Ruby>年度</Ruby></span>
                 <span className="flex flex-wrap gap-1">
                   {h.titles.map(t => (
-                    <span key={t.id} className="px-1.5 py-0.5 rounded border" style={{ borderColor: players[t.playerIndex]?.color, color: players[t.playerIndex]?.color }}>
+                    <span key={`${t.id}-${t.name}`} className="px-1.5 py-0.5 rounded border" style={{ borderColor: players[t.playerIndex]?.color, color: players[t.playerIndex]?.color }}>
                       <Ruby>{t.name}</Ruby>
                     </span>
                   ))}

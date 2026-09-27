@@ -1,6 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import type { Player } from '../../game/types';
 import { NODE_MAP } from '../../data/boardNodes';
+import BinboFigure from '../city/BinboFigure';
 import { playStep } from '../../utils/sound';
 
 /** 1マス進むのにかける時間（GameScreen の到着演出待ちと共有） */
@@ -21,9 +22,11 @@ interface PlayerTokenProps {
   /** 同じマスにいる駒の中での並び順 */
   stackIndex: number;
   stackSize: number;
+  /** 貧乏神がとりついているか（大貧乏神なら 'great'） */
+  binbo?: 'normal' | 'great' | null;
 }
 
-function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize }: PlayerTokenProps) {
+function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize, binbo }: PlayerTokenProps) {
   // 表示上の現在マス（移動中は経路に沿って1マスずつ進める）
   const [shownNode, setShownNode] = useState(player.currentNode);
 
@@ -77,6 +80,11 @@ function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize
 
       {/* 1マス進むごとに小さく跳ねる（key を変えてアニメを再生） */}
       <g key={moving ? shownNode : 'rest'} className={moving ? 'token-hop' : undefined}>
+      {/* 取り憑いた貧乏神は自分のピンの真上に乗せる（隣の駒と見分けがつくよう中心を揃える） */}
+      {binbo && (() => {
+        const h = binbo === 'great' ? 26 : 22;
+        return <BinboFigure size={h} great={binbo === 'great'} x={-(h * 5) / 12} y={-12.5 - h} />;
+      })()}
 
       {/* ピン本体（先端がマスを指す） */}
       <path

@@ -143,6 +143,10 @@ export default function DevPanel() {
             <button onClick={() => { devCityCheat('quake'); flash('地震カード'); }} className="px-2 py-1 rounded bg-shu-800/50 hover:bg-shu-700/60 text-shu-100 cursor-pointer">地震</button>
             <button onClick={() => { devCityCheat('kaiju'); flash('大王イカ'); }} className="px-2 py-1 rounded bg-shu-800/50 hover:bg-shu-700/60 text-shu-100 cursor-pointer">大王イカ</button>
             <button onClick={() => { devCityCheat('yearend'); flash('年度末の大決算'); }} className="col-span-2 px-2 py-1 rounded bg-kin-700/50 hover:bg-kin-600/60 text-kin-100 cursor-pointer">年度末の大決算</button>
+            <button onClick={() => { devCityCheat('cards'); flash('カードを4枚配った'); }} className="px-2 py-1 rounded bg-ai-700/60 hover:bg-ai-600/70 text-washi cursor-pointer">カード配布</button>
+            <button onClick={() => { devCityCheat('binbo'); flash('貧乏神をつけた（あと1か月で大貧乏神）'); }} className="px-2 py-1 rounded bg-purple-800/60 hover:bg-purple-700/70 text-purple-100 cursor-pointer">貧乏神</button>
+            <button onClick={() => { devCityCheat('binboAct'); flash('貧乏神に悪さをさせた'); }} className="px-2 py-1 rounded bg-purple-800/60 hover:bg-purple-700/70 text-purple-100 cursor-pointer">貧乏神の悪さ</button>
+            <button onClick={() => { devCityCheat('dest'); flash('目的地へワープ'); }} className="col-span-2 px-2 py-1 rounded bg-shu-800/50 hover:bg-shu-700/60 text-shu-100 cursor-pointer">目的地へワープ</button>
           </div>
         )}
         <button onClick={clearSave} className="col-span-2 px-2 py-1.5 rounded-md bg-shu-800/50 hover:bg-shu-700/60 border border-shu-500/30 text-shu-200 cursor-pointer">中断セーブ削除</button>

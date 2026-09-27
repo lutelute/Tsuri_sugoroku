@@ -2,6 +2,8 @@
 // 称号は桃鉄の決算のように、その場の賞金（公害大王は罰金）で盛り上げる。
 import type { CityState } from './city';
 import { cityScore, computeAllStats, computePowered, distancesFrom, POWER_RANGE, monopolyOwner, calendarLabel } from './city';
+import { regionalMonopolies, specialtyTitle } from './citySpecialties';
+import type { Region } from './types';
 
 export interface YearEndRank {
   playerIndex: number;
@@ -11,7 +13,7 @@ export interface YearEndRank {
 }
 
 export interface CityTitle {
-  id: 'choja' | 'jinko' | 'denryoku' | 'kanko' | 'dokusen' | 'kogai';
+  id: 'choja' | 'jinko' | 'denryoku' | 'kanko' | 'dokusen' | 'kogai' | 'kaoyaku';
   name: string;
   playerIndex: number;
   reason: string;
@@ -24,13 +26,16 @@ export interface YearEndResult {
   titles: CityTitle[];
 }
 
+// 長者（総資産1位）は名誉だけ。首位に賞金を足すと逃げ切りやすくなるため（難易度調整係の計測: 称号の賞金が序盤収入の6.5%）。
+// 顔役は地方ごとに付くので、複数の地方を独占すると重なる。1つあたりは控えめにする。
 const TITLE_DEF: Record<CityTitle['id'], { name: string; prize: number }> = {
-  choja: { name: '長者', prize: 3000 },
+  choja: { name: '長者', prize: 0 },
   jinko: { name: '人口王', prize: 2500 },
   denryoku: { name: '電力王', prize: 2000 },
   kanko: { name: '観光大臣', prize: 2000 },
   dokusen: { name: '独占王', prize: 2500 },
   kogai: { name: '公害大王', prize: -1500 },
+  kaoyaku: { name: '顔役', prize: 1000 },
 };
 
 /** 1位を返す（全員0なら誰にも与えない。同点は先の席） */
@@ -115,6 +120,11 @@ export function computeYearEnd(state: CityState, moneys: number[], turn: number,
   add('kanko', topOf(tourism), `観光名所の等級 計${Math.max(0, ...tourism)}`);
   add('dokusen', topOf(monopolies), `独占 ${Math.max(0, ...monopolies)}町`);
   add('kogai', kogai, `公害 ${worstPol.toFixed(1)} の町の工場主`);
+  // 地方の名産をすべて持つ「○○の顔役」（地方ごとに1つ）
+  for (const [region, who] of Object.entries(regionalMonopolies(state.specialties)) as [Region, number][]) {
+    if (who === undefined || who >= n) continue;
+    titles.push({ id: 'kaoyaku', name: specialtyTitle(region), playerIndex: who, reason: '地方の名産をすべて所有', prize: TITLE_DEF.kaoyaku.prize });
+  }
 
   return { year, ranking, titles };
 }
