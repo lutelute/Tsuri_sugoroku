@@ -16,7 +16,7 @@ import type { GeoRegion } from '../../data/japanGeo';
 import { useMapCamera } from './useMapCamera';
 import { LABEL_LAYOUT } from './labelLayout';
 import { CityDataLayer, CitySkyline, DestinationMarker } from './CityLayer';
-import { DATA_MAP_LABEL } from './cityMapModes';
+import { DATA_MAP_LABEL, DATA_MAP_ORDER } from './cityMapModes';
 import type { DataMapMode } from './cityMapModes';
 import type { Bounds } from './useMapCamera';
 import Ruby from '../shared/Ruby';
@@ -307,8 +307,8 @@ function JapanMapImpl() {
               </span>
             )}
             <MapButton
-              onClick={() => setDataMap(m => (['none', 'pop', 'power', 'pollution', 'happy'] as DataMapMode[])[(['none', 'pop', 'power', 'pollution', 'happy'].indexOf(m) + 1) % 5])}
-              label="データマップ切替（人口/電力網/公害/幸福度）"
+              onClick={() => setDataMap(m => DATA_MAP_ORDER[(DATA_MAP_ORDER.indexOf(m) + 1) % DATA_MAP_ORDER.length])}
+              label="データマップ切替（人口/電力網/公害/幸福度/地価）"
               active={dataMap !== 'none'}
             >
               図

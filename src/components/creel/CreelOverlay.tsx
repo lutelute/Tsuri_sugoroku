@@ -55,7 +55,7 @@ export default function CreelOverlay({ onClose }: CreelOverlayProps) {
   const [filter, setFilter] = useState<FilterRarity>('all');
   const [sortMode, setSortMode] = useState<SortMode>('turn');
 
-  const caughtFish = player?.caughtFish ?? [];
+  const caughtFish = useMemo(() => player?.caughtFish ?? [], [player]);
 
   const totalPoints = useMemo(
     () => caughtFish.reduce((sum, c) => sum + calculatePoints(c), 0),

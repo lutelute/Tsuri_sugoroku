@@ -11,14 +11,18 @@ export function getActiveBoardType(): BoardType {
   try {
     const v = localStorage.getItem(KEY);
     if (v === 'realistic' || v === 'snake' || v === 'islands') return v;
-  } catch {}
+  } catch {
+    // localStorage が使えない環境では既定の盤面
+  }
   return DEFAULT;
 }
 
 export function setActiveBoardType(t: BoardType): void {
   try {
     localStorage.setItem(KEY, t);
-  } catch {}
+  } catch {
+    // 保存できなくても今回のセッションには影響しない
+  }
 }
 
 export const BOARD_TYPE_LABEL: Record<BoardType, string> = {

@@ -7,6 +7,7 @@ const SetupScreen = lazy(() => import('./components/screens/SetupScreen'));
 const GameScreen = lazy(() => import('./components/screens/GameScreen'));
 const ResultScreen = lazy(() => import('./components/screens/ResultScreen'));
 const LoginScreen = lazy(() => import('./components/screens/LoginScreen'));
+const CpuDriver = lazy(() => import('./components/cpu/CpuDriver'));
 
 export default function App() {
   const screen = useGameStore(s => s.screen);
@@ -58,6 +59,7 @@ export default function App() {
         {screen === 'title' && <TitleScreen />}
         {screen === 'setup' && <SetupScreen />}
         {screen === 'game' && <GameScreen />}
+        {screen === 'game' && <CpuDriver />}
         {screen === 'result' && <ResultScreen />}
         {screen === 'login' && <LoginScreen />}
       </Suspense>

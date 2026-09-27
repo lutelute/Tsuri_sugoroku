@@ -1,7 +1,9 @@
 import type { Player, ScoreBreakdown, Region } from './types';
 import { FISH_DATABASE } from '../data/fishDatabase';
+import { NODE_MAP } from '../data/boardNodes';
 import {
   RARITY_BONUS,
+  REGION_COMPLETE_SPECIES,
   REGION_COMPLETE_BONUS,
   ENCYCLOPEDIA_COMPLETION_BONUS_PER_PERCENT,
   GIANT_FISH_THRESHOLD,
@@ -32,15 +34,21 @@ export function calculateScore(player: Player, encyclopedia: Record<string, bool
     }
   }
 
-  // 地域制覇ボーナス
-  const regions: Region[] = ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'];
-  let regionBonus = 0;
-  for (const region of regions) {
-    const regionFish = FISH_DATABASE.filter(f => f.regions.includes(region));
-    const caughtInRegion = regionFish.filter(f => uniqueFish.has(f.id));
-    if (regionFish.length > 0 && caughtInRegion.length >= Math.ceil(regionFish.length * 0.5)) {
-      regionBonus += REGION_COMPLETE_BONUS;
+  // 地域制覇ボーナス: 地方ごとに「その地方のマスで釣った魚種」を数え、REGION_COMPLETE_SPECIES 種以上で加点
+  const speciesByRegion = new Map<Region, Set<string>>();
+  for (const caught of player.caughtFish) {
+    const region = NODE_MAP.get(caught.caughtAt)?.region;
+    if (!region) continue;
+    let set = speciesByRegion.get(region);
+    if (!set) {
+      set = new Set();
+      speciesByRegion.set(region, set);
     }
+    set.add(caught.fishId);
+  }
+  let regionBonus = 0;
+  for (const set of speciesByRegion.values()) {
+    if (set.size >= REGION_COMPLETE_SPECIES) regionBonus += REGION_COMPLETE_BONUS;
   }
 
   // 図鑑完成度ボーナス

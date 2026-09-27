@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { useGameStore } from '../../store/useGameStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import { PLAYER_DEFAULT_NAMES, PLAYER_COLORS, DEFAULT_MAX_TURNS } from '../../game/constants';
+import { PLAYER_DEFAULT_NAMES, PLAYER_COLORS, DEFAULT_MAX_TURNS, MODE_STORAGE_KEY } from '../../game/constants';
 import { lookupUserByUsername, loadUserEquipment, loadUserMoney, loadUserEncyclopedia } from '../../lib/firestore';
 import { verifyAuth } from '../../lib/firebase';
 import type { PlayerEquipment, BoardType, GameMode } from '../../game/types';
@@ -24,7 +24,7 @@ export default function SetupScreen() {
   const [playerCount, setPlayerCount] = useState(1);
   const [names, setNames] = useState<string[]>([...PLAYER_DEFAULT_NAMES]);
   const [maxTurns, setMaxTurns] = useState(() => {
-    try { return localStorage.getItem('tsuri_sugoroku_mode') === 'city' ? CITY_DEFAULT_MONTHS : DEFAULT_MAX_TURNS; } catch { return DEFAULT_MAX_TURNS; }
+    try { return localStorage.getItem(MODE_STORAGE_KEY) === 'city' ? CITY_DEFAULT_MONTHS : DEFAULT_MAX_TURNS; } catch { return DEFAULT_MAX_TURNS; }
   });
   const [linkedUsers, setLinkedUsers] = useState<(LinkedUser | null)[]>([null, null, null, null]);
   const [searchInputs, setSearchInputs] = useState<string[]>(['', '', '', '']);
@@ -35,12 +35,33 @@ export default function SetupScreen() {
   const [starting, setStarting] = useState(false);
   const [carryOver, setCarryOver] = useState(true); // 引き継ぎモード
   const [boardType, setBoardType] = useState<BoardType>(getActiveBoardType());
+  // 各席が人か CPU か（1人目は常に人）
+  const [kinds, setKinds] = useState<('human' | 'cpu')[]>(['human', 'human', 'human', 'human']);
+  const toggleKind = (i: number) => {
+    if (i === 0) return;
+    const next = [...kinds];
+    next[i] = next[i] === 'cpu' ? 'human' : 'cpu';
+    setKinds(next);
+    if (next[i] === 'cpu') {
+      // CPU の席は紐付けを外し、名前は開始時に性格名で自動設定
+      const nl = [...linkedUsers];
+      nl[i] = null;
+      setLinkedUsers(nl);
+      const nn = [...names];
+      if (nn[i] === PLAYER_DEFAULT_NAMES[i]) nn[i] = '';
+      setNames(nn);
+    } else {
+      const nn = [...names];
+      if (!nn[i]) nn[i] = PLAYER_DEFAULT_NAMES[i];
+      setNames(nn);
+    }
+  };
   const [mode, setModeState] = useState<GameMode>(() => {
-    try { return localStorage.getItem('tsuri_sugoroku_mode') === 'city' ? 'city' : 'fishing'; } catch { return 'fishing'; }
+    try { return localStorage.getItem(MODE_STORAGE_KEY) === 'city' ? 'city' : 'fishing'; } catch { return 'fishing'; }
   });
   const setMode = (m: GameMode) => {
     setModeState(m);
-    try { localStorage.setItem('tsuri_sugoroku_mode', m); } catch { /* noop */ }
+    try { localStorage.setItem(MODE_STORAGE_KEY, m); } catch { /* noop */ }
     // モードに応じた既定の長さ
     setMaxTurns(m === 'city' ? CITY_DEFAULT_MONTHS : DEFAULT_MAX_TURNS);
   };
@@ -117,6 +138,7 @@ export default function SetupScreen() {
             maxTurns,
             carryOver: true,
             mode,
+            playerKinds: kinds.slice(0, playerCount),
           },
           savedEquipments,
           savedMoneys,
@@ -132,6 +154,7 @@ export default function SetupScreen() {
             maxTurns,
             carryOver: false,
             mode,
+            playerKinds: kinds.slice(0, playerCount),
           },
           undefined,
           undefined,
@@ -147,6 +170,7 @@ export default function SetupScreen() {
         maxTurns,
         carryOver: false,
         mode,
+        playerKinds: kinds.slice(0, playerCount),
       });
     } finally {
       setStarting(false);
@@ -302,19 +326,32 @@ export default function SetupScreen() {
                   className="w-4 h-4 rounded-full shrink-0"
                   style={{ backgroundColor: PLAYER_COLORS[i] }}
                 />
+                {i > 0 && (
+                  <button
+                    onClick={() => toggleKind(i)}
+                    className={`shrink-0 text-xs font-bold px-2.5 py-1.5 rounded-lg border transition cursor-pointer ${
+                      kinds[i] === 'cpu' ? 'bg-kin-500/30 border-kin-400/60 text-kin-200' : 'bg-white/10 border-white/20 text-white/70'
+                    }`}
+                    title="人とCPUを切り替え"
+                  >
+                    {kinds[i] === 'cpu' ? 'CPU' : <Ruby>人</Ruby>}
+                  </button>
+                )}
                 <input
                   type="text"
                   value={names[i]}
                   onChange={(e) => updateName(i, e.target.value)}
-                  placeholder={PLAYER_DEFAULT_NAMES[i]}
+                  placeholder={kinds[i] === 'cpu' ? '（自動で名付け）' : PLAYER_DEFAULT_NAMES[i]}
                   maxLength={10}
-                  disabled={!!linkedUsers[i]}
+                  disabled={!!linkedUsers[i] || kinds[i] === 'cpu'}
                   className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/30 outline-none focus:border-blue-400 transition disabled:opacity-60"
                 />
               </div>
 
-              {/* ユーザー紐付け */}
-              {linkedUsers[i] ? (
+              {/* ユーザー紐付け（CPU の席では出さない） */}
+              {kinds[i] === 'cpu' ? (
+                <p className="text-[11px] text-kin-300/70 mt-1"><Ruby>CPUが自動で遊びます（性格は堅実・独占・目的地の順）</Ruby></p>
+              ) : linkedUsers[i] ? (
                 <div className="flex items-center justify-between text-xs mt-1">
                   <span className="text-cyan-300">
                     🔗 {linkedUsers[i]!.displayName}（<Ruby>登録ユーザー</Ruby>）

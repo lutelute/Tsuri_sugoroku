@@ -1,4 +1,6 @@
 import type { CityState, CityReport, CityEventCard, CityDisasterReport } from './city';
+import type { CpuStyle } from './cpuAI';
+import type { YearEndResult, CityTitle } from './cityAwards';
 
 // ===== ノード関連 =====
 
@@ -201,6 +203,9 @@ export interface Player {
   extraTurn: boolean;
   fishBonusMultiplier: number;
   fishBonusTurnsLeft: number;
+  /** CPU 対戦相手か */
+  isCpu?: boolean;
+  cpuStyle?: CpuStyle;
 }
 
 // ===== 釣りフェーズ =====
@@ -247,6 +252,7 @@ export type TurnPhase =
   | 'city'          // まちづくり: 町の区画パネル
   | 'city_event'    // まちづくり: まちイベントカード
   | 'city_report'   // まちづくり: 月末の市政レポート
+  | 'city_yearend'  // まちづくり: 年度末（3月）の大決算
   | 'turn_end';
 
 export interface GameSettings {
@@ -256,6 +262,7 @@ export interface GameSettings {
   maxTurns: number; // 0 = ゴール到達で終了
   carryOver?: boolean; // 装備・所持金の引き継ぎモード（falseならゲーム終了時にFirestoreへ保存しない）
   mode?: GameMode; // 省略時は 'fishing'
+  playerKinds?: ('human' | 'cpu')[]; // 各席が人か CPU か（省略時は全員人）
 }
 
 export interface GameState {
@@ -284,6 +291,14 @@ export interface GameState {
   lastCityEventOutcome: { message: string; moneyDelta: number; disaster?: CityDisasterReport } | null;
   cityToast: { title: string; body: string; seq: number } | null;
   capitalDoneThisTurn: boolean;
+  /** まちづくり: ゴール賞金を受け取ったプレイヤー（着順）。賞金は1人1回 */
+  cityGoalClaims: number[];
+  /** まちづくり: 直近の年度末大決算（表示用） */
+  cityYearEnd: YearEndResult | null;
+  /** まちづくり: 年度ごとの称号の記録（結果画面用） */
+  cityTitleHistory: { year: number; titles: CityTitle[] }[];
+  /** 釣り旅: 最初にゴールした巡（ここから GOAL_CLOSE_ROUNDS 巡で終了） */
+  firstFinishTurn: number | null;
 }
 
 export interface MoveRecord {

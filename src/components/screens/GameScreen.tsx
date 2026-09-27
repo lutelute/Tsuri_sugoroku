@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { useGameStore, MAX_FISHING_PER_TURN } from '../../store/useGameStore';
 import { MOVE_STEP_MS } from '../map/PlayerToken';
 import { NODE_MAP } from '../../data/boardNodes';
@@ -21,18 +22,34 @@ import DevPanel from '../dev/DevPanel';
 import CityOverlay from '../city/CityOverlay';
 import CityEventOverlay from '../city/CityEventOverlay';
 import CityReportOverlay from '../city/CityReportOverlay';
-import { isTown } from '../../game/city';
+import CityYearEndOverlay from '../city/CityYearEndOverlay';
+import { isTown, calendarLabel } from '../../game/city';
+import TurnBanner from '../fx/TurnBanner';
+import StepCountdown from '../fx/StepCountdown';
+import ArrivalBanner from '../fx/ArrivalBanner';
+import GoalCelebration from '../fx/GoalCelebration';
+import CityToastCard from '../fx/CityToastCard';
+import MiniDie from '../fx/MiniDie';
+import { NODE_STAMP } from '../fx/nodeStyle';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
+
+/** 駒が着いてからマスの処理に移るまでの間（到着の巻物と判子を見せる） */
+const ARRIVAL_PAUSE_MS = 900;
+/** ターン終了から次の手番までの間 */
+const TURN_END_MS = 1200;
+/** ゴールの祝いを見せる時間（タップで早送りできる） */
+const GOAL_CELEBRATION_MS = 4200;
 
 export default function GameScreen() {
   // 釣りミニゲーム中の高頻度更新(fishingState)で画面全体が再描画されないよう、必要な値だけ購読する
   const {
     turnPhase, players, currentPlayerIndex, nodeActionsThisTurn,
     setTurnPhase, executeNodeAction, endTurn, doActionAgain, rouletteResult,
-    setScreen, endGame, lastMove, isCity, cityToast, dismissCityToast,
+    setScreen, endGame, lastMove, isCity, cityToast, dismissCityToast, turn,
   } = useGameStore(useShallow(s => ({
+    turn: s.turn,
     isCity: s.settings.mode === 'city',
     cityToast: s.cityToast,
     dismissCityToast: s.dismissCityToast,
@@ -62,18 +79,24 @@ export default function GameScreen() {
   const moveSteps = lastMove && lastMove.playerIndex === currentPlayerIndex ? lastMove.path.length - 1 : 0;
   useEffect(() => {
     if (turnPhase === 'node_action') {
-      const timer = setTimeout(() => executeNodeAction(), 450 + moveSteps * MOVE_STEP_MS);
+      const timer = setTimeout(() => executeNodeAction(), ARRIVAL_PAUSE_MS + moveSteps * MOVE_STEP_MS);
       return () => clearTimeout(timer);
     }
   }, [turnPhase, executeNodeAction, moveSteps]);
 
-  // turn_end → 次のプレイヤーへ（手動ではなく少し待つ）
+  // ゴール到達の祝い（釣り旅のみ）。この間は次の手番へ進むのを少し待つ
+  const showGoal = turnPhase === 'turn_end' && node?.type === 'goal' && !!player?.hasFinished;
+
+  // turn_end → 次のプレイヤーへ（手動ではなく少し待つ）。タップでの早送りと二重に進まないよう状態を確かめる
+  const proceedTurnEnd = useCallback(() => {
+    if (useGameStore.getState().turnPhase === 'turn_end') endTurn();
+  }, [endTurn]);
   useEffect(() => {
     if (turnPhase === 'turn_end') {
-      const timer = setTimeout(() => endTurn(), 1200);
+      const timer = setTimeout(proceedTurnEnd, showGoal ? GOAL_CELEBRATION_MS : TURN_END_MS);
       return () => clearTimeout(timer);
     }
-  }, [turnPhase, endTurn]);
+  }, [turnPhase, proceedTurnEnd, showGoal]);
 
   // 目的地到着などのお知らせは数秒で自動的に閉じる
   useEffect(() => {
@@ -111,17 +134,36 @@ export default function GameScreen() {
       <div className="flex-1 min-h-0 relative overflow-hidden">
         <JapanMap />
 
+        {/* 手番のはじめに「〇〇の番」の帯が横切る */}
+        {turnPhase === 'idle' && player && (
+          <TurnBanner
+            key={`${turn}-${currentPlayerIndex}`}
+            name={player.name}
+            color={player.color}
+            sub={isCity ? `${calendarLabel(turn).year}年目 ${calendarLabel(turn).month}月` : `${turn}巡目`}
+          />
+        )}
+
         {turnPhase === 'path_selection' && (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-amber-600/90 px-4 py-2 rounded-lg text-sm font-bold z-20 animate-bounce shadow-lg">
-            <Ruby>光っているマスをタップ！</Ruby> (🎲{rouletteResult})
+          <div className="absolute top-2 left-1/2 z-20 animate-slide-in-down washi-card rounded-full pl-2 pr-4 py-1.5 shadow-xl flex items-center gap-2 text-sm font-bold font-mincho text-[#2a2118]" role="status">
+            {rouletteResult ? <MiniDie value={rouletteResult} size={26} /> : null}
+            <span><Ruby>光っているマスをタップ！</Ruby></span>
           </div>
         )}
 
+        {/* 移動中は残りマスを数え、着いたら巻物＋判子で到着を知らせる */}
         {turnPhase === 'node_action' && node && (
-          <div className="absolute top-2 left-1/2 animate-slide-in-down bg-blue-600/90 px-4 py-2 rounded-lg text-sm z-20 shadow-lg flex items-center gap-2">
-            <span className="animate-icon-pulse inline-block">📍</span>
-            <span><Ruby>{node.name}</Ruby> <Ruby>に到着！</Ruby></span>
-          </div>
+          <>
+            {moveSteps > 0 && <StepCountdown key={`cd-${lastMove?.seq ?? 0}`} steps={moveSteps} stepMs={MOVE_STEP_MS} />}
+            <ArrivalBanner
+              key={`ar-${lastMove?.seq ?? 0}`}
+              name={node.name}
+              glyph={isCity && isTown(node) && node.type !== 'capital' ? '町' : node.id === 'tokyo' || node.id === 'kyoto' ? '都' : NODE_STAMP[node.type].glyph}
+              tone={NODE_STAMP[node.type].tone}
+              label={isCity && isTown(node) ? 'まち' : NODE_STAMP[node.type].label}
+              delayMs={moveSteps * MOVE_STEP_MS}
+            />
+          </>
         )}
 
         {/* === フローティング: サイコロボタン === */}
@@ -141,8 +183,8 @@ export default function GameScreen() {
         {/* === フローティング: アクション選択 === */}
         {turnPhase === 'action_choice' && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-xs space-y-2">
-            <div className="text-center text-xs text-white/70 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1.5">
-              📍 <Ruby>{node?.name || '???'}</Ruby> — <Ruby>何をする？</Ruby>
+            <div className="fx-rise text-center text-xs text-washi/80 bg-ai-950/70 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-kin-500/25 font-mincho">
+              <span className="text-kin-300 font-bold"><Ruby>{node?.name || '???'}</Ruby></span> — <Ruby>何をする？</Ruby>
             </div>
             {isCity && isTown(node) && (
               <Button
@@ -193,6 +235,7 @@ export default function GameScreen() {
           >
             <Icon name="trophy" size={26} />
           </button>
+          <SoundToggle />
         </div>
 
         {/* 右サイドボタン群 */}
@@ -239,17 +282,17 @@ export default function GameScreen() {
       {turnPhase === 'city' && <CityOverlay />}
       {turnPhase === 'city_event' && <CityEventOverlay />}
       {turnPhase === 'city_report' && <CityReportOverlay />}
+      {turnPhase === 'city_yearend' && <CityYearEndOverlay />}
 
-      {/* まちづくり: 目的地到着などのお知らせ */}
+      {/* まちづくり: 目的地到着などのお知らせ（瓦版） */}
       {cityToast && (
-        <button
+        <CityToastCard
           key={cityToast.seq}
-          onClick={dismissCityToast}
-          className="fixed top-14 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md washi-card rounded-xl px-4 py-3 text-left shadow-2xl animate-slide-in-down cursor-pointer"
-        >
-          <p className="font-mincho font-bold text-[#a92e1d]">🚩 <Ruby>{cityToast.title}</Ruby></p>
-          <p className="text-xs text-[#4a3a28] mt-0.5"><Ruby>{cityToast.body}</Ruby></p>
-        </button>
+          title={cityToast.title}
+          body={cityToast.body}
+          seq={cityToast.seq}
+          onDismiss={dismissCityToast}
+        />
       )}
 
       {/* 休憩所（修理機能付き） */}
@@ -260,18 +303,15 @@ export default function GameScreen() {
         />
       )}
 
-      {/* ゴール到達メッセージ */}
-      {turnPhase === 'turn_end' && node?.type === 'goal' && player?.hasFinished && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-gradient-to-b from-amber-900/80 to-amber-950/80 rounded-2xl border border-amber-500/20 p-8 text-center max-w-sm w-[90%]">
-            <div className="text-5xl mb-4">🏁</div>
-            <h3 className="text-xl font-bold mb-2">ゴール！</h3>
-            <p className="text-white/60 mb-3">{player.name}が<Ruby>ゴールに到達した！</Ruby></p>
-            <p className="text-amber-300 font-bold text-lg">
-              <Ruby>賞金</Ruby> ¥{(GOAL_MONEY_REWARD[player.finishOrder ?? 0] ?? GOAL_MONEY_REWARD[GOAL_MONEY_REWARD.length - 1]).toLocaleString()} <Ruby>獲得！</Ruby>
-            </p>
-          </div>
-        </div>
+      {/* ゴール到達の祝い（金箔・着順の判子・賞金の数え上げ） */}
+      {showGoal && player && (
+        <GoalCelebration
+          playerName={player.name}
+          color={player.color}
+          order={player.finishOrder ?? 0}
+          reward={GOAL_MONEY_REWARD[player.finishOrder ?? 0] ?? GOAL_MONEY_REWARD[GOAL_MONEY_REWARD.length - 1]}
+          onContinue={proceedTurnEnd}
+        />
       )}
 
       {/* 図鑑 */}
@@ -327,5 +367,23 @@ export default function GameScreen() {
         </div>
       )}
     </div>
+  );
+}
+
+/** ゲーム中の効果音 ON/OFF（タイトルと同じ設定を切り替える） */
+function SoundToggle() {
+  const soundEnabled = useSettingsStore(st => st.soundEnabled);
+  const toggleSound = useSettingsStore(st => st.toggleSound);
+  return (
+    <button
+      onClick={toggleSound}
+      className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex flex-col items-center justify-center text-washi transition cursor-pointer leading-none"
+      title={soundEnabled ? '効果音を消す' : '効果音を鳴らす'}
+      aria-label={soundEnabled ? '効果音を消す' : '効果音を鳴らす'}
+      aria-pressed={soundEnabled}
+    >
+      <span className="text-lg" aria-hidden="true">{soundEnabled ? '♪' : '×'}</span>
+      <span className="text-[10px] font-mincho mt-0.5">おと</span>
+    </button>
   );
 }

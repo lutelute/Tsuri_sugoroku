@@ -1,223 +1,153 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../store/useGameStore';
-import { getBiteDelay, createCaughtFish, getEffectiveLevel, checkTairyou, selectFish, interpolateBonus, getStrikeGreenZone } from '../game/fishing';
+import { getBiteDelay, createCaughtFish, getEffectiveLevel, checkTairyou, selectFish, getStrikeGreenZone } from '../game/fishing';
 import { NODE_MAP } from '../data/boardNodes';
-import type { FishRarity, FishingMiniGame } from '../game/types';
-import {
-  FISHING_REELING_TAP_BASE,
-  FISHING_REELING_TAP_PER_REEL_LEVEL,
-  FISHING_TENSION_RISE_PER_TAP,
-  FISHING_TENSION_DECAY_RATE,
-  FISHING_TENSION_BREAK_THRESHOLD,
-  FISHING_REELING_TARGET,
-  FISHING_REELING_TIME_LIMIT_MS,
-  REEL_TENSION_TOLERANCE,
-  REEL_TIME_EXTENSION,
-  NO_REEL_TAP_MULTIPLIER,
-  NO_REEL_TENSION_MULTIPLIER,
-  NO_LURE_BITE_DELAY_MULTIPLIER,
-} from '../game/constants';
+import { NO_LURE_BITE_DELAY_MULTIPLIER } from '../game/constants';
 import { getEquippedItem } from '../game/equipment';
+import { judgeStrike, drawMiniGame } from '../components/fishing/strike';
+import type { StrikeJudge } from '../components/fishing/strike';
+import type { FailReason } from '../components/fishing/miniGameMeta';
+import { buzz, HAPTIC } from '../components/fishing/haptics';
+import { playHook, playMiss } from '../utils/sound';
 
-// レア度による難易度倍率: テンション上昇・魚の抵抗が高くなり、タップ効果が下がる
-// バランス（子供向け）: 出会えた幻の魚は「ちゃんと釣れる」手応えにする。
-// mythical は出現自体に Lv4〜5 装備が必要（＝テンション上限・制限時間が延長される）ため、
-// 以下の倍率でも余裕をもって釣り上げられる。難しすぎないよう最上位2段階は控えめに設定。
-const RARITY_DIFFICULTY: Record<FishRarity, { tensionMul: number; resistMul: number; tapMul: number }> = {
-  common:    { tensionMul: 1.0,  resistMul: 1.0,  tapMul: 1.0 },
-  uncommon:  { tensionMul: 1.03, resistMul: 1.07, tapMul: 0.97 },
-  rare:      { tensionMul: 1.06, resistMul: 1.15, tapMul: 0.93 },
-  legendary: { tensionMul: 1.09, resistMul: 1.2,  tapMul: 0.9 },
-  mythical:  { tensionMul: 1.12, resistMul: 1.28, tapMul: 0.85 },
-};
+// ミニゲーム共通の難易度・手触りの数値は src/components/fishing/ 配下に集約:
+//   - やり取り（リーリング）のレア度別の手応え: reelSim.ts の RARITY_DIFFICULTY
+//   - 合わせの輪の速さ・会心幅: strike.ts
+//   - 的当て / 早合わせ / リズム: 各 Phase コンポーネント先頭の定数
+
+/** キャスト演出の長さ（ms） */
+const CAST_MS = 1500;
+/** 合わせ成功の演出を見せる時間（ms） */
+const STRIKE_SUCCESS_MS = 1000;
+/** 合わせ失敗の理由（早すぎ/遅すぎ/見逃し）を読ませる時間（ms） */
+const STRIKE_FAIL_MS = 1600;
+/** 当たり前に押した（早合わせ）ときに当たりが遅れる時間（ms） */
+const EARLY_TAP_PENALTY_MS = 700;
+/** 早合わせのペナルティは1回の釣りで最大この回数まで（子供が延々待たされないように） */
+const EARLY_TAP_MAX_PENALTIES = 3;
+
+/** 合わせの結果（判定 + 当たりを見逃した） */
+export type StrikeOutcome = StrikeJudge | 'missed';
 
 export function useFishing() {
-  const {
-    fishingState, players, currentPlayerIndex, turn,
-    updateFishingState, catchFish, failFishing,
-  } = useGameStore();
+  const { fishingState, player, turn, updateFishingState, catchFish, failFishing } = useGameStore(
+    useShallow(s => ({
+      fishingState: s.fishingState,
+      player: s.players[s.currentPlayerIndex],
+      turn: s.turn,
+      updateFishingState: s.updateFishingState,
+      catchFish: s.catchFish,
+      failFishing: s.failFishing,
+    })),
+  );
 
-  const player = players[currentPlayerIndex];
-  const [biteTimer, setBiteTimer] = useState<number | null>(null);
-  const reelingRef = useRef<number | null>(null);
-  const reelingTimerRef = useRef<number | null>(null);
-  const reelingStartRef = useRef(0);
-  const tensionRef = useRef(0);
-  const progressRef = useRef(0);
-  const tensionLimitRef = useRef(FISHING_TENSION_BREAK_THRESHOLD);
-  const timeLimitRef = useRef(FISHING_REELING_TIME_LIMIT_MS);
+  const [strikeOutcome, setStrikeOutcome] = useState<StrikeOutcome | null>(null);
+  const [failReason, setFailReason] = useState<FailReason | null>(null);
+  const biteTimerRef = useRef<number | null>(null);
+  const biteDueRef = useRef(0);
+  const penaltiesRef = useRef(0);
+  const timersRef = useRef<number[]>([]);
 
-  // 釣り開始（fishingStateは既にstartFishing/startBoatFishingでセット済み）
+  // アンマウント時に演出用タイマーをまとめて解除
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => timers.forEach(id => clearTimeout(id));
+  }, []);
+
+  const later = useCallback((fn: () => void, ms: number) => {
+    timersRef.current.push(window.setTimeout(fn, ms));
+  }, []);
+
+  // 釣り開始（fishingState は startFishing/startBoatFishing でセット済み）
   // クリーンアップ関数を返し、アンマウント時に cast→waiting タイマーを解除する
   const begin = useCallback(() => {
     const t = window.setTimeout(() => {
       updateFishingState({ phase: 'waiting' });
-    }, 1500);
+    }, CAST_MS);
     return () => clearTimeout(t);
   }, [updateFishingState]);
 
+  const scheduleBite = useCallback((delay: number) => {
+    if (biteTimerRef.current !== null) clearTimeout(biteTimerRef.current);
+    biteDueRef.current = Date.now() + delay;
+    biteTimerRef.current = window.setTimeout(() => {
+      biteTimerRef.current = null;
+      updateFishingState({ hasBite: true });
+    }, delay);
+  }, [updateFishingState]);
+
   // waiting フェーズ: バイト待ち
+  const phase = fishingState?.phase;
   useEffect(() => {
-    if (fishingState?.phase !== 'waiting') return;
+    if (phase !== 'waiting') return;
 
     let delay = getBiteDelay(player.equipment);
     // ルアーなしペナルティ: バイト待ちが大幅に遅くなる
     if (!getEquippedItem(player.equipment, 'lure')) {
       delay *= NO_LURE_BITE_DELAY_MULTIPLIER;
     }
-    const timer = window.setTimeout(() => {
-      updateFishingState({ hasBite: true });
-    }, delay);
+    penaltiesRef.current = 0;
+    scheduleBite(delay);
 
-    setBiteTimer(timer as unknown as number);
-    return () => clearTimeout(timer);
-  }, [fishingState?.phase, player.equipment, updateFishingState]);
+    return () => {
+      if (biteTimerRef.current !== null) clearTimeout(biteTimerRef.current);
+      biteTimerRef.current = null;
+    };
+  }, [phase, player.equipment, scheduleBite]);
 
-  // ストライク処理
-  const handleStrike = useCallback((normalizedAngle: number) => {
+  /**
+   * 当たり前に押した（早合わせ）。魚が警戒して当たりが少し遅れる。
+   * @returns ペナルティが入ったか（UI の文言切り替え用）
+   */
+  const handleEarlyTap = useCallback((): boolean => {
+    if (!fishingState || fishingState.phase !== 'waiting' || fishingState.hasBite) return false;
+    if (biteTimerRef.current === null || penaltiesRef.current >= EARLY_TAP_MAX_PENALTIES) return false;
+    penaltiesRef.current++;
+    const remaining = Math.max(0, biteDueRef.current - Date.now());
+    scheduleBite(remaining + EARLY_TAP_PENALTY_MS);
+    return true;
+  }, [fishingState, scheduleBite]);
+
+  // ストライク（合わせ）: t = 当たりからの正規化時間（0.5 が金の帯の中心）
+  const handleStrike = useCallback((t: number) => {
     if (!fishingState || fishingState.phase !== 'waiting' || !fishingState.hasBite) return;
 
-    // 装備の重み付きストライクレベルで緑ゾーンを計算（WaitingPhaseの描画と同一の式）
-    const strikeLevel = getEffectiveLevel(player.equipment, 'strike');
-    const greenZone = getStrikeGreenZone(strikeLevel);
+    // 装備の重み付きストライクレベルで帯幅を計算（WaitingPhase の描画と同一の式）
+    const greenZone = getStrikeGreenZone(getEffectiveLevel(player.equipment, 'strike'));
+    const judge = judgeStrike(t, greenZone);
+    setStrikeOutcome(judge);
 
-    // 緑ゾーンの中心は0.5に配置
-    const greenStart = 0.5 - greenZone / 2;
-    const greenEnd = 0.5 + greenZone / 2;
-
-    const success = normalizedAngle >= greenStart && normalizedAngle <= greenEnd;
-
-    if (success) {
-      const miniGames: FishingMiniGame[] = ['reeling', 'target', 'reaction', 'rhythm'];
-      const selectedMiniGame = miniGames[Math.floor(Math.random() * miniGames.length)];
+    if (judge === 'perfect' || judge === 'good') {
+      buzz(judge === 'perfect' ? HAPTIC.perfect : HAPTIC.hook);
+      playHook(judge === 'perfect');
+      const game = drawMiniGame(fishingState.targetFish?.rarity ?? 'common');
       updateFishingState({ phase: 'strike', strikeSuccess: true });
-      setTimeout(() => {
-        updateFishingState({ phase: 'reeling', miniGame: selectedMiniGame });
-        tensionRef.current = 0;
-        progressRef.current = 0;
-      }, 800);
+      later(() => updateFishingState({ phase: 'reeling', miniGame: game }), STRIKE_SUCCESS_MS);
     } else {
+      buzz(HAPTIC.miss);
+      playMiss();
+      setFailReason(judge);
       updateFishingState({ phase: 'strike', strikeSuccess: false });
-      setTimeout(() => failFishing(), 1000);
+      later(() => failFishing(), STRIKE_FAIL_MS);
     }
-  }, [fishingState, player.equipment, updateFishingState, failFishing]);
+  }, [fishingState, player.equipment, updateFishingState, failFishing, later]);
 
-  // リーリング: テンション自然減衰 + 制限時間
-  // ※ phase が 'reeling' でも miniGame が 'reeling' 以外（target/reaction/rhythm）のときは
-  //    各ミニゲームが自前の制限時間・成否を持つため、この孤立タイマーを起動してはならない。
-  useEffect(() => {
-    if (fishingState?.phase !== 'reeling' || fishingState.miniGame !== 'reeling') return;
+  // 当たりを見逃した（輪が消えるまで押さなかった）
+  const handleMiss = useCallback(() => {
+    if (!fishingState || fishingState.phase !== 'waiting') return;
+    buzz(HAPTIC.miss);
+    playMiss();
+    setStrikeOutcome('missed');
+    setFailReason('missed');
+    updateFishingState({ phase: 'strike', strikeSuccess: false });
+    later(() => failFishing(), STRIKE_FAIL_MS);
+  }, [fishingState, updateFishingState, failFishing, later]);
 
-    reelingStartRef.current = Date.now();
-
-    const rarity = fishingState.targetFish?.rarity ?? 'common';
-    const diff = RARITY_DIFFICULTY[rarity];
-
-    // リールのテンション耐性
-    const toleranceLevel = getEffectiveLevel(player.equipment, 'tensionTolerance');
-    const toleranceBonus = interpolateBonus(REEL_TENSION_TOLERANCE, toleranceLevel);
-    tensionLimitRef.current = FISHING_TENSION_BREAK_THRESHOLD + toleranceBonus;
-
-    // リールの制限時間延長
-    const timeExtLevel = getEffectiveLevel(player.equipment, 'tensionTolerance');
-    const timeExtBonus = interpolateBonus(REEL_TIME_EXTENSION, timeExtLevel);
-    timeLimitRef.current = FISHING_REELING_TIME_LIMIT_MS + timeExtBonus;
-
-    const interval = window.setInterval(() => {
-      tensionRef.current = Math.max(0, tensionRef.current - FISHING_TENSION_DECAY_RATE * 3);
-      // 自然後退（魚の抵抗）— レア度で増加
-      progressRef.current = Math.max(0, progressRef.current - 0.35 * diff.resistMul);
-
-      updateFishingState({
-        tension: tensionRef.current,
-        reelingProgress: progressRef.current,
-      });
-    }, 50);
-
-    // 制限時間タイマー
-    const timeLimit = window.setTimeout(() => {
-      if (reelingRef.current) clearInterval(reelingRef.current);
-      failFishing();
-    }, timeLimitRef.current);
-
-    reelingRef.current = interval;
-    reelingTimerRef.current = timeLimit;
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeLimit);
-    };
-  }, [fishingState?.phase, fishingState?.miniGame, player.equipment, updateFishingState, failFishing]);
-
-  // リーリング: タップ
-  const handleReelTap = useCallback(() => {
-    if (!fishingState || fishingState.phase !== 'reeling') return;
-
-    const rarity = fishingState.targetFish?.rarity ?? 'common';
-    const diff = RARITY_DIFFICULTY[rarity];
-
-    const reelingLevel = getEffectiveLevel(player.equipment, 'reeling');
-    const baseTapPower = FISHING_REELING_TAP_BASE +
-      FISHING_REELING_TAP_PER_REEL_LEVEL * (reelingLevel - 1);
-    let tapPower = baseTapPower * diff.tapMul;
-    let tensionRise = FISHING_TENSION_RISE_PER_TAP * diff.tensionMul;
-
-    // リールなしペナルティ
-    if (!getEquippedItem(player.equipment, 'reel')) {
-      tapPower *= NO_REEL_TAP_MULTIPLIER;
-      tensionRise *= NO_REEL_TENSION_MULTIPLIER;
-    }
-
-    tensionRef.current += tensionRise;
-    progressRef.current += tapPower;
-
-    // テンション破断チェック（リールのテンション耐性を考慮）
-    if (tensionRef.current >= tensionLimitRef.current) {
-      if (reelingRef.current) clearInterval(reelingRef.current);
-      if (reelingTimerRef.current) clearTimeout(reelingTimerRef.current);
-      updateFishingState({ tension: tensionLimitRef.current, reelingProgress: progressRef.current });
-      failFishing();
-      return;
-    }
-
-    // 釣り上げ成功チェック
-    if (progressRef.current >= FISHING_REELING_TARGET) {
-      if (reelingRef.current) clearInterval(reelingRef.current);
-      if (reelingTimerRef.current) clearTimeout(reelingTimerRef.current);
-      const caught = createCaughtFish(fishingState.targetFish!.id, player.currentNode, turn, player.equipment);
-      const size = caught.size;
-
-      // 大漁判定
-      const node = NODE_MAP.get(player.currentNode);
-      const isSpecial = node?.type === 'fishing_special';
-      const bonusCount = checkTairyou(player.equipment, isSpecial);
-      const bonusFish: typeof caught[] = [];
-      if (bonusCount > 0 && node) {
-        for (let i = 0; i < bonusCount; i++) {
-          const extraFish = selectFish(node.id, node.region, player.equipment, isSpecial, fishingState.boatFishing);
-          bonusFish.push(createCaughtFish(extraFish.id, player.currentNode, turn, player.equipment));
-        }
-      }
-
-      updateFishingState({
-        tension: tensionRef.current,
-        reelingProgress: FISHING_REELING_TARGET,
-        caughtSize: size,
-      });
-      catchFish(caught, bonusFish);
-      return;
-    }
-
-    updateFishingState({
-      tension: tensionRef.current,
-      reelingProgress: progressRef.current,
-    });
-  }, [fishingState, player.equipment, player.currentNode, turn, updateFishingState, failFishing, catchFish]);
-
-  // 新ミニゲーム共通: 成功コールバック
+  // ミニゲーム共通: 成功（釣果＋大漁判定）
   const handleMiniGameSuccess = useCallback(() => {
     if (!fishingState || !fishingState.targetFish) return;
     const caught = createCaughtFish(fishingState.targetFish.id, player.currentNode, turn, player.equipment);
-    const size = caught.size;
 
     const node = NODE_MAP.get(player.currentNode);
     const isSpecial = node?.type === 'fishing_special';
@@ -230,31 +160,27 @@ export function useFishing() {
       }
     }
 
-    updateFishingState({ caughtSize: size });
+    updateFishingState({ caughtSize: caught.size, reelingProgress: 100 });
     catchFish(caught, bonusFish);
   }, [fishingState, player.equipment, player.currentNode, turn, updateFishingState, catchFish]);
 
-  // 新ミニゲーム共通: 失敗コールバック
-  const handleMiniGameFail = useCallback(() => {
+  // ミニゲーム共通: 失敗（理由は結果画面のヒントに使う）
+  const handleMiniGameFail = useCallback((reason: FailReason = 'short') => {
+    setFailReason(reason);
     failFishing();
   }, [failFishing]);
-
-  // タイムアウト（バイトを逃す）
-  const handleMiss = useCallback(() => {
-    if (biteTimer) clearTimeout(biteTimer);
-    failFishing();
-  }, [biteTimer, failFishing]);
 
   return {
     fishingState,
     begin,
     handleStrike,
-    handleReelTap,
+    handleEarlyTap,
     handleMiss,
     handleMiniGameSuccess,
     handleMiniGameFail,
-    reelingStartRef,
-    tensionLimitRef,
-    timeLimitRef,
+    strikeOutcome,
+    failReason,
+    /** 会心の合わせ → ミニゲームに先行ボーナス */
+    headStart: strikeOutcome === 'perfect',
   };
 }

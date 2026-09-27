@@ -21,10 +21,20 @@ export interface Plot {
   level: number; // 1..3（住宅/商業/工業/観光は自然成長する）
   owner: number; // プレイヤー index
   builtTurn: number;
+  /** 需要が低い状態が続いた月数（空き家へのカウントダウン） */
+  lowMonths?: number;
+  /** 空き家（収入0・発展しない）。需要が戻るか、持ち主が直すと元に戻る */
+  vacant?: boolean;
 }
 
 export interface TownState {
   plots: (Plot | null)[];
+  /** 発展度 0〜3（壱・弐・参）。上がるたびに区画が増え、地価が上がる */
+  tier?: number;
+  /** 地価の係数（幸福度・公害で毎月変わる。建設費と資産価値にだけ効く） */
+  land?: number;
+  /** 発展で区画が増えたときの、もとの区画数（独占の判定に使う） */
+  base?: number;
 }
 
 export interface CityBuff {
@@ -61,6 +71,8 @@ export interface CityPlayerReport {
   populationDelta: number;
   grown: number;
   declined: number;
+  /** この月に空き家になった建物の数 */
+  vacated?: number;
 }
 
 export interface CityReport {
@@ -68,6 +80,8 @@ export interface CityReport {
   players: CityPlayerReport[];
   disasters: CityDisasterReport[];
   headlines: string[];
+  /** 発展度が変わった町 */
+  tierChanges?: { nodeId: string; from: number; to: number }[];
 }
 
 export interface CityState {
@@ -76,6 +90,8 @@ export interface CityState {
   destinationReward: number;
   buffs: CityBuff[];
   history: CityHistoryPoint[];
+  /** 今月視察した町（次の月末、その町の持ち主の建物は発展判定を多く受ける） */
+  inspections?: { nodeId: string; playerIndex: number }[];
 }
 
 export type DisasterKind = 'quake' | 'typhoon' | 'fire' | 'kaiju';
@@ -93,13 +109,111 @@ export const POWER_RANGE = 6;
 /** 近隣の町とみなす距離（隣の町 = 中継マスを1つ挟んで2） */
 export const NEIGHBOR_RANGE = 2;
 
+/**
+ * 経済・成長・災害の調整値。balance.city.sim.test.ts（36か月・4戦略の対戦シミュレーション）で計測して決めた。
+ * 目安: 建物の回収期間は約10〜20か月、単一の必勝戦略がない、災害の年間損失は資産価値の数%。
+ */
+export const CITY_ECONOMY = {
+  /** 住宅: 等級1・地価1.0・幸福度係数1.0あたりの月収 */
+  resIncome: 210,
+  /** 電気のない住宅の収入・人口の倍率 */
+  resUnpoweredMul: 0.7,
+  /** 商業: 等級1・地価1.0あたりの月収（客の入り 0.3〜1.6 倍） */
+  comIncome: 125,
+  comUnpoweredMul: 0.3,
+  /** 工業: 等級1・地価1.0あたりの月収（働き手 0.4〜1.12 倍） */
+  indIncome: 160,
+  indUnpoweredMul: 0.2,
+  /** 観光名所: 等級1あたりの月収（幸福度で 0.4〜1.5 倍） */
+  tourismIncome: 330,
+  /** 観光収入に地価を掛けるか（false だと地価の高い町ほど割に合わない） */
+  tourismUsesLandValue: true,
+  /** 発電所: 送電先（建物のある町）1つあたりの送電料・上限・維持費 */
+  powerPerTown: 90,
+  powerMaxTowns: 12,
+  powerUpkeep: 250,
+  /** 漁港: 固定の月収と、釣果の売上に対する水揚げ手数料の率 */
+  portIncome: 320,
+  portFeeRate: 0.3,
+  parkUpkeep: 60,
+  /** 自然成長: 需要がプラスのときの成長確率 = growthBase + 需要×growthPerDemand（上限 growthMax） */
+  growthBase: 0.1,
+  growthPerDemand: 0.3,
+  growthMax: 0.5,
+  /** 住宅需要 = (近くの雇用 − 近くの人口×demandResPop)/100 + (幸福度−4)×demandResHappiness + demandResBase */
+  demandResPop: 0.45,
+  demandResHappiness: 0.15,
+  demandResBase: 0.6,
+  /** 商業需要 = (近くの人口×demandComPop − 商業等級×demandComPer)/100 + 漁港 demandComPort */
+  demandComPop: 0.45,
+  demandComPer: 90,
+  demandComPort: 0.4,
+  /** 工業需要 = (近くの人口×demandIndPop − 工業等級×demandIndPer)/100 + demandIndBase */
+  demandIndPop: 0.35,
+  demandIndPer: 70,
+  demandIndBase: 0.3,
+  /** 観光名所が自然成長するのに必要な幸福度（需要 = (幸福度 − これ)/2） */
+  tourismGrowthHappiness: 8,
+  /**
+   * 需要が growthFloorMinDemand より上なら、幸福度 growthFloorHappiness 以上で月 growthFloor の確率で育つ（0 で無効）。
+   * 1人プレイでは相手の雇用・人口が無く需要が0付近に張り付くため、これが無いと町がほとんど育たなかった。
+   * 幸福度2は「電気の来ていない素の町（5−3）」でも満たす値。
+   */
+  growthFloor: 0.04,
+  growthFloorMinDemand: -1,
+  growthFloorHappiness: 2,
+  /** 町の格ごとの需要の上乗せ（町の個性。r=住宅 c=商業 i=工業。全て0で無効） */
+  // 大都市は住・商が集まり、温泉町は工場を嫌い、商都は商いが盛ん、村は店が育ちにくい（まちづくり企画係の案。平均はほぼ0）
+  classDemand: {
+    metro: { r: 0.3, c: 0.3, i: 0 },
+    city: { r: 0.1, c: 0.1, i: 0 },
+    port: { r: -0.1, c: 0, i: 0.2 },
+    onsen: { r: 0, c: 0.2, i: -0.6 },
+    market: { r: -0.1, c: 0.4, i: 0.1 },
+    village: { r: 0.1, c: -0.4, i: 0.1 },
+  } as Record<TownClass, { r: number; c: number; i: number }>,
+  /** 町の全区画を1人で埋めたときの収入倍率（発展で区画が増えると独占が崩れやすいため、v4.1 で 2.5 → 3） */
+  monopolyMul: 3,
+  /** 季節の災害: 8〜9月の台風確率 / 毎月の地震確率 */
+  typhoonChance: 0.45,
+  quakeChance: 0.08,
+  /** 被害: 地震で各建物が被災する確率 / 台風 / 等級1の建物が全壊する確率 */
+  quakeHit: 0.4,
+  typhoonHit: 0.35,
+  /** 備え: 公園のある町の地震の被災率 / 漁港のある町の台風の被災率（quakeHit・typhoonHit と同じ値なら効果なし） */
+  parkQuakeHit: 0.2,
+  portTyphoonHit: 0.18,
+  level1DestroyChance: 0.5,
+  /** 空き家: 需要がこれを下回る月が vacancyMonths 続くと空き家。需要が正に戻れば毎月 vacancyRecoverChance で戻る */
+  // 36か月の総当たりで最終月の空き家が建物の約8%・修理が1局2件程度になる値（−1.0/3か月/0.5 では約12%）
+  vacancyDemand: -1.3,
+  vacancyMonths: 4,
+  vacancyRecoverChance: 0.7,
+  /** 空き家を持ち主が直す費用（建設費に対する率） */
+  renovateCostRate: 0.3,
+  /** 視察: 視察した町の自分の建物が次の月末に受ける発展判定の回数 */
+  inspectRolls: 2,
+  /** 発展度: 壱・弐・参に上がる人口 / 1段ごとに増える区画 / 1段ごとの地価の上乗せ / 下がる境目の割合 */
+  tierPop: [120, 250, 450],
+  tierPlotBonus: 1,
+  tierLandBonus: 0.15,
+  tierDownRatio: 0.7,
+  /** 地価の係数 = 1 + landHappinessCoef×(幸福度−5) − landPollutionCoef×公害（landMin〜landMax） */
+  landHappinessCoef: 0.04,
+  landPollutionCoef: 0.03,
+  landMin: 0.75,
+  landMax: 1.35,
+};
+
+export const TIER_LABEL = ['', '壱', '弐', '参'];
+
 export const BUILDING_INFO: Record<BuildingKind, { name: string; short: string; cost: number; desc: string; color: string }> = {
   res: { name: '住宅地', short: '住', cost: 2000, desc: '人が住む。雇用と幸福度が高いと自然に発展し、税収が増える', color: '#4f9d5d' },
   com: { name: '商業地', short: '商', cost: 3000, desc: '近くの人口が多いほど売上UP。電力が必要', color: '#3d7fc4' },
   ind: { name: '工業地', short: '工', cost: 3500, desc: '雇用と大きな売上を生むが公害を出す。電力が必要', color: '#c99a2e' },
-  park: { name: '公園', short: '園', cost: 1500, desc: '幸福度UP・公害を吸収。維持費 ¥60/月', color: '#7cc36b' },
-  power: { name: '発電所', short: '電', cost: 9000, desc: `周囲${POWER_RANGE}マスの町へ送電し、送電料を得る。維持費 ¥250/月`, color: '#e0c341' },
-  port: { name: '漁港', short: '港', cost: 5000, desc: 'この町で誰かが釣るたび水揚げ手数料。商業も活気づく', color: '#4fb0c6' },
+  park: { name: '公園', short: '園', cost: 1500, desc: `幸福度UP・公害を吸収。避難場所になり、町の地震の被害を減らす。維持費 ¥${CITY_ECONOMY.parkUpkeep}/月`, color: '#7cc36b' },
+  power: { name: '発電所', short: '電', cost: 9000, desc: `周囲${POWER_RANGE}マスの町へ送電し、送電料を得る。維持費 ¥${CITY_ECONOMY.powerUpkeep}/月`, color: '#e0c341' },
+  port: { name: '漁港', short: '港', cost: 5000, desc: 'この町で誰かが釣るたび水揚げ手数料。商業も活気づき、防波堤で台風の被害を減らす', color: '#4fb0c6' },
   tourism: { name: '観光名所', short: '観', cost: 6000, desc: '幸福度が高いほど観光収入UP。人気が出ると発展する', color: '#d9628a' },
 };
 
@@ -210,24 +324,35 @@ export function createInitialCityState(): CityState {
 
 // ===== 費用・価値 =====
 
-export function buildCost(kind: BuildingKind, nodeId: string): number {
-  const info = getTownInfo(nodeId);
-  const lv = info?.landValue ?? 1;
-  return Math.round((BUILDING_INFO[kind].cost * lv) / 100) * 100;
+/** 町の今の地価（基本の地価 × 発展度の上乗せ × 幸福度・公害による係数） */
+export function effectiveLandValue(nodeId: string, town?: TownState): number {
+  const base = getTownInfo(nodeId)?.landValue ?? 1;
+  const tier = town?.tier ?? 0;
+  return base * (1 + CITY_ECONOMY.tierLandBonus * tier) * (town?.land ?? 1);
 }
 
-/** 建物の資産価値 */
-export function plotValue(plot: Plot, nodeId: string): number {
-  const base = buildCost(plot.kind, nodeId);
-  return Math.round(base * (1 + 0.6 * (plot.level - 1)));
+/** 建設費。town を渡すと発展度・地価の変動を反映する（省略時は基本の地価） */
+export function buildCost(kind: BuildingKind, nodeId: string, town?: TownState): number {
+  return Math.round((BUILDING_INFO[kind].cost * effectiveLandValue(nodeId, town)) / 100) * 100;
 }
 
-export function upgradeCost(plot: Plot, nodeId: string): number {
-  return Math.round((buildCost(plot.kind, nodeId) * 0.8 * plot.level) / 100) * 100;
+/** 建物の資産価値（空き家は半値） */
+export function plotValue(plot: Plot, nodeId: string, town?: TownState): number {
+  const base = buildCost(plot.kind, nodeId, town);
+  return Math.round(base * (1 + 0.6 * (plot.level - 1)) * (plot.vacant ? 0.5 : 1));
 }
 
-export function acquireCost(plot: Plot, nodeId: string): number {
-  return Math.round((plotValue(plot, nodeId) * 1.5) / 100) * 100;
+export function upgradeCost(plot: Plot, nodeId: string, town?: TownState): number {
+  return Math.round((buildCost(plot.kind, nodeId, town) * 0.8 * plot.level) / 100) * 100;
+}
+
+export function acquireCost(plot: Plot, nodeId: string, town?: TownState): number {
+  return Math.round((plotValue(plot, nodeId, town) * 1.5) / 100) * 100;
+}
+
+/** 空き家を直す費用 */
+export function renovateCost(plot: Plot, nodeId: string, town?: TownState): number {
+  return Math.round((buildCost(plot.kind, nodeId, town) * CITY_ECONOMY.renovateCostRate) / 100) * 100;
 }
 
 /** 等級を上げられる建物か（公園・発電所・漁港は1段階のみ） */
@@ -240,7 +365,7 @@ export function isUpgradable(kind: BuildingKind): boolean {
 export type CityActionResult = { ok: true; state: CityState; cost: number; message: string } | { ok: false; reason: string };
 
 function withTown(state: CityState, nodeId: string, plots: (Plot | null)[]): CityState {
-  return { ...state, towns: { ...state.towns, [nodeId]: { plots } } };
+  return { ...state, towns: { ...state.towns, [nodeId]: { ...state.towns[nodeId], plots } } };
 }
 
 export function canBuild(state: CityState, nodeId: string, kind: BuildingKind, plotIndex: number, money: number): string | null {
@@ -251,14 +376,14 @@ export function canBuild(state: CityState, nodeId: string, kind: BuildingKind, p
   if (plotIndex < 0 || plotIndex >= town.plots.length) return '区画がない';
   if (town.plots[plotIndex]) return 'その区画は使用中';
   if ((kind === 'power' || kind === 'port') && town.plots.some(p => p?.kind === kind)) return `${BUILDING_INFO[kind].name}は1つの町に1つまで`;
-  if (money < buildCost(kind, nodeId)) return 'お金が足りない';
+  if (money < buildCost(kind, nodeId, town)) return 'お金が足りない';
   return null;
 }
 
 export function build(state: CityState, nodeId: string, plotIndex: number, kind: BuildingKind, playerIndex: number, money: number, turn: number): CityActionResult {
   const err = canBuild(state, nodeId, kind, plotIndex, money);
   if (err) return { ok: false, reason: err };
-  const cost = buildCost(kind, nodeId);
+  const cost = buildCost(kind, nodeId, state.towns[nodeId]);
   const plots = [...state.towns[nodeId].plots];
   plots[plotIndex] = { kind, level: 1, owner: playerIndex, builtTurn: turn };
   const info = getTownInfo(nodeId)!;
@@ -272,7 +397,8 @@ export function upgrade(state: CityState, nodeId: string, plotIndex: number, pla
   if (plot.owner !== playerIndex) return { ok: false, reason: '自分の建物ではない' };
   if (!isUpgradable(plot.kind)) return { ok: false, reason: 'この建物は再開発できない' };
   if (plot.level >= MAX_BUILDING_LEVEL) return { ok: false, reason: 'すでに最高等級' };
-  const cost = upgradeCost(plot, nodeId);
+  if (plot.vacant) return { ok: false, reason: '空き家は先に直す必要がある' };
+  const cost = upgradeCost(plot, nodeId, town);
   if (money < cost) return { ok: false, reason: 'お金が足りない' };
   const plots = [...town.plots];
   plots[plotIndex] = { ...plot, level: plot.level + 1 };
@@ -284,11 +410,39 @@ export function acquire(state: CityState, nodeId: string, plotIndex: number, pla
   const plot = town?.plots[plotIndex];
   if (!plot) return { ok: false, reason: '建物がない' };
   if (plot.owner === playerIndex) return { ok: false, reason: 'すでに自分の建物' };
-  const cost = acquireCost(plot, nodeId);
+  const cost = acquireCost(plot, nodeId, town);
   if (money < cost) return { ok: false, reason: 'お金が足りない' };
   const plots = [...town.plots];
   plots[plotIndex] = { ...plot, owner: playerIndex };
   return { ok: true, state: withTown(state, nodeId, plots), cost, prevOwner: plot.owner, message: `${BUILDING_INFO[plot.kind].name}を買収した` };
+}
+
+/** 空き家を直す（持ち主のみ） */
+export function renovate(state: CityState, nodeId: string, plotIndex: number, playerIndex: number, money: number): CityActionResult {
+  const town = state.towns[nodeId];
+  const plot = town?.plots[plotIndex];
+  if (!plot) return { ok: false, reason: '建物がない' };
+  if (plot.owner !== playerIndex) return { ok: false, reason: '自分の建物ではない' };
+  if (!plot.vacant) return { ok: false, reason: '空き家ではない' };
+  const cost = renovateCost(plot, nodeId, town);
+  if (money < cost) return { ok: false, reason: 'お金が足りない' };
+  const plots = [...town.plots];
+  plots[plotIndex] = { ...plot, vacant: false, lowMonths: 0 };
+  return { ok: true, state: withTown(state, nodeId, plots), cost, message: `${BUILDING_INFO[plot.kind].name}を直して入居者が戻った` };
+}
+
+/** 視察を記録する（自分の建物がある町に止まったとき）。記録したら true */
+export function recordInspection(state: CityState, nodeId: string, playerIndex: number): { state: CityState; inspected: boolean } {
+  const town = state.towns[nodeId];
+  if (!town || !town.plots.some(p => p && p.owner === playerIndex)) return { state, inspected: false };
+  const list = state.inspections ?? [];
+  if (list.some(x => x.nodeId === nodeId && x.playerIndex === playerIndex)) return { state, inspected: true };
+  // 視察で入居者の不安も和らぐ（空き家へのカウントダウンをリセット）
+  const plots = town.plots.map(p => (p && p.owner === playerIndex && !p.vacant && p.lowMonths ? { ...p, lowMonths: 0 } : p));
+  return {
+    state: { ...state, inspections: [...list, { nodeId, playerIndex }], towns: { ...state.towns, [nodeId]: { ...town, plots } } },
+    inspected: true,
+  };
 }
 
 // ===== 町の状態計算 =====
@@ -306,7 +460,7 @@ export interface TownStats {
 
 function sumLevel(plots: (Plot | null)[], kind: BuildingKind): number {
   let s = 0;
-  for (const p of plots) if (p?.kind === kind) s += p.level;
+  for (const p of plots) if (p?.kind === kind && !p.vacant) s += p.level;
   return s;
 }
 function countKind(plots: (Plot | null)[], kind: BuildingKind): number {
@@ -361,7 +515,7 @@ export function computeAllStats(state: CityState): Map<string, TownStats> {
     const isPowered = powered.has(id);
     const h = 5 + b.P * 3 + b.T + (b.cls === 'onsen' ? 2 : 0) - (pollution.get(id) ?? 0) - (isPowered ? 0 : 3);
     hap.set(id, Math.round(h * 10) / 10);
-    const factor = Math.max(0.3, Math.min(1.5, 0.6 + h * 0.06)) * (isPowered ? 1 : 0.7);
+    const factor = Math.max(0.3, Math.min(1.5, 0.6 + h * 0.06)) * (isPowered ? 1 : CITY_ECONOMY.resUnpoweredMul);
     pop.set(id, Math.round(b.R * 100 * factor));
   }
   // 4. 需要（RCI）
@@ -376,9 +530,11 @@ export function computeAllStats(state: CityState): Map<string, TownStats> {
       if (nbb) jobsNear += (nbb.C * 50 + nbb.I * 80 + nbb.T * 30) * 0.5;
     }
     const h = hap.get(id) ?? 0;
-    const r = (jobsNear - popNear * 0.6) / 100 + (h - 4) * 0.12 + 0.4;
-    const c = (popNear * 0.45 - b.C * 60) / 100 + (b.port ? 0.4 : 0) + (isPowered ? 0 : -1.5);
-    const i = (popNear * 0.35 - b.I * 70) / 100 + 0.6 + (isPowered ? 0 : -1.5);
+    const E = CITY_ECONOMY;
+    const cd = E.classDemand[b.cls];
+    const r = (jobsNear - popNear * E.demandResPop) / 100 + (h - 4) * E.demandResHappiness + E.demandResBase + cd.r;
+    const c = (popNear * E.demandComPop - b.C * E.demandComPer) / 100 + (b.port ? E.demandComPort : 0) + (isPowered ? 0 : -1.5) + cd.c;
+    const i = (popNear * E.demandIndPop - b.I * E.demandIndPer) / 100 + E.demandIndBase + (isPowered ? 0 : -1.5) + cd.i;
     out.set(id, {
       population: pop.get(id) ?? 0,
       jobs: b.C * 50 + b.I * 80 + b.T * 30,
@@ -398,30 +554,31 @@ const round1 = (v: number) => Math.round(v * 10) / 10;
 
 /** 1つの建物の月収（維持費はマイナス） */
 export function plotIncome(plot: Plot, nodeId: string, stats: TownStats, poweredTownsWithBuildings: number): number {
+  if (plot.vacant) return 0;
   const info = getTownInfo(nodeId);
   const lv = info?.landValue ?? 1;
-  const powerK = stats.powered ? 1 : 0;
+  const E = CITY_ECONOMY;
   switch (plot.kind) {
     case 'res': {
-      const k = Math.max(0.3, Math.min(1.5, 0.6 + stats.happiness * 0.06)) * (stats.powered ? 1 : 0.7);
-      return Math.round(110 * plot.level * lv * k);
+      const k = Math.max(0.3, Math.min(1.5, 0.6 + stats.happiness * 0.06)) * (stats.powered ? 1 : E.resUnpoweredMul);
+      return Math.round(E.resIncome * plot.level * lv * k);
     }
     case 'com': {
       const customers = Math.min(1.3, stats.popNear / Math.max(1, 60 * plot.level * 2));
-      return Math.round(170 * plot.level * lv * (0.3 + customers) * (powerK ? 1 : 0.3));
+      return Math.round(E.comIncome * plot.level * lv * (0.3 + customers) * (stats.powered ? 1 : E.comUnpoweredMul));
     }
     case 'ind': {
       const workers = Math.min(1.2, (stats.popNear + 60) / Math.max(1, 70 * plot.level * 2));
-      return Math.round(210 * plot.level * lv * (0.4 + workers * 0.6) * (powerK ? 1 : 0.2));
+      return Math.round(E.indIncome * plot.level * lv * (0.4 + workers * 0.6) * (stats.powered ? 1 : E.indUnpoweredMul));
     }
     case 'tourism':
-      return Math.round(260 * plot.level * Math.max(0.4, 0.6 + stats.happiness * 0.06));
+      return Math.round(E.tourismIncome * plot.level * (E.tourismUsesLandValue ? lv : 1) * Math.max(0.4, 0.6 + stats.happiness * 0.06));
     case 'power':
-      return Math.min(12, poweredTownsWithBuildings) * 90 - 250;
+      return Math.min(E.powerMaxTowns, poweredTownsWithBuildings) * E.powerPerTown - E.powerUpkeep;
     case 'port':
-      return 180;
+      return E.portIncome;
     case 'park':
-      return -60;
+      return -E.parkUpkeep;
   }
 }
 
@@ -458,7 +615,7 @@ export function playerPopulation(state: CityState, playerIndex: number, stats = 
 export function playerPropertyValue(state: CityState, playerIndex: number): number {
   let total = 0;
   for (const [id, town] of Object.entries(state.towns)) {
-    for (const p of town.plots) if (p && p.owner === playerIndex) total += plotValue(p, id);
+    for (const p of town.plots) if (p && p.owner === playerIndex) total += plotValue(p, id, town);
   }
   return total;
 }
@@ -470,11 +627,16 @@ export function playerBuildingCount(state: CityState, playerIndex: number): numb
   return n;
 }
 
-/** 町の全区画を1人で埋めている（独占） */
+/**
+ * 独占: 町のもとの区画数ぶん以上の建物を1人だけで持っている。
+ * 発展で増えた区画に他の人が建てると独占は崩れる（町の発展が独占争いの火種になる）。
+ */
 export function monopolyOwner(town: TownState): number | null {
-  if (town.plots.length === 0 || town.plots.some(p => !p)) return null;
-  const owner = town.plots[0]!.owner;
-  return town.plots.every(p => p!.owner === owner) ? owner : null;
+  const built = town.plots.filter((p): p is Plot => !!p);
+  const need = town.base ?? town.plots.length;
+  if (built.length === 0 || built.length < need) return null;
+  const owner = built[0].owner;
+  return built.every(p => p.owner === owner) ? owner : null;
 }
 
 function monthOf(turn: number): number {
@@ -508,7 +670,7 @@ export function simulateRound(state: CityState, playerCount: number, turn: numbe
     for (const p of town.plots) {
       if (!p || p.owner >= playerCount) continue;
       let v = plotIncome(p, id, s, poweredWithBuildings.get(id) ?? 0);
-      if (v > 0 && mono === p.owner) v = Math.round(v * 1.5); // 独占ボーナス
+      if (v > 0 && mono === p.owner) v = Math.round(v * CITY_ECONOMY.monopolyMul); // 独占ボーナス
       if (v >= 0) income[p.owner] += v;
       else upkeep[p.owner] += -v;
     }
@@ -526,6 +688,8 @@ export function simulateRound(state: CityState, playerCount: number, turn: numbe
   // 自然成長・衰退
   const grown = Array.from({ length: playerCount }, () => 0);
   const declined = Array.from({ length: playerCount }, () => 0);
+  const vacated = Array.from({ length: playerCount }, () => 0);
+  const inspected = new Set((state.inspections ?? []).map(x => `${x.nodeId}:${x.playerIndex}`));
   const headlines: string[] = [];
   const towns: Record<string, TownState> = {};
   for (const [id, town] of Object.entries(state.towns)) {
@@ -537,9 +701,38 @@ export function simulateRound(state: CityState, playerCount: number, turn: numbe
     let changed = false;
     const plots = town.plots.map(p => {
       if (!p || !isUpgradable(p.kind)) return p;
-      const d = p.kind === 'res' ? s.demand.r : p.kind === 'com' ? s.demand.c : p.kind === 'ind' ? s.demand.i : (s.happiness - 7) / 2;
-      const r = random();
-      if (p.level < MAX_BUILDING_LEVEL && d > 0 && r < Math.min(0.4, d * 0.22)) {
+      const E = CITY_ECONOMY;
+      const d = p.kind === 'res' ? s.demand.r : p.kind === 'com' ? s.demand.c : p.kind === 'ind' ? s.demand.i : (s.happiness - E.tourismGrowthHappiness) / 2;
+      // 空き家: 需要が戻れば入居者が戻る。空き家の間は発展しない
+      if (p.vacant) {
+        if (d > 0 && random() < E.vacancyRecoverChance) {
+          changed = true;
+          return { ...p, vacant: false, lowMonths: 0 };
+        }
+        return p;
+      }
+      // 需要の低い月が続くと空き家に近づく
+      if (d < E.vacancyDemand) {
+        const low = (p.lowMonths ?? 0) + 1;
+        changed = true;
+        if (low >= E.vacancyMonths) {
+          if (p.owner < playerCount) vacated[p.owner]++;
+          return { ...p, vacant: true, lowMonths: low };
+        }
+        p = { ...p, lowMonths: low };
+      } else if (p.lowMonths) {
+        changed = true;
+        p = { ...p, lowMonths: 0 };
+      }
+      const growChance = Math.max(
+        d > 0 ? Math.min(E.growthMax, E.growthBase + d * E.growthPerDemand) : 0,
+        d > E.growthFloorMinDemand && s.happiness >= E.growthFloorHappiness ? E.growthFloor : 0,
+      );
+      // 視察した町の建物は発展判定を複数回受ける
+      const rolls = inspected.has(`${id}:${p.owner}`) ? E.inspectRolls : 1;
+      let r = random();
+      for (let k = 1; k < rolls && r >= growChance; k++) r = random();
+      if (p.level < MAX_BUILDING_LEVEL && r < growChance) {
         changed = true;
         if (p.owner < playerCount) grown[p.owner]++;
         return { ...p, level: p.level + 1 };
@@ -552,25 +745,59 @@ export function simulateRound(state: CityState, playerCount: number, turn: numbe
       }
       return p;
     });
-    towns[id] = changed ? { plots } : town;
+    towns[id] = changed ? { ...town, plots } : town;
   }
 
-  let next: CityState = { ...state, towns, buffs };
+  let next: CityState = { ...state, towns, buffs, inspections: [] };
 
   // 季節の災害（8〜9月は台風、まれに地震）
   const disasters: CityDisasterReport[] = [];
   const month = monthOf(turn);
   const hasBuildings = Object.values(next.towns).some(t => t.plots.some(Boolean));
   if (hasBuildings) {
-    if ((month === 8 || month === 9) && random() < 0.25) {
+    if ((month === 8 || month === 9) && random() < CITY_ECONOMY.typhoonChance) {
       const r = applyDisaster(next, 'typhoon');
       next = r.state;
       disasters.push(r.report);
-    } else if (random() < 0.03) {
+    } else if (random() < CITY_ECONOMY.quakeChance) {
       const r = applyDisaster(next, 'quake');
       next = r.state;
       disasters.push(r.report);
     }
+  }
+
+  // 発展度と地価（月末の町の姿で決める）
+  const tierChanges: { nodeId: string; from: number; to: number }[] = [];
+  {
+    const E = CITY_ECONOMY;
+    const st2 = computeAllStats(next);
+    const towns2: Record<string, TownState> = { ...next.towns };
+    for (const [id, town] of Object.entries(next.towns)) {
+      const s2 = st2.get(id);
+      if (!s2) continue;
+      const land = Math.max(E.landMin, Math.min(E.landMax, 1 + E.landHappinessCoef * (s2.happiness - 5) - E.landPollutionCoef * s2.pollution));
+      let tier = town.tier ?? 0;
+      const from = tier;
+      while (tier < E.tierPop.length && s2.population >= E.tierPop[tier]) tier++;
+      while (tier > 0 && s2.population < E.tierPop[tier - 1] * E.tierDownRatio) tier--;
+      let plots = town.plots;
+      // 独占中の町は囲い込める（区画は増えず、地価だけが上がる）。独占のない町は区画が増えて新規参入の余地ができる
+      if (tier > from && monopolyOwner(town) === null) {
+        // 上がるたびに区画が増える（下がっても区画は減らさない。増やした分は最大まで）
+        const info = getTownInfo(id);
+        const maxPlots = (info?.plots ?? plots.length) + E.tierPop.length * E.tierPlotBonus;
+        const want = Math.min(maxPlots, (info?.plots ?? plots.length) + tier * E.tierPlotBonus);
+        if (plots.length < want) plots = [...plots, ...Array.from({ length: want - plots.length }, () => null)];
+      }
+      if (tier !== from) tierChanges.push({ nodeId: id, from, to: tier });
+      if (tier !== from || plots !== town.plots || Math.abs((town.land ?? 1) - land) > 0.001) {
+        towns2[id] = { ...town, plots, tier, land: Math.round(land * 100) / 100, base: town.base ?? getTownInfo(id)?.plots ?? town.plots.length };
+      }
+    }
+    next = { ...next, towns: towns2 };
+  }
+  for (const c of tierChanges) {
+    if (c.to > c.from) headlines.push(`${getTownInfo(c.nodeId)?.name}の発展度が${TIER_LABEL[c.to]}に上がった（区画が増えた）`);
   }
 
   // 目玉ニュース
@@ -606,9 +833,11 @@ export function simulateRound(state: CityState, playerCount: number, turn: numbe
         populationDelta: popAfter[i] - popBefore[i],
         grown: grown[i],
         declined: declined[i],
+        vacated: vacated[i],
       })),
       disasters,
       headlines,
+      tierChanges,
     },
   };
 }
@@ -633,7 +862,7 @@ function damagePlot(p: Plot, destroy: boolean): Plot | null {
 
 /**
  * 災害を起こす。
- * quake: 地方全体の建物が30%で損壊 / typhoon: 地方の港町・都市が25%で損壊 /
+ * quake: 地方全体の建物が quakeHit の確率で損壊 / typhoon: 地方の港町・都市が typhoonHit の確率で損壊 /
  * fire: 対象プレイヤーの建物1つが全焼 / kaiju: 海辺の町から3つの町を進み、各町の最大の建物を壊す
  */
 export function applyDisaster(
@@ -651,14 +880,14 @@ export function applyDisaster(
   const region = opts.region ?? pool[Math.floor(random() * pool.length)];
   let area = REGION_JA[region];
 
-  // 等級2以上は1段階ダウン。等級1の建物は35%の確率でだけ全壊（残りは持ちこたえる）
+  // 等級2以上は1段階ダウン。等級1の建物は level1DestroyChance の確率でだけ全壊（残りは持ちこたえる）
   const hit = (id: string, pred: (p: Plot) => boolean, chance: number) => {
     const t = towns[id];
     if (!t) return;
     let changed = false;
     const plots = t.plots.map(p => {
       if (!p || !pred(p) || random() >= chance) return p;
-      if (p.level <= 1 && random() >= 0.35) return p;
+      if (p.level <= 1 && random() >= CITY_ECONOMY.level1DestroyChance) return p;
       changed = true;
       const np = damagePlot(p, false);
       damages.push({ nodeId: id, kind: p.kind, owner: p.owner, destroyed: np === null });
@@ -668,11 +897,18 @@ export function applyDisaster(
   };
 
   if (kind === 'quake') {
-    for (const id of Object.keys(towns)) if (getTownInfo(id)?.region === region) hit(id, p => p.kind !== 'park' && p.kind !== 'power', 0.3);
+    for (const id of Object.keys(towns)) {
+      if (getTownInfo(id)?.region !== region) continue;
+      const chance = towns[id].plots.some(p => p?.kind === 'park') ? CITY_ECONOMY.parkQuakeHit : CITY_ECONOMY.quakeHit;
+      hit(id, p => p.kind !== 'park' && p.kind !== 'power', chance);
+    }
   } else if (kind === 'typhoon') {
     for (const id of Object.keys(towns)) {
       const info = getTownInfo(id);
-      if (info?.region === region && (info.cls === 'port' || info.cls === 'city' || info.cls === 'metro')) hit(id, p => p.kind !== 'power', 0.25);
+      if (info?.region === region && (info.cls === 'port' || info.cls === 'city' || info.cls === 'metro')) {
+        const chance = towns[id].plots.some(p => p?.kind === 'port') ? CITY_ECONOMY.portTyphoonHit : CITY_ECONOMY.typhoonHit;
+        hit(id, p => p.kind !== 'power', chance);
+      }
     }
   } else if (kind === 'fire') {
     const owned: { id: string; idx: number }[] = [];
@@ -866,9 +1102,9 @@ export function cityScore(state: CityState, playerIndex: number, money: number):
   };
 }
 
-/** 釣りで漁港の町に落ちるお金（漁港の持ち主へ） */
+/** 釣りで漁港の町に落ちるお金（漁港の持ち主へ。市場が払うので釣り人は損しない） */
 export function portFee(state: CityState, nodeId: string, sellPrice: number): { owner: number; fee: number } | null {
   const port = state.towns[nodeId]?.plots.find(p => p?.kind === 'port');
   if (!port) return null;
-  return { owner: port.owner, fee: Math.round(sellPrice * 0.2) };
+  return { owner: port.owner, fee: Math.round(sellPrice * CITY_ECONOMY.portFeeRate) };
 }

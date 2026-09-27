@@ -4,6 +4,7 @@ import type { Player } from '../../game/types';
 import type { CityState } from '../../game/city';
 import { cityScore, calendarLabel } from '../../game/city';
 import Ruby from '../shared/Ruby';
+import type { CityTitle } from '../../game/cityAwards';
 
 function AssetChart({ city, players }: { city: CityState; players: Player[] }) {
   const hist = city.history;
@@ -43,7 +44,7 @@ function AssetChart({ city, players }: { city: CityState; players: Player[] }) {
   );
 }
 
-export default function CityResult({ city, players }: { city: CityState; players: Player[] }) {
+export default function CityResult({ city, players, titleHistory = [] }: { city: CityState; players: Player[]; titleHistory?: { year: number; titles: CityTitle[] }[] }) {
   const results = useMemo(
     () => players.map((p, i) => ({ player: p, score: cityScore(city, i, p.money) })).sort((a, b) => b.score.assets - a.score.assets),
     [city, players],
@@ -77,6 +78,26 @@ export default function CityResult({ city, players }: { city: CityState; players
           </div>
         </div>
       ))}
+
+      {titleHistory.length > 0 && (
+        <div className="panel-ai rounded-2xl p-4">
+          <p className="text-sm font-mincho text-kin-300 mb-2"><Ruby>年度ごとの称号</Ruby></p>
+          <div className="space-y-1.5">
+            {titleHistory.map(h => (
+              <div key={h.year} className="flex items-start gap-2 text-xs">
+                <span className="shrink-0 text-washi/60 font-mincho w-12">{h.year}<Ruby>年度</Ruby></span>
+                <span className="flex flex-wrap gap-1">
+                  {h.titles.map(t => (
+                    <span key={t.id} className="px-1.5 py-0.5 rounded border" style={{ borderColor: players[t.playerIndex]?.color, color: players[t.playerIndex]?.color }}>
+                      <Ruby>{t.name}</Ruby>
+                    </span>
+                  ))}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {city.history.length >= 2 && (
         <div className="panel-ai rounded-2xl p-4">

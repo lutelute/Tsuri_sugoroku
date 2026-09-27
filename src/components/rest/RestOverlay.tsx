@@ -1,4 +1,10 @@
+import { useEffect, useState } from 'react';
+import { playBuild, playChime } from '../../utils/sound';
+import type { CSSProperties } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
+import { REST_MONEY_BONUS } from '../../game/constants';
+import MoneyTicker from '../fx/MoneyTicker';
 import { calculateRepairCost, isBroken } from '../../game/equipment';
 import { getEquipment } from '../../data/equipmentData';
 import type { EquipmentType, EquipmentItem } from '../../game/types';
@@ -13,14 +19,49 @@ const TYPE_ICONS: Record<EquipmentType, IconName> = {
   lure: 'lure',
 };
 
+/** 温泉マーク（湯気が数回立ちのぼる） */
+function OnsenMark() {
+  return (
+    <svg width="72" height="64" viewBox="0 0 72 64" aria-hidden="true" className="mx-auto">
+      {/* 静止の薄い湯気（アニメが終わっても湯気が残る） */}
+      {[18, 36, 54].map(x => (
+        <path key={`s${x}`} d={`M${x} 34 c-5 -5 5 -9 0 -14 c-5 -5 5 -9 0 -14`} fill="none" stroke="#f4ecd8" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
+      ))}
+      {[18, 36, 54].map((x, i) => (
+        <path
+          key={x}
+          className="fx-steam"
+          style={{ '--d': `${i * 280}ms` } as CSSProperties}
+          d={`M${x} 34 c-5 -5 5 -9 0 -14 c-5 -5 5 -9 0 -14`}
+          fill="none"
+          stroke="#f4ecd8"
+          strokeWidth="3.4"
+          strokeLinecap="round"
+        />
+      ))}
+      <path d="M8 40 Q36 30 64 40 Q64 60 36 60 Q8 60 8 40 Z" fill="#e34a33" />
+      <path d="M8 40 Q36 30 64 40" fill="none" stroke="#f1d893" strokeWidth="2" />
+      <ellipse cx="28" cy="46" rx="10" ry="3" fill="#fff" opacity="0.25" />
+    </svg>
+  );
+}
+
 interface RestOverlayProps {
   nodeName: string;
   onClose: () => void;
 }
 
 export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
-  const { players, currentPlayerIndex, repairEquipment } = useGameStore();
-  const player = players[currentPlayerIndex];
+  const { player, repairEquipment } = useGameStore(
+    useShallow(s => ({ player: s.players[s.currentPlayerIndex], repairEquipment: s.repairEquipment })),
+  );
+  const [repaired, setRepaired] = useState<{ name: string; seq: number } | null>(null);
+  // 休憩のボーナス（到着時に加算済み）を、開いた瞬間に数え上げて見せる
+  const [moneyFrom] = useState(() => Math.max(0, player.money - REST_MONEY_BONUS));
+  // 湯に浸かる、りんの一打（+¥500 の鈴は所持金表示が鳴らす）
+  useEffect(() => {
+    playChime();
+  }, []);
 
   const damagedItems = player.equipment.inventory.filter(item => item.durability < 100);
 
@@ -28,6 +69,8 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
     const cost = calculateRepairCost(item);
     if (player.money >= cost) {
       repairEquipment(item.id, cost);
+      playBuild();
+      setRepaired(r => ({ name: getEquipment(item.type, item.level)?.name ?? '道具', seq: (r?.seq ?? 0) + 1 }));
     }
   };
 
@@ -42,13 +85,18 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
           <Icon name="close" size={16} />
         </button>
         <div className="text-center mb-4">
-          <div className="text-5xl mb-3">♨️</div>
-          <h3 className="font-mincho text-kin-300 text-xl font-bold mb-1 ink-underline inline-block"><Ruby>{nodeName}</Ruby><Ruby>で休憩</Ruby></h3>
+          <div className="mb-2"><OnsenMark /></div>
+          <h3 className="font-mincho text-kin-300 text-xl font-bold mb-1 ink-underline inline-block animate-ink-rise"><Ruby>{nodeName}</Ruby><Ruby>で休憩</Ruby></h3>
           <p className="text-washi/60 text-sm mt-2"><Ruby>ゆっくり湯に浸かって体力回復! ¥500を獲得した!</Ruby></p>
-          <p className="text-sm text-kin-300 mt-1 inline-flex items-center gap-1">
+          <p className="text-sm text-kin-300 mt-3 inline-flex items-center gap-1">
             <Icon name="coin" size={14} className="text-kin-400" />
-            <Ruby>所持金</Ruby>: ¥<span className="tabular-nums">{player.money.toLocaleString()}</span>
+            <Ruby>所持金</Ruby>: <MoneyTicker value={player.money} initialFrom={moneyFrom} className="font-bold" popClassName="text-base" />
           </p>
+          {repaired && (
+            <p key={repaired.seq} className="fx-pop block text-xs text-emerald-300 mt-2 font-mincho" role="status">
+              <Ruby>{`${repaired.name}を修理した！`}</Ruby>
+            </p>
+          )}
         </div>
 
         {/* 修理セクション */}

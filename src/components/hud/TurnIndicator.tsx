@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { NODE_MAP } from '../../data/boardNodes';
 import { computeDistanceToGoal } from '../../utils/pathfinding';
 import { calendarLabel } from '../../game/city';
+import { GOAL_CLOSE_ROUNDS } from '../../game/constants';
 import Ruby from '../shared/Ruby';
 
 const distanceToGoal = computeDistanceToGoal();
@@ -27,8 +28,9 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 export default function TurnIndicator() {
-  const { turn, player, turnPhase, maxTurns, destination, destinationReward, isCity } = useGameStore(
+  const { turn, player, turnPhase, maxTurns, destination, destinationReward, isCity, firstFinishTurn } = useGameStore(
     useShallow(s => ({
+      firstFinishTurn: s.firstFinishTurn,
       turn: s.turn,
       player: s.players[s.currentPlayerIndex],
       turnPhase: s.turnPhase,
@@ -60,7 +62,7 @@ export default function TurnIndicator() {
           )}
         </span>
         <span className="text-kin-500/40">｜</span>
-        <span className="font-bold font-mincho truncate" style={{ color: player?.color }}>{player?.name}</span>
+        <span key={`${turn}-${player?.id}`} className="fx-rise font-bold font-mincho truncate" style={{ color: player?.color }}>{player?.name}</span>
         {player && player.fishBonusMultiplier > 1 && (
           <span className="bg-kin-500/20 text-kin-300 text-xs font-bold px-2 py-0.5 rounded-full border border-kin-500/35 whitespace-nowrap">
             x{player.fishBonusMultiplier} ({player.fishBonusTurnsLeft}T)
@@ -70,15 +72,20 @@ export default function TurnIndicator() {
 
       <div className="flex items-center gap-2 sm:gap-3 text-washi/70 min-w-0 text-xs sm:text-sm">
         {isCity && destName && (
-          <span className="whitespace-nowrap bg-shu-600/25 border border-shu-500/40 rounded-full px-2 py-0.5 text-shu-200 font-mincho">
+          <span key={destination ?? ''} className="fx-pop whitespace-nowrap bg-shu-600/25 border border-shu-500/40 rounded-full px-2 py-0.5 text-shu-200 font-mincho">
             <Ruby>目的地</Ruby> <Ruby>{destName}</Ruby> <span className="text-kin-300 tabular-nums">¥{destinationReward.toLocaleString()}</span>
           </span>
         )}
         {node && <span className="hidden sm:inline font-mincho truncate"><Ruby>{node.name}</Ruby></span>}
+        {!isCity && firstFinishTurn != null && (
+          <span className="whitespace-nowrap bg-shu-600/25 border border-shu-500/40 rounded-full px-2 py-0.5 text-shu-200 font-mincho text-xs" title="最初の人がゴールしたので、残り巡数で全体が終わる">
+            <Ruby>締切まで</Ruby> {Math.max(0, firstFinishTurn + GOAL_CLOSE_ROUNDS - turn + 1)}<Ruby>巡</Ruby>
+          </span>
+        )}
         {!isCity && remainingDist !== undefined && remainingDist > 0 && (
           <span className="text-kin-300/75 text-xs whitespace-nowrap">ゴールまで {remainingDist} マス</span>
         )}
-        <span className="hidden sm:inline whitespace-nowrap"><Ruby>{PHASE_LABELS[turnPhase] || ''}</Ruby></span>
+        <span key={turnPhase} className="fx-fade-in hidden sm:inline whitespace-nowrap"><Ruby>{PHASE_LABELS[turnPhase] || ''}</Ruby></span>
       </div>
     </div>
   );

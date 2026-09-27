@@ -1,7 +1,7 @@
 // まちづくり: 地図上の町の姿（スカイライン）・目的地・データマップ。
 import { memo, useMemo } from 'react';
 import { NODE_MAP } from '../../data/boardNodes';
-import { computeAllStats, BUILDING_INFO, getTownInfo } from '../../game/city';
+import { computeAllStats, BUILDING_INFO, getTownInfo, effectiveLandValue, TIER_LABEL } from '../../game/city';
 import type { CityState } from '../../game/city';
 import { nodeRadius } from './mapTheme';
 import type { DataMapMode } from './cityMapModes';
@@ -33,6 +33,20 @@ export const CityDataLayer = memo(function CityDataLayer({ city, mode }: { city:
           if (s.pollution <= 0) return null;
           const r = 10 + s.pollution * 4;
           return <circle key={id} cx={n.x} cy={n.y} r={r} fill="rgba(140,80,40,0.4)" stroke="rgba(170,100,50,0.9)" strokeWidth="1.2" />;
+        }
+        if (mode === 'land') {
+          const town = city.towns[id];
+          const base = getTownInfo(id)?.landValue ?? 1;
+          const ratio = effectiveLandValue(id, town) / base; // 1.0 が基準
+          if (!town?.plots.some(Boolean) && ratio === 1) return null;
+          const hueL = Math.max(0, Math.min(120, 60 + (ratio - 1) * 160));
+          const r = 12 + Math.max(0, ratio - 0.7) * 14;
+          return (
+            <g key={id}>
+              <circle cx={n.x} cy={n.y} r={r} fill={`hsla(${hueL}, 70%, 50%, 0.38)`} stroke={`hsla(${hueL}, 70%, 58%, 0.95)`} strokeWidth="1.2" />
+              <text x={n.x} y={n.y - r - 2} textAnchor="middle" fontSize="7" fill="#fbf6e8" stroke="#1a130c" strokeWidth="1.8" style={{ paintOrder: 'stroke' }}>×{ratio.toFixed(2)}</text>
+            </g>
+          );
         }
         // 幸福度: 赤 → 黄 → 緑
         const h = Math.max(0, Math.min(10, s.happiness));
@@ -66,11 +80,17 @@ export const CitySkyline = memo(function CitySkyline({ city, colors }: { city: C
           <g key={id}>
             {/* 地面（区画の埋まり具合も示す） */}
             <rect x={x0 - 1.2} y={base - 0.2} width={totalW + 2.4} height={2.2} rx={1.1} fill="rgba(20,14,8,0.8)" />
+            {(town.tier ?? 0) > 0 && (
+              <g transform={`translate(${x0 - 6} ${base - 4})`}>
+                <circle r={4.2} fill="#c63a26" stroke="#fbf6e8" strokeWidth={0.8} />
+                <text y={1.8} textAnchor="middle" fontSize="5" fontWeight={900} fill="#fff" fontFamily='"Shippori Mincho", serif'>{TIER_LABEL[town.tier ?? 0]}</text>
+              </g>
+            )}
             {built.map((p, i) => {
               const x = x0 + i * W + 0.5;
               const w = W - 1;
               const h = p.kind === 'park' ? 4 : p.kind === 'power' ? 12 : p.kind === 'port' ? 6.5 : 5 + p.level * 5;
-              const color = BUILDING_INFO[p.kind].color;
+              const color = p.vacant ? '#77736b' : BUILDING_INFO[p.kind].color;
               const owner = colors[p.owner] ?? '#fff';
               return (
                 <g key={i}>

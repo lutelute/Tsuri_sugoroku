@@ -1,14 +1,25 @@
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
-import { BOAT_FISHING_COST } from '../../game/constants';
+import { BOAT_FISHING_COST, FISHING_REELING_TIME_LIMIT_MS, REEL_TIME_EXTENSION } from '../../game/constants';
 import { getEquippedItem } from '../../game/equipment';
+import { getEffectiveLevel, getStrikeGreenZone, interpolateBonus } from '../../game/fishing';
+import type { PlayerEquipment } from '../../game/types';
 import { NODE_MAP } from '../../data/boardNodes';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
+import { playCoinLoss } from '../../utils/sound';
 
 export default function FishingChoiceOverlay() {
-  const { players, currentPlayerIndex, startFishing, startBoatFishing, setTurnPhase, boatFishingRemaining } = useGameStore();
-  const player = players[currentPlayerIndex];
+  const { player, startFishing, startBoatFishing, setTurnPhase, boatFishingRemaining } = useGameStore(
+    useShallow(s => ({
+      player: s.players[s.currentPlayerIndex],
+      startFishing: s.startFishing,
+      startBoatFishing: s.startBoatFishing,
+      setTurnPhase: s.setTurnPhase,
+      boatFishingRemaining: s.boatFishingRemaining,
+    })),
+  );
   const node = NODE_MAP.get(player.currentNode);
   const isSpecialSpot = node?.type === 'fishing_special';
   const canAffordBoat = player.money >= BOAT_FISHING_COST;
@@ -45,7 +56,7 @@ export default function FishingChoiceOverlay() {
         {/* 特別スポット表示 */}
         {isSpecialSpot && (
           <div className="bg-shu-500/20 border border-shu-500/30 rounded-lg p-3 text-center">
-            <p className="text-shu-400 font-mincho font-bold text-sm">🌟 <Ruby>特別な釣りスポット！</Ruby></p>
+            <p className="text-shu-400 font-mincho font-bold text-sm">◆ <Ruby>特別な釣りスポット！</Ruby></p>
             <p className="text-shu-400/70 text-xs mt-1"><Ruby>レア魚が出やすく、大漁のチャンスも UP！</Ruby></p>
           </div>
         )}
@@ -63,10 +74,13 @@ export default function FishingChoiceOverlay() {
         {hasRod && missingWarnings.length > 0 && (
           <div className="bg-kin-500/15 border border-kin-500/30 rounded-lg p-2">
             {missingWarnings.map((w, i) => (
-              <p key={i} className="text-kin-300/90 text-xs">⚠️ <Ruby>{w}</Ruby></p>
+              <p key={i} className="text-kin-300/90 text-xs">◆ <Ruby>{w}</Ruby></p>
             ))}
           </div>
         )}
+
+        {/* 道具の力（ミニゲームでの効き目が見える） */}
+        {hasRod && <GearPower equipment={player.equipment} />}
 
         {/* 船釣り続行中 */}
         {boatFishingRemaining > 0 && (
@@ -123,7 +137,11 @@ export default function FishingChoiceOverlay() {
           {/* 船釣り（新規購入） */}
           {boatFishingRemaining === 0 && (
             <button
-              onClick={() => hasRod && canAffordBoat && startBoatFishing()}
+              onClick={() => {
+                if (!hasRod || !canAffordBoat) return;
+                playCoinLoss();
+                startBoatFishing();
+              }}
               disabled={!hasRod || !canAffordBoat}
               className={`w-full border rounded-xl p-4 text-left transition
                 ${hasRod && canAffordBoat
@@ -153,6 +171,54 @@ export default function FishingChoiceOverlay() {
           <Ruby>やめる</Ruby>
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** 実効レベル（0〜5の実数）を5つの珠で表示 */
+function Pips({ level }: { level: number }) {
+  return (
+    <span className="flex gap-0.5" aria-label={`Lv${level.toFixed(1)}`}>
+      {Array.from({ length: 5 }, (_, i) => {
+        const fill = Math.max(0, Math.min(1, level - i));
+        return (
+          <span key={i} className="relative w-2.5 h-2.5 rounded-full bg-ai-950/70 border border-kin-500/30 overflow-hidden">
+            <span className="absolute inset-y-0 left-0 bg-kin-400" style={{ width: `${fill * 100}%` }} />
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+/** 今の道具がミニゲームでどう効くか（竿=合わせ / リール=巻き・糸 / ルアー=当たり） */
+function GearPower({ equipment }: { equipment: PlayerEquipment }) {
+  const strike = getEffectiveLevel(equipment, 'strike');
+  const reeling = getEffectiveLevel(equipment, 'reeling');
+  const tolerance = getEffectiveLevel(equipment, 'tensionTolerance');
+  const bite = getEffectiveLevel(equipment, 'biteSpeed');
+  const zone = Math.round(getStrikeGreenZone(strike) * 100);
+  const time = Math.round((FISHING_REELING_TIME_LIMIT_MS + interpolateBonus(REEL_TIME_EXTENSION, tolerance)) / 1000);
+  const rows: { label: string; level: number; note: string }[] = [
+    { label: '合わせ', level: strike, note: `金の帯 ${zone}%` },
+    { label: '巻き', level: reeling, note: '巻く速さ' },
+    { label: '糸の強さ', level: tolerance, note: `${time}秒` },
+    { label: '当たり', level: bite, note: '当たりの早さ' },
+  ];
+  return (
+    <div className="bg-ai-950/40 border border-kin-500/20 rounded-lg px-3 py-2">
+      <p className="text-[11px] text-washi/50 mb-1"><Ruby>道具の力</Ruby></p>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+        {rows.map(r => (
+          <div key={r.label} className="flex items-center justify-between gap-1">
+            <span className="text-xs text-washi/80"><Ruby>{r.label}</Ruby></span>
+            <Pips level={r.level} />
+          </div>
+        ))}
+      </div>
+      <p className="text-[10px] text-washi/40 mt-1 tabular-nums">
+        {rows.map(r => r.note).filter(n => /\d/.test(n)).join(' ・ ')}
+      </p>
     </div>
   );
 }

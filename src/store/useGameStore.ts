@@ -3,7 +3,7 @@ import type {
   GameState, GameScreen, TurnPhase, Player, GameSettings,
   FishingState, CaughtFish, EquipmentType, CapitalChoiceEffect, CapitalResult,
 } from '../game/types';
-import { INITIAL_MONEY, PLAYER_COLORS, PLAYER_DEFAULT_NAMES, REST_MONEY_BONUS, DEFAULT_MAX_TURNS, FISH_SELL_PRICE, BOAT_FISHING_COST, GOAL_MONEY_REWARD } from '../game/constants';
+import { INITIAL_MONEY, PLAYER_COLORS, PLAYER_DEFAULT_NAMES, REST_MONEY_BONUS, DEFAULT_MAX_TURNS, FISH_SELL_PRICE, BOAT_FISHING_COST, GOAL_MONEY_REWARD, GOAL_CLOSE_ROUNDS } from '../game/constants';
 import { getCapitalEvent } from '../data/capitalEvents';
 import { calculateReachableNodes } from '../game/movement';
 import { NODE_MAP } from '../data/boardNodes';
@@ -17,11 +17,18 @@ import { saveUserEquipment, saveUserMoney, saveUserEncyclopedia, loadUserEncyclo
 import type { PlayerEquipment } from '../game/types';
 import {
   createInitialCityState, isTown, build as cityBuildFn, upgrade as cityUpgradeFn, acquire as cityAcquireFn,
+  renovate as cityRenovateFn, recordInspection, TIER_LABEL, getTownInfo,
   simulateRound, drawCityEvent, applyCityEvent, pickDestination, portFee,
-  CITY_INITIAL_MONEY, CITY_START_NODE, CITY_ACTIONS_PER_VISIT, CITY_GOAL_BONUS, CITY_DEFAULT_MONTHS,
+  CITY_INITIAL_MONEY, CITY_START_NODE, CITY_ACTIONS_PER_VISIT, CITY_DEFAULT_MONTHS,
 } from '../game/city';
-import type { BuildingKind } from '../game/city';
+import type { BuildingKind, CityReport } from '../game/city';
+import type { YearEndResult } from '../game/cityAwards';
 import { random } from '../utils/random';
+import { CPU_STYLES, CPU_STYLE_LABEL, cpuCatchChance } from '../game/cpuAI';
+import { createCaughtFish } from '../game/fishing';
+import { computeYearEnd, isYearEndTurn } from '../game/cityAwards';
+import { calendarLabel } from '../game/city';
+import { getEquippedItem } from '../game/equipment';
 
 const MAX_FISHING_PER_TURN = 3;
 
@@ -61,11 +68,17 @@ interface GameActions {
   cityBuild: (plotIndex: number, kind: BuildingKind) => string | null;
   cityUpgrade: (plotIndex: number) => string | null;
   cityAcquire: (plotIndex: number) => string | null;
+  cityRenovate: (plotIndex: number) => string | null;
   applyCityEventCard: () => void;
   acknowledgeCityEvent: () => void;
   acknowledgeCityReport: () => void;
+  acknowledgeCityYearEnd: () => void;
   dismissCityToast: () => void;
-  devCityCheat: (kind: 'money' | 'simulate' | 'quake' | 'kaiju') => void;
+  devCityCheat: (kind: 'money' | 'simulate' | 'quake' | 'kaiju' | 'yearend') => void;
+  /** CPU: ミニゲームを遊ばずに確率で1回釣る */
+  cpuFish: () => void;
+  /** 画面上部のお知らせ（CPU の行動報告など） */
+  announce: (title: string, body: string) => void;
 }
 
 type GameStore = GameState & GameActions;
@@ -76,9 +89,15 @@ function createInitialPlayers(
   savedMoneys?: (number | null)[],
 ): Player[] {
   const isCity = settings.mode === 'city';
-  return Array.from({ length: settings.playerCount }, (_, i) => ({
+  let cpuCount = 0;
+  return Array.from({ length: settings.playerCount }, (_, i) => {
+    const isCpu = settings.playerKinds?.[i] === 'cpu';
+    const cpuStyle = isCpu ? CPU_STYLES[cpuCount++ % CPU_STYLES.length] : undefined;
+    return {
     id: i,
-    name: settings.playerNames[i] || PLAYER_DEFAULT_NAMES[i],
+    isCpu,
+    cpuStyle,
+    name: settings.playerNames[i] || (isCpu && cpuStyle ? `CPU・${CPU_STYLE_LABEL[cpuStyle]}` : PLAYER_DEFAULT_NAMES[i]),
     color: PLAYER_COLORS[i],
     uid: settings.playerUids[i] ?? undefined,
     currentNode: isCity && NODE_MAP.has(CITY_START_NODE) ? CITY_START_NODE : 'start',
@@ -92,7 +111,8 @@ function createInitialPlayers(
     extraTurn: false,
     fishBonusMultiplier: 1,
     fishBonusTurnsLeft: 0,
-  }));
+    };
+  });
 }
 
 const initialState: GameState = {
@@ -120,7 +140,31 @@ const initialState: GameState = {
   lastCityEventOutcome: null,
   cityToast: null,
   capitalDoneThisTurn: false,
+  cityGoalClaims: [],
+  cityYearEnd: null,
+  cityTitleHistory: [],
+  firstFinishTurn: null,
 };
+
+/** まちづくり: ゴール賞金（着順）。1人1回だけ */
+const CITY_GOAL_REWARDS = [5000, 3000, 2000, 1000];
+
+/** まちづくり: 中継マスの小さな道中イベント（釣り旅のカードの代わり） */
+const ROAD_EVENTS: { title: string; body: string; amount: number }[] = [
+  { title: '道の駅で名産を売った', body: '旅の途中で仕入れた名産が売れた', amount: 600 },
+  { title: '峠の茶屋でひと休み', body: '団子代を払った', amount: -300 },
+  { title: '落とし物を届けた', body: '持ち主からお礼をもらった', amount: 500 },
+  { title: '通行料', body: '有料道路を通った', amount: -400 },
+  { title: '観光客を案内した', body: 'ガイド料をもらった', amount: 800 },
+  { title: '渋滞にはまった', body: '燃料代がかさんだ', amount: -500 },
+];
+
+/** まちづくり: ゴール到着の処理（着順賞金は1人1回。以後は記念のみ） */
+function claimCityGoal(claims: number[], playerIndex: number): { claims: number[]; reward: number; order: number | null } {
+  if (claims.includes(playerIndex)) return { claims, reward: 0, order: null };
+  const order = claims.length;
+  return { claims: [...claims, playerIndex], reward: CITY_GOAL_REWARDS[order] ?? CITY_GOAL_REWARDS[CITY_GOAL_REWARDS.length - 1], order };
+}
 
 /** 手番の切り替え時に毎回リセットする値 */
 const TURN_RESET = {
@@ -154,7 +198,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const encyclopedias = players.map((p, i) => {
       if (savedEncyclopedias?.[i] != null) return savedEncyclopedias[i]!;
       // ゲストプレイヤーはlocalStorageから読み込み、登録ユーザーは空で開始（Firestoreからロード済みのはず）
-      return p.uid ? {} : loadEncyclopedia();
+      return p.uid || p.isCpu ? {} : loadEncyclopedia();
     });
     // ゲーム開始時の図鑑をスナップショット（NEW判定用）
     const initialEncyclopedias = encyclopedias.map(enc => ({ ...enc }));
@@ -183,6 +227,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       lastCityEventOutcome: null,
       cityToast: null,
       capitalDoneThisTurn: false,
+      cityGoalClaims: [],
+      cityYearEnd: null,
+      cityTitleHistory: [],
+      firstFinishTurn: null,
     });
   },
 
@@ -283,7 +331,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
       case 'route': {
         // 街道中継マス: 50%でランダム小イベント、50%は素通り。稀にレア魚遭遇。
-        const r = Math.random();
+        const r = random();
         if (r < 0.5) {
           const event = getRandomEventCard();
           set({ currentEvent: event, turnPhase: 'event' });
@@ -317,7 +365,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           finishOrder: finishedCount,
           money: player.money + reward,
         };
-        set({ players: newPlayers, turnPhase: 'turn_end' });
+        set({ players: newPlayers, turnPhase: 'turn_end', firstFinishTurn: get().firstFinishTurn ?? get().turn });
         break;
       }
       default:
@@ -409,7 +457,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       caughtFish: [...player.caughtFish, ...allWithBonus],
       money: player.money + totalSellPrice,
     };
-    // まちづくり: 漁港の町なら水揚げ手数料（持ち主へ売上の2割。市場が払うので釣り人は損しない）
+    // まちづくり: 漁港の町なら水揚げ手数料（持ち主へ売上の3割（CITY_ECONOMY.portFeeRate）。市場が払うので釣り人は損しない）
     const cityState = get().city;
     if (cityState) {
       const fee = portFee(cityState, player.currentNode, totalSellPrice);
@@ -421,7 +469,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 永続化（uidがあればFirestore、なければlocalStorage）
     if (player.uid) {
       saveUserEncyclopedia(player.uid, newEncyclopedia).catch(() => {});
-    } else {
+    } else if (!player.isCpu) {
+      // CPU の釣果で人のローカル図鑑を上書きしない
       saveEncyclopedia(newEncyclopedia);
     }
 
@@ -548,7 +597,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // 移動系イベント(move / move_steps)で新しいノードに着いた場合、ゴール到達を処理する
     // （通常移動と異なり executeNodeAction を経由しないため、ここで明示的にゴール判定する）
-    if (updatedPlayer.currentNode !== prevNode && !updatedPlayer.hasFinished) {
+    let cityGoalClaims = get().cityGoalClaims;
+    if (updatedPlayer.currentNode !== prevNode && !updatedPlayer.hasFinished && isCityMode(get().settings)) {
+      // まちづくりでは「ゴール＝上がり」ではない（上がると手番が飛ばされ続けてしまう）。着順賞金だけ渡す
+      const newNode = NODE_MAP.get(updatedPlayer.currentNode);
+      if (newNode?.type === 'goal') {
+        const g = claimCityGoal(cityGoalClaims, currentPlayerIndex);
+        cityGoalClaims = g.claims;
+        updatedPlayer = { ...updatedPlayer, money: updatedPlayer.money + g.reward };
+      }
+    } else if (updatedPlayer.currentNode !== prevNode && !updatedPlayer.hasFinished) {
       const newNode = NODE_MAP.get(updatedPlayer.currentNode);
       if (newNode?.type === 'goal') {
         const finishedCount = players.filter(p => p.hasFinished).length;
@@ -559,11 +617,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
           finishOrder: finishedCount,
           money: updatedPlayer.money + reward,
         };
+        if (get().firstFinishTurn == null) set({ firstFinishTurn: turn });
       }
     }
 
     const newPlayers = [...players];
     newPlayers[currentPlayerIndex] = updatedPlayer;
+    // イベントでの移動も駒が進んで見えるように（瞬間移動させない）
+    if (updatedPlayer.currentNode !== prevNode) {
+      set({ lastMove: { playerIndex: currentPlayerIndex, path: [prevNode, updatedPlayer.currentNode], seq: (get().lastMove?.seq ?? 0) + 1 } });
+    }
 
     // イベントで魚を獲得した場合は図鑑も更新
     const oldFishIds = new Set(player.caughtFish.map(f => f.fishId));
@@ -575,9 +638,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
       const newEncyclopedias = [...encyclopedias];
       newEncyclopedias[currentPlayerIndex] = newEncyclopedia;
-      set({ players: newPlayers, encyclopedias: newEncyclopedias });
+      set({ players: newPlayers, encyclopedias: newEncyclopedias, cityGoalClaims });
     } else {
-      set({ players: newPlayers });
+      set({ players: newPlayers, cityGoalClaims });
     }
   },
 
@@ -649,7 +712,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const baseChance = 0.55 + (avgLevel / 5) * 0.32;
         const difficultyPenalty = (effect.difficulty - 1) * 0.08;
         const successChance = Math.max(0.15, Math.min(0.92, baseChance - difficultyPenalty));
-        const success = Math.random() < successChance;
+        const success = random() < successChance;
 
         if (success) {
           const caught: CaughtFish = { fishId: fishData.id, caughtAt: node.id, turn, size: 1.3 };
@@ -658,7 +721,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const newEnc = { ...encyclopedias[currentPlayerIndex], [fishData.id]: true };
           newEncyclopedias[currentPlayerIndex] = newEnc;
           if (p.uid) saveUserEncyclopedia(p.uid, newEnc).catch(() => {});
-          else saveEncyclopedia(newEnc);
+          else if (!p.isCpu) saveEncyclopedia(newEnc);
           result = {
             choiceId: choice.id,
             choiceLabel: choice.label,
@@ -719,8 +782,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   acknowledgeCapitalResult: () => {
-    // まちづくりでは祭りの後もまだ建設できるよう、行動選択へ戻る
-    set({ lastCapitalResult: null, turnPhase: isCityMode(get().settings) ? 'city' : 'turn_end', capitalDoneThisTurn: true });
+    // まちづくりでは祭りの後もまだ建設できるよう、町パネルへ戻る。
+    // 釣り旅では、釣具店のある県庁なら祭りの後に店へ寄れる（従来は祭りに隠れて店が使えなかった）
+    const st = get();
+    const node = NODE_MAP.get(st.players[st.currentPlayerIndex]?.currentNode ?? '');
+    const next: TurnPhase = isCityMode(st.settings) ? 'city' : node?.shopTier ? 'shop' : 'turn_end';
+    set({ lastCapitalResult: null, turnPhase: next, capitalDoneThisTurn: true });
   },
 
   doActionAgain: () => {
@@ -797,8 +864,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           saveUserEquipment(p.uid, p.equipment).catch(() => {});
           saveUserMoney(p.uid, p.money).catch(() => {});
         }
-      } else {
-        // ゲストプレイヤーはlocalStorageに保存
+      } else if (!p.isCpu) {
+        // ゲストプレイヤーはlocalStorageに保存（CPU は保存しない）
         saveEncyclopedia(encyclopedias[i]);
       }
     }
@@ -837,8 +904,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // まちづくり: ラウンド（月）が進んだら月末処理（収入・自然成長・季節の災害）
     const city = get().city;
-    let cityReport = null;
+    let cityReport: CityReport | null = null;
     let cityNext = city;
+    let yearEnd: YearEndResult | null = null;
+    let titleHistory = get().cityTitleHistory;
     if (city && isCityMode(settings) && newTurn > turn) {
       for (let t = turn; t < newTurn; t++) {
         const sim = simulateRound(cityNext!, workingPlayers.length, t, workingPlayers.map(p => p.money));
@@ -847,25 +916,64 @@ export const useGameStore = create<GameStore>((set, get) => ({
         });
         cityNext = sim.state;
         cityReport = sim.report;
+        // 3月は年度末の大決算: 番付と称号（称号は賞金/罰金つき）
+        if (isYearEndTurn(t)) {
+          yearEnd = computeYearEnd(cityNext!, workingPlayers.map(p => p.money), t, CITY_INITIAL_MONEY);
+          for (const title of yearEnd.titles) {
+            const wp = workingPlayers[title.playerIndex];
+            if (wp) wp.money = Math.max(0, wp.money + title.prize);
+          }
+          titleHistory = [...titleHistory, { year: yearEnd.year, titles: yearEnd.titles }];
+        }
       }
     }
 
-    // 最大ターン到達: ラウンドが maxTurns を超えた時点で終了（全員が同数ラウンドをプレイ済み）
-    if (settings.maxTurns > 0 && newTurn > settings.maxTurns) {
-      set({ players: workingPlayers, city: cityNext, cityReport });
+    // 釣り旅: 最初のゴールから GOAL_CLOSE_ROUNDS 巡たったら締め切り
+    const ff = get().firstFinishTurn;
+    if (!isCityMode(settings) && ff != null && newTurn > ff + GOAL_CLOSE_ROUNDS) {
+      set({ players: workingPlayers });
       get().endGame();
       return;
     }
 
+    // 最大ターン到達: ラウンドが maxTurns を超えた時点で終了（全員が同数ラウンドをプレイ済み）
+    if (settings.maxTurns > 0 && newTurn > settings.maxTurns) {
+      set({ players: workingPlayers, city: cityNext, cityReport, cityYearEnd: yearEnd, cityTitleHistory: titleHistory });
+      get().endGame();
+      return;
+    }
+
+    // 月末決算の見せ方: 年度末は大決算、災害や発展/衰退があった月だけ全画面、それ以外は上部のお知らせで流す
+    const notable = !!cityReport && (
+      cityReport.disasters.length > 0
+      || cityReport.players.some(r => r.grown > 0 || r.declined > 0 || (r.vacated ?? 0) > 0)
+      || (cityReport.tierChanges ?? []).some(c => c.to > c.from)
+    );
+    const phase: TurnPhase = yearEnd ? 'city_yearend' : notable ? 'city_report' : 'idle';
     set({
       players: workingPlayers,
       currentPlayerIndex: nextIndex,
       turn: newTurn,
-      turnPhase: cityReport ? 'city_report' : 'idle',
+      turnPhase: phase,
       ...TURN_RESET,
       city: cityNext,
       cityReport,
+      cityYearEnd: yearEnd,
+      cityTitleHistory: titleHistory,
     });
+    const ups = (cityReport?.tierChanges ?? []).filter(c => c.to > c.from);
+    if (ups.length && (notable || yearEnd)) {
+      // 決算画面の見出しにも出るが、地図に戻ったときに分かるよう短く知らせる
+      get().announce('町が発展した', ups.map(c => `${getTownInfo(c.nodeId)?.name}が発展度${TIER_LABEL[c.to]}に`).join('・'));
+    }
+    if (cityReport && !notable && !yearEnd) {
+      const cal = calendarLabel(cityReport.turn);
+      const summary = cityReport.players
+        .map((r, i) => `${workingPlayers[i]?.name} ${r.net >= 0 ? '+' : '−'}¥${Math.abs(r.net).toLocaleString()}`)
+        .join(' ／ ');
+      const upText = ups.length ? ` ／ ${ups.map(c => `${getTownInfo(c.nodeId)?.name}が発展度${TIER_LABEL[c.to]}に`).join('・')}` : '';
+      get().announce(`${cal.month}月の決算`, summary + upText);
+    }
 
     saveGameState(get());
   },
@@ -927,6 +1035,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       lastCityEventOutcome: null,
       cityToast: null,
       capitalDoneThisTurn: saved.capitalDoneThisTurn ?? false,
+      cityGoalClaims: saved.cityGoalClaims ?? [],
+      cityYearEnd: saved.cityYearEnd ?? null,
+      cityTitleHistory: saved.cityTitleHistory ?? [],
+      firstFinishTurn: saved.firstFinishTurn ?? null,
     });
   },
 
@@ -1001,6 +1113,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return null;
   },
 
+  cityRenovate: (plotIndex) => {
+    const { city, players, currentPlayerIndex, cityActionsThisTurn } = get();
+    if (!city) return 'まちづくりモードではない';
+    if (cityActionsThisTurn >= CITY_ACTIONS_PER_VISIT) return `1回の訪問で行える工事は${CITY_ACTIONS_PER_VISIT}回まで`;
+    const player = players[currentPlayerIndex];
+    const r = cityRenovateFn(city, player.currentNode, plotIndex, currentPlayerIndex, player.money);
+    if (!r.ok) return r.reason;
+    const newPlayers = [...players];
+    newPlayers[currentPlayerIndex] = { ...player, money: player.money - r.cost };
+    set({ city: r.state, players: newPlayers, cityActionsThisTurn: cityActionsThisTurn + 1 });
+    return null;
+  },
+
   applyCityEventCard: () => {
     const { city, currentCityEvent, players, currentPlayerIndex, turn } = get();
     if (!city || !currentCityEvent) return;
@@ -1021,7 +1146,38 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ turnPhase: 'idle' });
   },
 
+  acknowledgeCityYearEnd: () => {
+    set({ turnPhase: 'idle', cityYearEnd: null });
+  },
+
   dismissCityToast: () => set({ cityToast: null }),
+
+  announce: (title, body) => {
+    set({ cityToast: { title, body, seq: (get().cityToast?.seq ?? 0) + 1 } });
+  },
+
+  cpuFish: () => {
+    const { players, currentPlayerIndex, turn } = get();
+    const player = players[currentPlayerIndex];
+    const node = NODE_MAP.get(player.currentNode);
+    if (!node || !getEquippedItem(player.equipment, 'rod')) {
+      set({ turnPhase: 'action_choice' });
+      return;
+    }
+    const fish = selectFish(node.id, node.region, player.equipment, node.type === 'fishing_special', false);
+    const ok = random() < cpuCatchChance(player, fish);
+    if (ok) {
+      const caught = createCaughtFish(fish.id, node.id, turn, player.equipment);
+      get().catchFish(caught);
+      const price = Math.round((FISH_SELL_PRICE[fish.rarity] ?? 200) * caught.size);
+      get().announce(`${player.name}：${fish.name}を釣った`, `${node.name}で${caught.size >= 1.5 ? '大物の' : ''}${fish.name}（¥${price.toLocaleString()}）`);
+    } else {
+      get().failFishing();
+      get().announce(`${player.name}：逃げられた`, `${node.name}で${fish.name}に糸を切られた`);
+    }
+    get().degradeEquipment();
+    set({ fishingState: null, turnPhase: 'action_choice' });
+  },
 
   devCityCheat: (kind) => {
     const { city, players, currentPlayerIndex, turn } = get();
@@ -1030,6 +1186,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const newPlayers = [...players];
       newPlayers[currentPlayerIndex] = { ...newPlayers[currentPlayerIndex], money: newPlayers[currentPlayerIndex].money + 50000 };
       set({ players: newPlayers });
+    } else if (kind === 'yearend') {
+      const ye = computeYearEnd(city, players.map(p => p.money), turn, CITY_INITIAL_MONEY);
+      set({ cityYearEnd: ye, turnPhase: 'city_yearend' });
     } else if (kind === 'simulate') {
       const sim = simulateRound(city, players.length, turn, players.map(p => p.money));
       set({
@@ -1068,28 +1227,34 @@ function executeCityNodeAction(nodeId: string) {
     nextCity = { ...city, destination: nd.nodeId, destinationReward: nd.reward };
   }
 
+  // 視察: 自分の建物がある町に止まると、次の月末にその町の自分の建物が発展しやすくなる
+  const insp = recordInspection(nextCity, nodeId, currentPlayerIndex);
+  if (insp.inspected && insp.state !== nextCity) {
+    nextCity = insp.state;
+    toast = toast ?? { title: `${node.name}を視察`, body: '次の月末、この町のあなたの建物は発展しやすくなる' };
+  }
+
   let phase: TurnPhase = 'action_choice';
-  let currentEvent = null;
+  const currentEvent = null;
   let currentCityEvent = null;
+  let goalClaims = st.cityGoalClaims;
 
   switch (node.type) {
     case 'event_good':
     case 'event_bad':
     case 'event_random': {
+      // 村マスでは必ず「まちの出来事」（釣り旅のカードは混ぜない）
       const kind = node.type === 'event_good' ? 'good' : node.type === 'event_bad' ? 'bad' : 'random';
-      if (random() < 0.65) {
-        currentCityEvent = drawCityEvent(kind);
-        phase = 'city_event';
-      } else {
-        currentEvent = getRandomEventCard(kind);
-        phase = 'event';
-      }
+      currentCityEvent = drawCityEvent(kind);
+      phase = 'city_event';
       break;
     }
     case 'route': {
+      // 中継マス: 3割で小さな道中イベント
       if (random() < 0.3) {
-        currentEvent = getRandomEventCard();
-        phase = 'event';
+        const ev = ROAD_EVENTS[Math.floor(random() * ROAD_EVENTS.length)];
+        p.money = Math.max(0, p.money + ev.amount);
+        toast = toast ?? { title: `道中: ${ev.title}`, body: `${ev.body}（${ev.amount >= 0 ? '+' : '−'}¥${Math.abs(ev.amount).toLocaleString()}）` };
       }
       break;
     }
@@ -1097,10 +1262,15 @@ function executeCityNodeAction(nodeId: string) {
       p.money += REST_MONEY_BONUS;
       phase = 'city';
       break;
-    case 'goal':
-      p.money += CITY_GOAL_BONUS;
-      toast = toast ?? { title: '南の果てに到達！', body: `旅の記念に ¥${CITY_GOAL_BONUS.toLocaleString()}。まちづくりはまだまだ続く` };
+    case 'goal': {
+      const g = claimCityGoal(st.cityGoalClaims, currentPlayerIndex);
+      goalClaims = g.claims;
+      p.money += g.reward;
+      toast = toast ?? (g.order !== null
+        ? { title: `南の果てに${g.order + 1}番目に到達！`, body: `着順賞金 ¥${g.reward.toLocaleString()}（賞金は1人1回）。まちづくりはまだまだ続く` }
+        : { title: '南の果てに再訪', body: 'ゴール賞金はもう受け取り済み。町へ戻って稼ごう' });
       break;
+    }
     case 'start':
       phase = 'shop';
       break;
@@ -1117,6 +1287,7 @@ function executeCityNodeAction(nodeId: string) {
     currentCityEvent,
     lastCityEventOutcome: null,
     cityToast: toast ? { ...toast, seq: (st.cityToast?.seq ?? 0) + 1 } : st.cityToast,
+    cityGoalClaims: goalClaims,
   });
 }
 

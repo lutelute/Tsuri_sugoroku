@@ -247,3 +247,23 @@ idle → roulette → path_selection(分岐あり) or node_action →
 ### 開発時の注意
 - リポジトリが iCloud 同期下（~/Documents）にあり、`node_modules` が退避（dataless）されると cat/grep/vite が固まる。`npm ci` で復旧する。
 - 同じ理由でファイル変更イベントが遅れて届き、Vite 開発サーバーが遅れて再起動・再読み込みすることがある。ブラウザ確認が不安定なときは `NODE_ENV=development npx vite build --mode development --outDir <tmp>` を静的配信すると安定する（DevPanel も使える）。
+
+
+## v4.1.0 係（エージェント）分担での作り込み（2026-09-27）
+
+ユーザーの「まだまだしょぼい」「難易度調整係やミニゲーム係がいないと全体把握できない」を受け、役割別のサブエージェント（難易度調整係・ミニゲーム係・演出係・まちづくり企画係）で監査→実装し、リーダーが統合した。詳細は `CHANGELOG.md`。
+
+### 追加された主なモジュール
+- `src/game/cpuAI.ts` + `components/cpu/CpuDriver.tsx`: CPU 対戦相手（堅実/独占/目的地）。CpuDriver は App に取り付け、手番の段階ごとに1手ずつ実行。CPU の釣りは `cpuFish`（確率判定）で、ミニゲームは遊ばない。CPU の図鑑はローカル保存しない。
+- `src/game/cityAwards.ts` + `components/city/CityYearEndOverlay.tsx`: 3月の年度末大決算と称号（賞金/罰金）。年度は4月始まり（12巡目=1年度3月）。
+- `city.ts` の空き家（`vacant`/`lowMonths`・`renovate`）、視察（`recordInspection`・`inspections`）、発展度（`TownState.tier/land/base`・`effectiveLandValue`）。独占は「もとの区画数（base）以上を1人で所有」。独占中の町は発展しても区画が増えない（囲い込み）。
+- 経済の数値はすべて `CITY_ECONOMY`（難易度調整係が `balance.city.sim.test.ts` で計測・調整）。釣り旅は `balance.fishing.sim.test.ts`。数値を変えたらこの2つのシミュレーションテストを必ず通す。
+- 釣りミニゲーム: `components/fishing/reelSim.ts`（やり取りの純粋シミュレーション・RARITY_DIFFICULTY）、`strike.ts`（合わせ判定）、`reelBots.ts`（公平性テスト用ボット）。
+- 演出: `components/fx/*`（3Dサイコロ・判子・紙吹雪・数え上げ等）。CSS は index.css 末尾の係ごとのブロック（演出係 `fx-`、ミニゲーム係 `fg-`）。
+
+### ルールの変更点
+- まちづくり: ゴール賞金は1人1回の着順制（ストアの `cityGoalClaims`）。移動カードでゴールしても上がらない。村マスは必ずまちの出来事、中継マスは道中イベント。平凡な月の決算は全画面を出さず上部のお知らせ。
+- 釣り旅: 県庁の祭りの後に釣具店へ寄れる（shopTier があれば）。最初のゴールから `GOAL_CLOSE_ROUNDS`(10) 巡で締め切り（`firstFinishTurn`）。
+
+### ふりがな
+- 単漢字の金・来・回・光・先は誤読の元なので登録しない（熟語で登録）。新しい語を出すときは `furigana.ts` に熟語で足す。

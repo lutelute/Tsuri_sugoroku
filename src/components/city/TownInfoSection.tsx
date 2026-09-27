@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
-import { getTownInfo, computeAllStats, TOWN_CLASS_INFO, BUILDING_INFO, buildCost, monopolyOwner } from '../../game/city';
+import { getTownInfo, computeAllStats, TOWN_CLASS_INFO, BUILDING_INFO, buildCost, monopolyOwner, effectiveLandValue, CITY_ECONOMY, TIER_LABEL } from '../../game/city';
 import BuildingGlyph from './BuildingGlyph';
 import Ruby from '../shared/Ruby';
 
@@ -21,7 +21,8 @@ export default function TownInfoSection({ nodeId }: { nodeId: string }) {
     <div className="mt-3 p-3 rounded-lg bg-emerald-900/20 border border-emerald-500/25">
       <div className="flex items-center gap-2 text-[11px] mb-2 flex-wrap">
         <span className="px-2 py-0.5 rounded-full bg-kin-500/20 border border-kin-500/35 text-kin-200"><Ruby>{TOWN_CLASS_INFO[info.cls].name}</Ruby></span>
-        <span className="text-washi/60"><Ruby>地価</Ruby> ×{info.landValue.toFixed(1)}（<Ruby>住宅</Ruby> ¥{buildCost('res', nodeId).toLocaleString()}〜）</span>
+        {(town.tier ?? 0) > 0 && <span className="px-2 py-0.5 rounded-full bg-shu-600/30 border border-shu-400/50 text-shu-100"><Ruby>発展度</Ruby> {TIER_LABEL[town.tier ?? 0]}</span>}
+        <span className="text-washi/60"><Ruby>地価</Ruby> ×{effectiveLandValue(nodeId, town).toFixed(2)}（<Ruby>住宅</Ruby> ¥{buildCost('res', nodeId, town).toLocaleString()}〜）</span>
         {isDest && <span className="px-2 py-0.5 rounded-full bg-shu-600/40 border border-shu-400/50 text-shu-100"><Ruby>目的地</Ruby> ¥{city.destinationReward.toLocaleString()}</span>}
       </div>
       <div className="grid grid-cols-4 gap-1 text-center text-[11px] mb-2">
@@ -38,12 +39,12 @@ export default function TownInfoSection({ nodeId }: { nodeId: string }) {
             style={{ borderColor: p ? players[p.owner]?.color : 'rgba(255,255,255,0.12)' }}
             title={p ? `${BUILDING_INFO[p.kind].name}（${players[p.owner]?.name}）` : '空き地'}
           >
-            {p ? <BuildingGlyph kind={p.kind} level={p.level} size={26} /> : <span className="text-washi/20 text-xs">空</span>}
+            {p ? <BuildingGlyph kind={p.kind} level={p.level} size={26} className={p.vacant ? 'grayscale opacity-50' : ''} /> : <span className="text-washi/20 text-xs">空</span>}
           </div>
         ))}
       </div>
       {mono !== null && (
-        <p className="text-[11px] mt-1.5" style={{ color: players[mono]?.color }}>{players[mono]?.name}<Ruby>が独占中（収入1.5倍）</Ruby></p>
+        <p className="text-[11px] mt-1.5" style={{ color: players[mono]?.color }}>{players[mono]?.name}<Ruby>が独占中（収入</Ruby>{CITY_ECONOMY.monopolyMul}<Ruby>倍）</Ruby></p>
       )}
     </div>
   );

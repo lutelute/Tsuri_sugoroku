@@ -4,14 +4,16 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { NODE_MAP } from '../../data/boardNodes';
 import {
-  getTownInfo, computeAllStats, plotIncome, poweredTownsWithBuildings, buildCost, upgradeCost, acquireCost,
-  isUpgradable, canBuild, monopolyOwner, BUILDING_INFO, TOWN_CLASS_INFO, MAX_BUILDING_LEVEL, CITY_ACTIONS_PER_VISIT,
+  getTownInfo, computeAllStats, plotIncome, poweredTownsWithBuildings, buildCost, upgradeCost, acquireCost, renovateCost,
+  isUpgradable, canBuild, monopolyOwner, effectiveLandValue, BUILDING_INFO, TOWN_CLASS_INFO, MAX_BUILDING_LEVEL,
+  CITY_ACTIONS_PER_VISIT, CITY_ECONOMY, TIER_LABEL,
 } from '../../game/city';
 import type { BuildingKind, TownStats } from '../../game/city';
 import BuildingGlyph from './BuildingGlyph';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
+import { playBuild, playStamp } from '../../utils/sound';
 
 function DemandBar({ label, value }: { label: string; value: number }) {
   const v = Math.max(-2, Math.min(2, value));
@@ -41,7 +43,7 @@ function Stat({ label, value, tone = 'text-washi' }: { label: string; value: Rea
 }
 
 export default function CityOverlay() {
-  const { city, players, currentPlayerIndex, cityActionsThisTurn, capitalDoneThisTurn, cityBuild, cityUpgrade, cityAcquire, setTurnPhase } = useGameStore(
+  const { city, players, currentPlayerIndex, cityActionsThisTurn, capitalDoneThisTurn, cityBuild, cityUpgrade, cityAcquire, cityRenovate, setTurnPhase } = useGameStore(
     useShallow(s => ({
       city: s.city,
       players: s.players,
@@ -51,6 +53,7 @@ export default function CityOverlay() {
       cityBuild: s.cityBuild,
       cityUpgrade: s.cityUpgrade,
       cityAcquire: s.cityAcquire,
+      cityRenovate: s.cityRenovate,
       setTurnPhase: s.setTurnPhase,
     })),
   );
@@ -69,11 +72,17 @@ export default function CityOverlay() {
   const actionsLeft = CITY_ACTIONS_PER_VISIT - cityActionsThisTurn;
   const mono = monopolyOwner(town);
   const sel = selected !== null ? town.plots[selected] : undefined;
+  const tier = town.tier ?? 0;
+  const land = effectiveLandValue(nodeId, town);
+  const inspected = (city.inspections ?? []).some(x => x.nodeId === nodeId && x.playerIndex === currentPlayerIndex);
 
-  const act = (fn: () => string | null) => {
+  const act = (fn: () => string | null, onDone?: () => void) => {
     const err = fn();
     setError(err);
-    if (!err) setSelected(null);
+    if (!err) {
+      setSelected(null);
+      onDone?.();
+    }
   };
 
   const incomeOf = (idx: number) => {
@@ -105,10 +114,25 @@ export default function CityOverlay() {
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-kin-500/20 border border-kin-500/35 text-kin-200">
               <Ruby>{TOWN_CLASS_INFO[info.cls].name}</Ruby>
             </span>
-            <span className="text-[11px] text-washi/55"><Ruby>地価</Ruby> ×{info.landValue.toFixed(1)}</span>
+            {tier > 0 && (
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-shu-600/30 border border-shu-400/50 text-shu-100 font-mincho" title="人口が増えると発展度が上がり、区画と地価が増える">
+                <Ruby>発展度</Ruby> {TIER_LABEL[tier]}
+              </span>
+            )}
+            <span className="text-[11px] text-washi/55" title="建設費と資産価値に効く（発展度・幸福度・公害で変わる）">
+              <Ruby>地価</Ruby> ×{land.toFixed(2)}
+              {Math.abs(land - info.landValue) >= 0.01 && (
+                <span className={land > info.landValue ? 'text-emerald-300' : 'text-shu-400'}> {land > info.landValue ? '▲' : '▼'}</span>
+              )}
+            </span>
             {mono !== null && (
               <span className="text-[11px] px-2 py-0.5 rounded-full border" style={{ borderColor: players[mono]?.color, color: players[mono]?.color }}>
-                {players[mono]?.name}<Ruby>の独占</Ruby>（<Ruby>収入</Ruby>1.5<Ruby>倍</Ruby>）
+                {players[mono]?.name}<Ruby>の独占</Ruby>（<Ruby>収入</Ruby>{CITY_ECONOMY.monopolyMul}<Ruby>倍</Ruby>）
+              </span>
+            )}
+            {inspected && (
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-700/30 border border-emerald-400/40 text-emerald-200" title="次の月末、この町のあなたの建物は発展しやすい">
+                <Ruby>視察済み</Ruby>
               </span>
             )}
           </div>
@@ -153,7 +177,16 @@ export default function CityOverlay() {
                 >
                   {p ? (
                     <>
-                      <BuildingGlyph kind={p.kind} level={p.level} size={30} />
+                      {p.vacant && <span className="absolute inset-0 rounded-lg bg-ai-950/55" aria-hidden="true" />}
+                      {p.vacant && (
+                        <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 z-10 text-[9px] px-1.5 rounded bg-washi/85 text-sumi font-bold"><Ruby>空き家</Ruby></span>
+                      )}
+                      {!p.vacant && (p.lowMonths ?? 0) > 0 && (
+                        <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 z-10 text-[8.5px] px-1 rounded bg-shu-600/85 text-white whitespace-nowrap" title="需要が低い状態が続くと空き家になる。訪れる（視察）とリセットされる">
+                          <Ruby>あと</Ruby>{CITY_ECONOMY.vacancyMonths - (p.lowMonths ?? 0)}<Ruby>か月で空き家</Ruby>
+                        </span>
+                      )}
+                      <BuildingGlyph kind={p.kind} level={p.level} size={30} className={p.vacant ? 'grayscale opacity-60' : ''} />
                       <span className="text-[10px] text-washi/85 font-mincho leading-none"><Ruby>{BUILDING_INFO[p.kind].name}</Ruby></span>
                       {isUpgradable(p.kind) && (
                         <span className="text-[9px] text-kin-300 leading-none tracking-tighter">
@@ -183,14 +216,14 @@ export default function CityOverlay() {
             <p className="text-xs text-washi/60"><Ruby>何を建てる？</Ruby>（<Ruby>所持金</Ruby> ¥{player.money.toLocaleString()}）</p>
             <div className="grid grid-cols-2 gap-1.5">
               {info.allowed.map((k: BuildingKind) => {
-                const cost = buildCost(k, nodeId);
+                const cost = buildCost(k, nodeId, town);
                 const why = canBuild(city, nodeId, k, selected, player.money);
                 const disabled = !!why || actionsLeft <= 0;
                 return (
                   <button
                     key={k}
                     disabled={disabled}
-                    onClick={() => act(() => cityBuild(selected, k))}
+                    onClick={() => act(() => cityBuild(selected, k), playBuild)}
                     title={why ?? BUILDING_INFO[k].desc}
                     className="flex items-center gap-2 text-left rounded-lg border border-kin-500/25 bg-ai-800/60 hover:bg-ai-700/70 px-2 py-1.5 transition cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
                   >
@@ -220,16 +253,26 @@ export default function CityOverlay() {
                 <p className="text-[11px] text-washi/70"><Ruby>今月の見込み</Ruby>: <span className="tabular-nums">{incomeOf(selected) >= 0 ? '+' : ''}¥{incomeOf(selected).toLocaleString()}</span></p>
               </div>
             </div>
-            {sel.owner === currentPlayerIndex ? (
+            {sel.owner === currentPlayerIndex && sel.vacant ? (
+              <Button
+                onClick={() => act(() => cityRenovate(selected), playBuild)}
+                variant="gold"
+                size="sm"
+                className="w-full"
+                disabled={actionsLeft <= 0 || player.money < renovateCost(sel, nodeId, town)}
+              >
+                <Ruby>空き家を直して入居者を呼び戻す</Ruby> ¥{renovateCost(sel, nodeId, town).toLocaleString()}
+              </Button>
+            ) : sel.owner === currentPlayerIndex ? (
               isUpgradable(sel.kind) && sel.level < MAX_BUILDING_LEVEL ? (
                 <Button
-                  onClick={() => act(() => cityUpgrade(selected))}
+                  onClick={() => act(() => cityUpgrade(selected), playBuild)}
                   variant="primary"
                   size="sm"
                   className="w-full"
-                  disabled={actionsLeft <= 0 || player.money < upgradeCost(sel, nodeId)}
+                  disabled={actionsLeft <= 0 || player.money < upgradeCost(sel, nodeId, town)}
                 >
-                  <Ruby>再開発して等級を上げる</Ruby> ¥{upgradeCost(sel, nodeId).toLocaleString()}
+                  <Ruby>再開発して等級を上げる</Ruby> ¥{upgradeCost(sel, nodeId, town).toLocaleString()}
                 </Button>
               ) : (
                 <p className="text-[11px] text-washi/45 text-center">
@@ -238,13 +281,13 @@ export default function CityOverlay() {
               )
             ) : (
               <Button
-                onClick={() => act(() => cityAcquire(selected))}
+                onClick={() => act(() => cityAcquire(selected), playStamp)}
                 variant="danger"
                 size="sm"
                 className="w-full"
-                disabled={actionsLeft <= 0 || player.money < acquireCost(sel, nodeId)}
+                disabled={actionsLeft <= 0 || player.money < acquireCost(sel, nodeId, town)}
               >
-                <Ruby>買収する</Ruby> ¥{acquireCost(sel, nodeId).toLocaleString()}（<Ruby>代金は持ち主へ</Ruby>）
+                <Ruby>買収する</Ruby> ¥{acquireCost(sel, nodeId, town).toLocaleString()}（<Ruby>代金は持ち主へ</Ruby>）
               </Button>
             )}
           </div>

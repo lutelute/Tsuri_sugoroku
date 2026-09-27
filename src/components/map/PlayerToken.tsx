@@ -1,6 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import type { Player } from '../../game/types';
 import { NODE_MAP } from '../../data/boardNodes';
+import { playStep } from '../../utils/sound';
 
 /** 1マス進むのにかける時間（GameScreen の到着演出待ちと共有） */
 export const MOVE_STEP_MS = 190;
@@ -31,7 +32,10 @@ function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize
     const path = move && move.playerIndex === index ? move.path : null;
     if (path && path.length > 1 && path[path.length - 1] === player.currentNode) {
       path.slice(1).forEach((nid, i) => {
-        timers.push(window.setTimeout(() => setShownNode(nid), i * MOVE_STEP_MS));
+        timers.push(window.setTimeout(() => {
+          setShownNode(nid);
+          playStep();
+        }, i * MOVE_STEP_MS));
       });
     } else {
       timers.push(window.setTimeout(() => setShownNode(player.currentNode), 0));
@@ -57,16 +61,22 @@ function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize
         transition: `transform ${moving ? MOVE_STEP_MS - 20 : 450}ms ${moving ? 'linear' : 'ease-in-out'}`,
       }}
     >
-      {/* 現在プレイヤーの強調オーラ (脈動) */}
+      {/* 現在プレイヤーの強調オーラ（手番の頭に数回だけ脈打ち、以後は静止した輪。常時アニメで全体を描き直さない） */}
       {isCurrent && (
-        <circle cx={0} cy={2} r={14} fill="none" stroke={player.color} strokeWidth="1.8" opacity="0.7">
-          <animate attributeName="r" values="12;20;12" dur="1.6s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.8;0.15;0.8" dur="1.6s" repeatCount="indefinite" />
-        </circle>
+        <>
+          <circle cx={0} cy={2} r={13} fill="none" stroke={player.color} strokeWidth="1.6" opacity="0.55" />
+          <circle cx={0} cy={2} r={14} fill="none" stroke={player.color} strokeWidth="1.8" opacity="0">
+            <animate attributeName="r" values="12;22;12" dur="1.4s" repeatCount="4" />
+            <animate attributeName="opacity" values="0.85;0;0.85" dur="1.4s" repeatCount="4" fill="freeze" />
+          </circle>
+        </>
       )}
 
       {/* 接地影 */}
       <ellipse cx={0} cy={18} rx={6.3} ry={2.1} fill="rgba(6,18,31,0.45)" />
+
+      {/* 1マス進むごとに小さく跳ねる（key を変えてアニメを再生） */}
+      <g key={moving ? shownNode : 'rest'} className={moving ? 'token-hop' : undefined}>
 
       {/* ピン本体（先端がマスを指す） */}
       <path
@@ -93,6 +103,7 @@ function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize
       >
         {player.id + 1}
       </text>
+      </g>
     </g>
   );
 }

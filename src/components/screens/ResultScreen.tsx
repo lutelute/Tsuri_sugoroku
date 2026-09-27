@@ -10,8 +10,8 @@ import Ruby from '../shared/Ruby';
 import CityResult from '../city/CityResult';
 
 export default function ResultScreen() {
-  const { players, encyclopedias, resetGame, city } = useGameStore(
-    useShallow(s => ({ players: s.players, encyclopedias: s.encyclopedias, resetGame: s.resetGame, city: s.city })),
+  const { players, encyclopedias, resetGame, city, titleHistory } = useGameStore(
+    useShallow(s => ({ players: s.players, encyclopedias: s.encyclopedias, resetGame: s.resetGame, city: s.city, titleHistory: s.cityTitleHistory })),
   );
   const savedRef = useRef(false);
 
@@ -34,7 +34,7 @@ export default function ResultScreen() {
       const enc = encyclopedias[i];
       if (p.uid && enc) {
         saveUserEncyclopedia(p.uid, enc).catch(() => {});
-      } else if (!p.uid && enc) {
+      } else if (!p.uid && !p.isCpu && enc) {
         saveEncyclopedia(enc);
       }
     }
@@ -70,7 +70,7 @@ export default function ResultScreen() {
       </h1>
       <p className="text-washi/55 mb-6 font-mincho tracking-widest"><Ruby>お疲れ様でした</Ruby></p>
 
-      {city && <CityResult city={city} players={players} />}
+      {city && <CityResult city={city} players={players} titleHistory={titleHistory} />}
 
       <div className={`w-full max-w-lg space-y-4 ${city ? 'hidden' : ''}`}>
         {results.map((result, index) => (

@@ -26,10 +26,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      # Lint は既存の react-hooks 系の警告が残るため当面は非ブロッキング（可視化のみ）。
-      # 解消後に continue-on-error を外して必須ゲートに昇格させる。
+      # Lint は v4.1.0 でエラー・警告0件になったため必須ゲート。
       - run: npm run lint
-        continue-on-error: true
       - run: npm test
 
   build:

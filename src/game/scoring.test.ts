@@ -3,7 +3,7 @@ import type { Player } from './types';
 import { calculateScore } from './scoring';
 import { createInitialEquipment } from './equipment';
 import { FISH_DATABASE } from '../data/fishDatabase';
-import { RARITY_BONUS, FINISH_BONUS, GIANT_FISH_BONUS, MONEY_TO_POINTS_RATE } from './constants';
+import { RARITY_BONUS, FINISH_BONUS, GIANT_FISH_BONUS, MONEY_TO_POINTS_RATE, REGION_COMPLETE_SPECIES, REGION_COMPLETE_BONUS } from './constants';
 
 function makePlayer(overrides: Partial<Player> = {}): Player {
   return {
@@ -81,5 +81,19 @@ describe('calculateScore', () => {
     const s = calculateScore(makePlayer(), {});
     expect(s.fishPoints).toBe(0);
     expect(s.giantFishBonus).toBe(0);
+  });
+
+  it('地域制覇: その地方のマスで REGION_COMPLETE_SPECIES 種以上釣った地方ごとに加点', () => {
+    const species = FISH_DATABASE.slice(0, REGION_COMPLETE_SPECIES).map(f => f.id);
+    // 銚子(関東)で必要種数ちょうど、釧路(北海道)では1種足りない
+    const kanto = species.map((id, k) => ({ fishId: id, caughtAt: 'choshi', turn: k, size: 1 }));
+    const hokkaido = species.slice(1).map((id, k) => ({ fishId: id, caughtAt: 'kushiro', turn: k, size: 1 }));
+    const s = calculateScore(makePlayer({ caughtFish: [...kanto, ...hokkaido] }), {});
+    expect(s.regionBonus).toBe(REGION_COMPLETE_BONUS);
+  });
+
+  it('地域制覇: 同じ魚種を何匹釣っても1種として数える', () => {
+    const many = Array.from({ length: 20 }, (_, k) => ({ fishId: fish.id, caughtAt: 'choshi', turn: k, size: 1 }));
+    expect(calculateScore(makePlayer({ caughtFish: many }), {}).regionBonus).toBe(0);
   });
 });

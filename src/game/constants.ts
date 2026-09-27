@@ -1,4 +1,4 @@
-export const APP_VERSION = '4.0.0';
+export const APP_VERSION = '4.1.0';
 
 export const ROULETTE_MIN = 1;
 export const ROULETTE_MAX = 6;
@@ -75,31 +75,39 @@ export const SPECIAL_SPOT_LEGENDARY_MULT = 2;    // 特別スポットで legend
 export const SPECIAL_SPOT_MYTHICAL_MULT = 12;    // 特別スポットで mythical の重み×12（名所＝幻の魚の聖地）
 
 // 魚の売却価格（レアリティ別）
+// v4.1 調整: 終盤の高レア売却でお金が使い道なく積み上がっていた（80巡で所持金 中央値¥64,000）ため、
+// uncommon 以上を引き下げ。釣った魚の価値は主に「魚ポイント」で受け取る。
 export const FISH_SELL_PRICE: Record<string, number> = {
   common: 200,
-  uncommon: 500,
-  rare: 1000,
-  legendary: 2500,
-  mythical: 5000,
+  uncommon: 400,
+  rare: 700,
+  legendary: 1500,
+  mythical: 3000,
 };
 
 // スコア計算
+// 魚種ごと（ユニーク）に1回だけ付くレア度ボーナス。同じ魚を釣り続けるより「新しい魚種を集める」方が得になるよう強化。
 export const RARITY_BONUS: Record<string, number> = {
   common: 0,
-  uncommon: 50,
-  rare: 150,
-  legendary: 500,
-  mythical: 1500,
+  uncommon: 80,
+  rare: 250,
+  legendary: 800,
+  mythical: 2500,
 };
 
-export const REGION_COMPLETE_BONUS = 500;
-export const ENCYCLOPEDIA_COMPLETION_BONUS_PER_PERCENT = 20;
+// 地域制覇: その地方の釣り場（釣った場所）で REGION_COMPLETE_SPECIES 種以上を釣ると1地方ごとに加点。
+// 旧仕様（その地方に棲む魚の50%）は関東162種中81種などが必要で、ほぼ達成不能だった。
+export const REGION_COMPLETE_SPECIES = 8;
+export const REGION_COMPLETE_BONUS = 1500;
+export const ENCYCLOPEDIA_COMPLETION_BONUS_PER_PERCENT = 50;
 export const GIANT_FISH_THRESHOLD = 1.5;
-export const GIANT_FISH_BONUS = 200;
+export const GIANT_FISH_BONUS = 300;
 
-export const FINISH_BONUS = [2000, 1200, 600, 200];
+// ゴール順位ボーナス。旧値(2000〜200)はスコアの2%弱で、到着順がほぼ勝敗に影響しなかった。
+export const FINISH_BONUS = [5000, 3000, 1500, 500];
 export const GOAL_MONEY_REWARD = [10000, 6000, 3000, 1000]; // ゴール順位別の賞金
-export const MONEY_TO_POINTS_RATE = 0.5;
+// 残金のスコア換算率。旧0.5では残金ボーナスがスコアの35%を占め、釣りより貯金が強かった。
+export const MONEY_TO_POINTS_RATE = 0.3;
 
 // 休憩所
 export const REST_MONEY_BONUS = 500;
@@ -129,3 +137,9 @@ export const NO_LURE_BITE_DELAY_MULTIPLIER = 2.5; // ルアーなし: バイト�
 // デフォルト設定
 // v2.x: ボード拡張(79→207ノード)に合わせて50→80に増量
 export const DEFAULT_MAX_TURNS = 80;
+
+// 釣り旅: 最初の人がゴールしてから、この巡数で全体が終了する（早くゴールした人が長く待たされないように）
+export const GOAL_CLOSE_ROUNDS = 10;
+
+// 設定画面・タイトルで共有する「前回選んだ遊び方」の保存キー
+export const MODE_STORAGE_KEY = 'tsuri_sugoroku_mode';

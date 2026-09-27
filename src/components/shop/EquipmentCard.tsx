@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Equipment, EquipmentType } from '../../game/types';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
@@ -25,22 +26,33 @@ interface EquipmentCardProps {
 }
 
 export default function EquipmentCard({ equipment, ownedCount, canAfford, canBuy, onBuy }: EquipmentCardProps) {
+  // 買って所持数が増えたらカードをふわっと光らせる
+  const [prevOwned, setPrevOwned] = useState(ownedCount);
+  const [flash, setFlash] = useState(0);
+  if (ownedCount !== prevOwned) {
+    if (ownedCount > prevOwned) setFlash(f => f + 1);
+    setPrevOwned(ownedCount);
+  }
+
   return (
-    <div className={`panel-ai rounded-xl p-3 transition-all ${
+    <div className={`panel-ai relative rounded-xl p-3 transition-all ${
       ownedCount > 0
         ? 'border-emerald-500/40'
         : canBuy
           ? 'border-kin-500/40'
           : 'opacity-50'
     }`}>
+      {flash > 0 && <span key={flash} className="fx-glow is-gain" aria-hidden="true" />}
       <div className="flex items-start justify-between mb-2">
         <div>
           <div className="flex items-center gap-1.5">
             <Icon name={TYPE_ICONS[equipment.type]} size={18} className="text-kin-300 shrink-0" />
             <span className="font-mincho font-bold text-sm text-washi"><Ruby>{equipment.name}</Ruby></span>
             {ownedCount > 0 && (
-              <span className="seal text-[10px] rounded-full px-1.5 py-0.5 tabular-nums">
-                <Ruby>所持</Ruby> x{ownedCount}
+              <span key={ownedCount} className="fx-pop">
+                <span className="seal text-[10px] rounded-full px-1.5 py-0.5 tabular-nums">
+                  <Ruby>所持</Ruby> x{ownedCount}
+                </span>
               </span>
             )}
           </div>

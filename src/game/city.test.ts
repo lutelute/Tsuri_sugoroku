@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   createInitialCityState, getTownInfo, build, upgrade, acquire, buildCost, computeAllStats, computePowered,
   simulateRound, applyDisaster, pickDestination, applyCityEvent, cityScore, monopolyOwner, portFee,
-  TOWN_IDS, CITY_EVENT_CARDS, POWER_RANGE, distancesFrom, townNeighbors, calendarLabel,
+  TOWN_IDS, CITY_EVENT_CARDS, POWER_RANGE, distancesFrom, townNeighbors, calendarLabel, CITY_ECONOMY,
 } from './city';
 import type { CityState } from './city';
 import { setRandomSource, resetRandomSource, mulberry32 } from '../utils/random';
@@ -211,6 +211,20 @@ describe('まちづくり: 災害・イベント・目的地', () => {
     expect(r.state.towns.osaka.plots[0]?.level).toBe(2);
   });
 
+  it('備え: 公園のある町は地震の被災率が下がる', () => {
+    expect(CITY_ECONOMY.parkQuakeHit).toBeLessThan(CITY_ECONOMY.quakeHit);
+    // 乱数を被災率の間に置くと、公園のない町だけが被災する
+    const between = (CITY_ECONOMY.parkQuakeHit + CITY_ECONOMY.quakeHit) / 2;
+    setRandomSource(() => between);
+    let s = createInitialCityState();
+    s = place(s, 'tokyo', 0, 'res', 0, 2);
+    s = place(s, 'tokyo', 1, 'park', 0);
+    s = place(s, 'yokohama', 0, 'res', 0, 2);
+    const r = applyDisaster(s, 'quake', { region: 'kanto' });
+    expect(r.state.towns.tokyo.plots[0]?.level).toBe(2);
+    expect(r.state.towns.yokohama.plots[0]?.level).toBe(1);
+  });
+
   it('目的地は現在地から離れた都市で、賞金は距離に比例', () => {
     setRandomSource(mulberry32(4));
     const d = pickDestination(null, 'tokyo');
@@ -230,7 +244,7 @@ describe('まちづくり: 災害・イベント・目的地', () => {
     }
   });
 
-  it('総資産 = 所持金 + 建物の価値、漁港は釣果の2割を持ち主へ', () => {
+  it('総資産 = 所持金 + 建物の価値、漁港は釣果の手数料(portFeeRate)を持ち主へ', () => {
     setRandomSource(mulberry32(2));
     let s = createInitialCityState();
     s = place(s, 'choshi', 0, 'port', 1);
@@ -238,7 +252,7 @@ describe('まちづくり: 災害・イベント・目的地', () => {
     const sc = cityScore(s, 0, 5000);
     expect(sc.assets).toBe(5000 + sc.property);
     expect(sc.buildings).toBe(1);
-    expect(portFee(s, 'choshi', 1000)).toEqual({ owner: 1, fee: 200 });
+    expect(portFee(s, 'choshi', 1000)).toEqual({ owner: 1, fee: Math.round(1000 * CITY_ECONOMY.portFeeRate) });
     expect(portFee(s, 'tokyo', 1000)).toBeNull();
   });
 });

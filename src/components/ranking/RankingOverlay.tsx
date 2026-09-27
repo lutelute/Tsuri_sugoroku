@@ -11,17 +11,23 @@ interface RankingOverlayProps {
 }
 
 export default function RankingOverlay({ onClose }: RankingOverlayProps) {
-  const [tab, setTab] = useState<RankingTab>('score');
+  const [tab, setTabState] = useState<RankingTab>('score');
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  // タブ切替の操作側で読み込み中にする（effect 内で同期的に setState しない）
+  const setTab = (t: RankingTab) => {
+    if (t !== tab) setLoading(true);
+    setTabState(t);
+  };
 
   useEffect(() => {
-    setLoading(true);
+    let alive = true;
     const load = tab === 'score' ? loadScoreRankings : loadEncyclopediaRankings;
     load(50)
-      .then(setRankings)
-      .catch(() => setRankings([]))
-      .finally(() => setLoading(false));
+      .then(r => { if (alive) setRankings(r); })
+      .catch(() => { if (alive) setRankings([]); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, [tab]);
 
   return (
