@@ -88,6 +88,7 @@ export default function FishingOverlay() {
             size={fishingState.caughtSize}
             escaped={fishingState.escaped}
             tairyouCount={fishingState.tairyouCount}
+            tairyouFishIds={fishingState.tairyouFishIds}
             isNew={isNew && !fishingState.escaped}
             failReason={failReason}
             onClose={endFishing}

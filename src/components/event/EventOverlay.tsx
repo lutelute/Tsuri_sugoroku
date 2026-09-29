@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { FISH_DATABASE } from '../../data/fishDatabase';
-import type { Fish } from '../../game/types';
+import type { CaughtFish, Fish } from '../../game/types';
+import { eventFishPool } from '../../game/events';
 import { random } from '../../utils/random';
 import TargetPhase from '../fishing/TargetPhase';
 import ReactionPhase from '../fishing/ReactionPhase';
@@ -29,6 +30,13 @@ const AUTO_FLIP_MS = 520;
 type EventUIState = 'card' | 'fighting' | 'result';
 type MiniGameType = 'target' | 'reaction' | 'rhythm';
 
+/** 手に入れた魚の名前（同じ魚は「×2」とまとめる） */
+function gainedNames(list: CaughtFish[]): string {
+  const counts = new Map<string, number>();
+  for (const c of list) counts.set(c.fishId, (counts.get(c.fishId) ?? 0) + 1);
+  return [...counts].map(([id, n]) => `${FISH_DATABASE.find(f => f.id === id)?.name ?? id}${n > 1 ? `×${n}` : ''}`).join('・');
+}
+
 function isFishEvent(effect: { kind: string }): boolean {
   return effect.kind === 'random_fish' || effect.kind === 'multi_fish';
 }
@@ -48,6 +56,7 @@ export default function EventOverlay() {
 
   const [uiState, setUIState] = useState<EventUIState>('card');
   const [fightWon, setFightWon] = useState(false);
+  const [gained, setGained] = useState<CaughtFish[]>([]);
   const [nonFishApplied, setNonFishApplied] = useState(false);
   const [flipped, setFlipped] = useState(false);
 
@@ -67,9 +76,12 @@ export default function EventOverlay() {
     if (!currentEvent || !isFishEvent(currentEvent.effect)) {
       return { fightFish: null as Fish | null, miniGame: 'target' as MiniGameType };
     }
-    const effect = currentEvent.effect as { rarity?: string };
+    const effect = currentEvent.effect as { rarity?: Fish['rarity'] };
     const rarity = effect.rarity ?? 'common';
-    const pool = FISH_DATABASE.filter(f => f.rarity === rarity);
+    // 手に入る魚と同じ候補（現在地で釣れる魚）から選ぶ。勝てばこの魚がそのまま魚籠に入る
+    const st = useGameStore.getState();
+    const node = st.players[st.currentPlayerIndex]?.currentNode ?? '';
+    const pool = eventFishPool(rarity, node);
     const fish = pool.length > 0 ? pool[Math.floor(random() * pool.length)] : null;
     const games: MiniGameType[] = ['target', 'reaction', 'rhythm'];
     const game = games[Math.floor(random() * games.length)];
@@ -98,7 +110,7 @@ export default function EventOverlay() {
   };
 
   const handleFightSuccess = () => {
-    applyEventCard();
+    setGained(applyEventCard(fightFish?.id)?.gained ?? []);
     setFightWon(true);
     setUIState('result');
   };
@@ -171,7 +183,9 @@ export default function EventOverlay() {
           </h3>
           <p className="text-[#4a3a28] mb-6 text-sm leading-relaxed">
             {fightWon
-              ? <><Ruby>{currentEvent.name}</Ruby><Ruby>の魚を手に入れた！</Ruby></>
+              ? gained.length > 0
+                ? <><Ruby>{gainedNames(gained)}</Ruby><Ruby>を手に入れた！</Ruby></>
+                : <><Ruby>{currentEvent.name}</Ruby><Ruby>の魚を手に入れた！</Ruby></>
               : <Ruby>魚に逃げられてしまった...次こそ！</Ruby>}
           </p>
           <Button onClick={handleClose} variant="primary" size="md" className="w-full">

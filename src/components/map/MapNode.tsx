@@ -35,7 +35,7 @@ const ROUTE_THEME_COLORS: Record<RouteTheme, string> = {
   town: '#8a7a64',      // 茶白系（街道宿）
 };
 
-// 地方連想色 (landmass.tsのREGION_COLORSと同期。ノードの外枠 rim に使う)
+// 地方連想色（ノードの外枠 rim に使う）
 const REGION_RIM_COLORS: Record<string, string> = {
   hokkaido: '#5e8aa8',
   tohoku:   '#8a5a6a',

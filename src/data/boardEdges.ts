@@ -1,9 +1,9 @@
-// 後方互換: 既存コードは BOARD_EDGES / REALISTIC_EDGES / buildAdjacencyList を見る。
-// 元データ本体は realisticData_edges.ts、アクティブ選択は boardActive.ts に分離。
+// 盤面は日本列島盤のみ。既存コードは BOARD_EDGES / REALISTIC_EDGES / buildAdjacencyList を見る。
+// 元データ本体は realisticData_edges.ts。
 import type { BoardEdge } from '../game/types';
-export { REALISTIC_EDGES } from './realisticData_edges';
-import { ACTIVE_BOARD_EDGES } from './boardActive';
-export const BOARD_EDGES: BoardEdge[] = ACTIVE_BOARD_EDGES;
+import { REALISTIC_EDGES } from './realisticData_edges';
+export { REALISTIC_EDGES };
+export const BOARD_EDGES: BoardEdge[] = REALISTIC_EDGES;
 
 // 隣接リスト（双方向 - イベント移動用）
 export function buildAdjacencyList(): Map<string, string[]> {

@@ -1,8 +1,6 @@
 import type { BoardNode } from '../game/types';
 
-// realistic ボード(=日本地図)のノードデータ。
-// 案B/Dのボードは src/data/boards/snakeBoard.ts と islandsBoard.ts でこの配列を import して座標再配置する。
-// 「現在アクティブなボードのノード」を取りたい場合は boardActive.ts の BOARD_NODES を見ること。
+// 日本列島盤のノードデータ（座標は scripts/relayout-nodes.mjs が緯度経度から生成）。
 export const REALISTIC_NODES: BoardNode[] = [
   // スタート・ゴール
   { id: 'start', name: 'スタート', type: 'start', region: 'hokkaido', x: 1204, y: 30, shopTier: 1, description: 'オホーツクの港町・網走から冒険の始まり！装備を整えよう' },

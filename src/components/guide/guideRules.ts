@@ -215,7 +215,7 @@ export const GUIDES: GuideDef[] = [
   {
     id: 'tools', mode: 'fishing', target: 'side-tools', union: true, delayMs: IDLE_DELAY,
     when: c => c.phase === 'idle' && c.caughtCount > 0,
-    text: () => ({ title: '道具箱・魚籠・図鑑', body: '道具の付け替えと修理、釣った魚、集めた魚の図鑑はここから見られる。' }),
+    text: () => ({ title: '道具箱・魚籠・図鑑', body: '道具の付け替えと修理、みんなが釣った魚、集めた魚の図鑑はここから見られる。' }),
   },
   // ===== 行動選択 =====
   {

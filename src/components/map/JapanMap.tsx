@@ -2,16 +2,13 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { BOARD_NODES, NODE_MAP } from '../../data/boardNodes';
-import { getActiveBoardType } from '../../data/boards/boardType';
 import MapNode from './MapNode';
 import MapEdges from './MapEdge';
 import { curvePath } from './edgeGeometry';
 import MapTerrain from './MapTerrain';
-import LegacyTerrain from './LegacyTerrain';
 import PlayerToken from './PlayerToken';
 import { useDisplayedBinbo } from './useDisplayedBinbo';
 import NodeInfoOverlay from './NodeInfoOverlay';
-import { REGION_FILLS } from './landmass';
 import { REGION_ACCENT, REGION_LAND, REGION_NAME, MAP_BOUNDS } from './mapTheme';
 import type { GeoRegion } from '../../data/japanGeo';
 import { useMapCamera } from './useMapCamera';
@@ -23,16 +20,7 @@ import type { Bounds } from './useMapCamera';
 import Ruby from '../shared/Ruby';
 import GuideMapLayer from './GuideMapLayer';
 
-const IS_REAL_MAP = getActiveBoardType() === 'realistic';
-
-// 盤面全体の範囲（ジグザグ盤等はノード座標から算出）
-const BOARD_BOUNDS: Bounds = IS_REAL_MAP
-  ? MAP_BOUNDS
-  : BOARD_NODES.reduce(
-      (b, n) => ({ minX: Math.min(b.minX, n.x - 60), minY: Math.min(b.minY, n.y - 60), maxX: Math.max(b.maxX, n.x + 60), maxY: Math.max(b.maxY, n.y + 60) }),
-      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
-    );
-const PAN_BOUNDS: Bounds = { minX: BOARD_BOUNDS.minX, minY: BOARD_BOUNDS.minY, maxX: BOARD_BOUNDS.maxX, maxY: BOARD_BOUNDS.maxY };
+const PAN_BOUNDS: Bounds = { ...MAP_BOUNDS };
 
 // ===== ノードレイヤー =====
 const NodesLayer = memo(function NodesLayer({ reachableSteps, currentNode }: { reachableSteps: Map<string, number>; currentNode: string | undefined }) {
@@ -183,7 +171,7 @@ function JapanMapImpl() {
 
   // 初期表示: 日本全体 → 現在のプレイヤーへ寄る
   useEffect(() => {
-    fitBounds(BOARD_BOUNDS, { pad: 0, duration: 0 });
+    fitBounds(MAP_BOUNDS, { pad: 0, duration: 0 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -229,7 +217,7 @@ function JapanMapImpl() {
     if (n) flyTo({ cx: n.x, cy: n.y, w: followWidth() }, 500);
   };
   const showAll = () => {
-    fitBounds(BOARD_BOUNDS, { pad: 0, duration: 500 });
+    fitBounds(MAP_BOUNDS, { pad: 0, duration: 500 });
     setInteracted(false);
   };
 
@@ -259,7 +247,7 @@ function JapanMapImpl() {
         aria-label="日本全国のすごろくマップ"
         data-lod="far"
       >
-        {IS_REAL_MAP ? <MapTerrain /> : <LegacyTerrain />}
+        <MapTerrain />
         <MapEdges />
         {city && <CityDataLayer city={city} mode={dataMap} />}
         {isPathSelection && <ReachableRoutes paths={reachableNodes} />}
@@ -293,19 +281,12 @@ function JapanMapImpl() {
         </MapButton>
         {showLegend && (
           <div className="bg-ai-900/90 backdrop-blur-sm border border-kin-500/30 rounded-md shadow-lg py-1.5 pl-1.5 pr-2 space-y-0.5">
-            {IS_REAL_MAP
-              ? (Object.keys(REGION_NAME) as GeoRegion[]).map(r => (
-                  <div key={r} className="flex items-center gap-1.5 text-[10px] text-washi/90 leading-tight">
-                    <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: REGION_LAND[r], boxShadow: `inset 0 0 0 1.5px ${REGION_ACCENT[r]}` }} />
-                    <span className="font-mincho whitespace-nowrap"><Ruby>{REGION_NAME[r]}</Ruby></span>
-                  </div>
-                ))
-              : REGION_FILLS.map(r => (
-                  <div key={r.id} className="flex items-center gap-1.5 text-[10px] text-washi/90 leading-tight">
-                    <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: r.color }} />
-                    <span className="font-mincho whitespace-nowrap"><Ruby>{r.name}</Ruby></span>
-                  </div>
-                ))}
+            {(Object.keys(REGION_NAME) as GeoRegion[]).map(r => (
+              <div key={r} className="flex items-center gap-1.5 text-[10px] text-washi/90 leading-tight">
+                <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: REGION_LAND[r], boxShadow: `inset 0 0 0 1.5px ${REGION_ACCENT[r]}` }} />
+                <span className="font-mincho whitespace-nowrap"><Ruby>{REGION_NAME[r]}</Ruby></span>
+              </div>
+            ))}
           </div>
         )}
         {city && (
@@ -341,11 +322,9 @@ function JapanMapImpl() {
         <MapButton onClick={() => camera.zoomBy(1.4)} label="縮小">－</MapButton>
       </div>
 
-      {IS_REAL_MAP && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-0.5 text-[8.5px] text-washi/35 pointer-events-none select-none whitespace-nowrap">
-          地図: 地球地図日本（国土地理院）を加工
-        </div>
-      )}
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-0.5 text-[8.5px] text-washi/35 pointer-events-none select-none whitespace-nowrap">
+        地図: 地球地図日本（国土地理院）を加工
+      </div>
 
       {/* パス選択の代替操作: 行き先一覧（折りたたみ。地図のマスを直接タップしてもよい） */}
       {isPathSelection && reachableNodes.length > 0 && (

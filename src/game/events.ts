@@ -10,19 +10,25 @@ import { random } from '../utils/random';
 export interface EventResult {
   player: Player;
   message: string;
+  /** このイベントで手に入れた魚 */
+  gained?: CaughtFish[];
 }
 
 const GOAL_DISTANCE = computeDistanceToGoal();
 
 // イベントで魚を選ぶプール。limitedNodes（特定ノード限定魚）は現在地に合致する場合のみ含める。
 // 該当レアリティに非限定魚が無い場合のみ、限定魚へフォールバックする。
-function eventFishPool(rarity: Fish['rarity'], nodeId: string): Fish[] {
+export function eventFishPool(rarity: Fish['rarity'], nodeId: string): Fish[] {
   const byRarity = FISH_DATABASE.filter(f => f.rarity === rarity);
   const allowed = byRarity.filter(f => !f.limitedNodes || f.limitedNodes.includes(nodeId));
   return allowed.length > 0 ? allowed : byRarity;
 }
 
-export function applyEvent(player: Player, event: EventCard, turn: number): EventResult {
+/**
+ * fishId: 魚イベントで画面に出して戦った魚。渡されたら（1匹目は）その魚を手に入れる。
+ * 渡されなければ（CPU など）現在地のプールから選ぶ。
+ */
+export function applyEvent(player: Player, event: EventCard, turn: number, fishId?: string): EventResult {
   const p = { ...player };
   const effect = event.effect;
 
@@ -76,25 +82,27 @@ export function applyEvent(player: Player, event: EventCard, turn: number): Even
 
     case 'random_fish': {
       const pool = eventFishPool(effect.rarity, p.currentNode);
-      if (pool.length > 0) {
-        const fish = pool[Math.floor(random() * pool.length)];
-        const caught: CaughtFish = createCaughtFish(fish.id, p.currentNode, turn, p.equipment);
+      const shown = fishId ? FISH_DATABASE.find(f => f.id === fishId) : undefined;
+      if (shown || pool.length > 0) {
+        const fish = shown ?? pool[Math.floor(random() * pool.length)];
+        const caught: CaughtFish = { ...createCaughtFish(fish.id, p.currentNode, turn, p.equipment), via: 'event' };
         p.caughtFish = [...p.caughtFish, caught];
-        return { player: p, message: `${fish.name}を手に入れた！（${fish.points}pt）` };
+        return { player: p, message: `${fish.name}を手に入れた！（${fish.points}pt）`, gained: [caught] };
       }
       return { player: p, message: '残念、何も起こらなかった...' };
     }
 
     case 'multi_fish': {
       const pool = eventFishPool(effect.rarity, p.currentNode);
-      if (pool.length > 0) {
+      const shown = fishId ? FISH_DATABASE.find(f => f.id === fishId) : undefined;
+      if (shown || pool.length > 0) {
         const newFish: CaughtFish[] = [];
         for (let i = 0; i < effect.count; i++) {
-          const fish = pool[Math.floor(random() * pool.length)];
-          newFish.push(createCaughtFish(fish.id, p.currentNode, turn, p.equipment));
+          const fish = i === 0 && shown ? shown : pool[Math.floor(random() * pool.length)];
+          newFish.push({ ...createCaughtFish(fish.id, p.currentNode, turn, p.equipment), via: 'event' });
         }
         p.caughtFish = [...p.caughtFish, ...newFish];
-        return { player: p, message: `大漁！${effect.count}匹の魚を手に入れた！` };
+        return { player: p, message: `大漁！${effect.count}匹の魚を手に入れた！`, gained: newFish };
       }
       return { player: p, message: '残念、何も起こらなかった...' };
     }

@@ -236,7 +236,7 @@ idle → roulette → path_selection(分岐あり) or node_action →
 - マス座標の再計算: `node scripts/relayout-nodes.mjs`（LATLON 表 → 投影 → 陸地に留める → 最小間隔31の反発 → 中継マスは中点）。マスを足したら LATLON に緯度経度を追加する。
 - カメラ `useMapCamera.ts`: 操作中は viewBox 属性を直接更新（React 再描画なし）。ズーム段階は svg の `data-lod`（far/mid/near）→ `index.css` の `.lbl-*` / `.lod-*` で出し分け。
 - 地名ラベル `labelLayout.ts`: 重なり回避で LOD ごとのずらし量を事前計算し、CSS 変数（--nx/--mx/--fx…）+ transform で適用。**`LABEL_FONT` と index.css のフォントサイズは一致させること。**
-- ジグザグ盤・島ホップ盤は `LegacyTerrain.tsx`（凸包表示）を使う。
+- 盤は日本列島盤だけ（v4.5.0 でジグザグ盤・島ホップ盤と `LegacyTerrain`・`landmass.ts` を削除）。
 
 ### まちづくりモード
 - `settings.mode === 'city'`。状態は `GameState.city`（`CityState`）。1巡=1か月、`nextPlayer` でラウンドが進むと `simulateRound` → `turnPhase: 'city_report'`。
@@ -312,3 +312,13 @@ idle → roulette → path_selection(分岐あり) or node_action →
 
 - **名産は26**: 県庁22か所と、名物で知られる町4か所（函館・松本・和歌山・岡山）。どの地方も3つ以上。名産のあるマスは `CITY_SPECIALTIES` にある町マス（県庁に限らない）。`citySpecialties.test.ts` が「すべて isTown」「どの地方も3つ以上」を確かめる。地方独占は36か月・4人で約45%の局に起きる（`balance.city.sim.test.ts` の目標30〜60%）。
 - **釣り旅の締め切り**: `src/game/deadline.ts` の `fishingLastTurn(firstFinishTurn, maxTurns)` が唯一の計算（ストアの終了判定・上部の「締切まで」・CPU の道選び・シミュレーションが共通で使う）。最初のゴールから `GOAL_CLOSE_ROUNDS`(7) 巡、ただし `MIN_CLOSE_TURN`(40) 巡目より前には終わらない（ゴール直行の抜け道を塞ぐ）。
+
+## v4.5.0 iPad の声への対応（2026-09-29）
+
+詳細は `CHANGELOG.md`。
+
+- 盤は日本列島盤だけ。`BOARD_NODES` / `BOARD_EDGES` は `realisticData_*` をそのまま指す。
+- 3D サイコロは出目の面を上にして止まる。向きは `fx/diceFaces.ts` の `diceTransform`（関数の並びを振る前後で同じにして CSS の遷移で転がす）。**ヘッドレスの WebKit（Playwright）は preserve-3d を平たく描く**ので、サイコロの見た目は Chromium か実機で確かめる。
+- 釣果の記録: `CaughtFish.via`（大漁/イベント/お祭り＝県庁の祭りの特別な釣り）。魚籠（`CreelOverlay`）の「みんな」は全員の `caughtFish` を巡ごとに新しい順で並べる。イベントの魚は `applyEventCard(fishId)` で画面の魚をそのまま渡す。
+- iPad の見え方は Playwright の WebKit + `devices['iPad Pro 11']` でおおむね再現できる。盤や地図がおかしいときは、まず端末の localStorage を疑う。
+

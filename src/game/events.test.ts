@@ -103,6 +103,19 @@ describe('applyEvent: 魚獲得', () => {
     const r = applyEvent(makePlayer(), makeEvent({ kind: 'multi_fish', count: 4, rarity: 'common' }), 1);
     expect(r.player.caughtFish).toHaveLength(4);
   });
+
+  it('画面で戦った魚（fishId）がそのまま手に入り、イベントの印が付く', () => {
+    setRandomSource(mulberry32(3));
+    const shown = FISH_DATABASE.find(f => f.rarity === 'rare')!;
+    const one = applyEvent(makePlayer(), makeEvent({ kind: 'random_fish', rarity: 'rare' }), 1, shown.id);
+    expect(one.gained?.map(c => c.fishId)).toEqual([shown.id]);
+    expect(one.player.caughtFish[0].via).toBe('event');
+
+    const many = applyEvent(makePlayer(), makeEvent({ kind: 'multi_fish', count: 3, rarity: 'rare' }), 1, shown.id);
+    expect(many.gained).toHaveLength(3);
+    expect(many.gained?.[0].fishId).toBe(shown.id);
+    expect(many.gained?.every(c => c.via === 'event')).toBe(true);
+  });
 });
 
 describe('applyEvent: move_steps の方向（#10 戻るイベントの符号を尊重）', () => {

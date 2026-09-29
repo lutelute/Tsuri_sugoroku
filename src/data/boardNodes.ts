@@ -1,7 +1,7 @@
-// 後方互換: 既存コードは BOARD_NODES / NODE_MAP / REALISTIC_NODES を見る。
-// 元データ本体は realisticData_nodes.ts、アクティブ選択は boardActive.ts に分離。
+// 盤面は日本列島盤のみ。既存コードは BOARD_NODES / NODE_MAP / REALISTIC_NODES を見る。
+// 元データ本体は realisticData_nodes.ts。
 import type { BoardNode } from '../game/types';
-export { REALISTIC_NODES } from './realisticData_nodes';
-import { ACTIVE_BOARD_NODES, ACTIVE_NODE_MAP } from './boardActive';
-export const BOARD_NODES: BoardNode[] = ACTIVE_BOARD_NODES;
-export const NODE_MAP = ACTIVE_NODE_MAP;
+import { REALISTIC_NODES } from './realisticData_nodes';
+export { REALISTIC_NODES };
+export const BOARD_NODES: BoardNode[] = REALISTIC_NODES;
+export const NODE_MAP: Map<string, BoardNode> = new Map(BOARD_NODES.map(n => [n.id, n]));

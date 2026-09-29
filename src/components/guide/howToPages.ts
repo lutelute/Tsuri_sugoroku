@@ -37,7 +37,7 @@ export const HOWTO_PAGES: Record<HowToMode, HowToPage[]> = {
     },
     {
       id: 'f-fish', title: '釣りのミニゲーム', diagram: 'fishing-flow',
-      lines: ['釣りのマスでは釣りができる。アタリが来たら合わせて、魚とやり取りしよう。', 'ミニゲームの遊び方は、毎回はじめに説明が出るよ。'],
+      lines: ['釣りのマスでは釣りができる。アタリが来たら合わせて、魚とやり取りしよう。', 'ミニゲームは毎回はじめに説明が出る。だれが何を釣ったかは、右下の魚籠で見返せるよ。'],
     },
     {
       id: 'f-gear', title: '道具をそろえる', diagram: 'gear',

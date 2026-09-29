@@ -156,7 +156,7 @@ export function useFishing() {
     if (bonusCount > 0 && node) {
       for (let i = 0; i < bonusCount; i++) {
         const extraFish = selectFish(node.id, node.region, player.equipment, isSpecial, fishingState.boatFishing);
-        bonusFish.push(createCaughtFish(extraFish.id, player.currentNode, turn, player.equipment));
+        bonusFish.push({ ...createCaughtFish(extraFish.id, player.currentNode, turn, player.equipment), via: 'tairyou' });
       }
     }
 

@@ -1,6 +1,5 @@
 import type { CSSProperties } from 'react';
-import { FACES, FACE_ROT, IDLE_ROT, PIPS, REST_TILT } from './diceFaces';
-import { hash01 } from './prng';
+import { FACES, PIPS, diceTransform } from './diceFaces';
 
 interface Dice3DProps {
   /** 止まる出目（1〜6） */
@@ -29,21 +28,9 @@ function Face({ value, half }: { value: number; half: number }) {
   );
 }
 
-/** 和紙色の立方体サイコロ。振ると放り上げられ、転がって出目の面で止まる。 */
+/** 和紙色の立方体サイコロ。振ると放り上げられ、転がって出目の面を上にして止まる。 */
 export default function Dice3D({ value, rollId, rolling, durationMs, size = 104, onClick, spinSeed = 0 }: Dice3DProps) {
   const half = size / 2;
-  let rx = IDLE_ROT[0];
-  let ry = IDLE_ROT[1];
-  if (rollId > 0) {
-    const [fx, fy] = FACE_ROT[value] ?? FACE_ROT[1];
-    // 振るたびに回転数を変える（見た目だけ・決定論的）
-    const kx = 2 + Math.floor(hash01(rollId, value, 1 + 16 * spinSeed) * 2);
-    const ky = 2 + Math.floor(hash01(rollId, value, 2 + 16 * spinSeed) * 2);
-    // 2個目以降は止まる向きを少しだけずらし、並んだサイコロが揃いすぎないようにする（±8°）
-    const tilt = spinSeed ? (hash01(spinSeed, rollId, 3) - 0.5) * 16 : 0;
-    rx = fx + REST_TILT[0] + 360 * kx * rollId;
-    ry = fy + REST_TILT[1] + tilt + 360 * ky * rollId;
-  }
   const idle = rollId === 0;
 
   return (
@@ -67,7 +54,7 @@ export default function Dice3D({ value, rollId, rolling, durationMs, size = 104,
           <div
             className="fx-dice"
             style={{
-              transform: `rotateX(${rx}deg) rotateY(${ry}deg)`,
+              transform: diceTransform(value, rollId, spinSeed),
               transition: idle ? undefined : `transform ${durationMs}ms cubic-bezier(0.16, 0.6, 0.24, 1)`,
             }}
           >

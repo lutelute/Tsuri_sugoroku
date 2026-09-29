@@ -438,7 +438,8 @@ export default function GameScreen() {
       {import.meta.env.DEV && <DevPanel />}
 
       {/* 案内役: 初めての場面の指差し案内と、遊び方の画面 */}
-      <GuideLayer />
+      {/* 魚籠・図鑑・道具箱を開いている間は案内を出さない（後ろの画面を指してしまう） */}
+      {!(showEncyclopedia || showCreel || showInventory) && <GuideLayer />}
       <HowToPlayOverlay />
 
       {/* 途中終了の確認ダイアログ */}

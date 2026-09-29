@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { Fish } from '../../game/types';
 import { playChime, playFanfare, playGood } from '../../utils/sound';
 import { FISH_SELL_PRICE } from '../../game/constants';
+import { FISH_DATABASE } from '../../data/fishDatabase';
 import Button from '../shared/Button';
 import FishIllustration from '../shared/FishIllustration';
 import Ruby from '../shared/Ruby';
@@ -30,11 +31,15 @@ interface FishCaughtModalProps {
   size: number;
   escaped: boolean;
   tairyouCount: number;
+  /** 大漁で一緒に揚がった魚 */
+  tairyouFishIds?: string[];
   isNew?: boolean;
   /** 逃げられた理由（ヒント表示用） */
   failReason?: FailReason | null;
   onClose: () => void;
 }
+
+const FISH_NAME = new Map(FISH_DATABASE.map(f => [f.id, f.name]));
 
 /** 大物の後光（conic-gradient を回すだけ） */
 const RAYS: Record<string, string> = {
@@ -42,7 +47,7 @@ const RAYS: Record<string, string> = {
   mythical: 'repeating-conic-gradient(from 0deg, rgba(239,106,82,0.3) 0deg 8deg, rgba(241,216,147,0.22) 8deg 16deg, transparent 16deg 24deg)',
 };
 
-export default function FishCaughtModal({ fish, size, escaped, tairyouCount, isNew, failReason, onClose }: FishCaughtModalProps) {
+export default function FishCaughtModal({ fish, size, escaped, tairyouCount, tairyouFishIds = [], isNew, failReason, onClose }: FishCaughtModalProps) {
   // 釣果の発表: 大物は太鼓と琴、レアは吉の音、図鑑に初めて載る魚はりん（釣り上げた音は締めで鳴らし済み）
   const caughtRarity = fish && !escaped ? fish.rarity : null;
   useEffect(() => {
@@ -133,8 +138,20 @@ export default function FishCaughtModal({ fish, size, escaped, tairyouCount, isN
               </div>
             )}
             {tairyouCount > 0 && (
-              <div className="text-shu-400 text-sm mb-4 animate-bounce font-bold">
-                ◆ <Ruby>大漁</Ruby>！ +{tairyouCount}<Ruby>匹</Ruby>ボーナス！
+              <div className="mb-4">
+                <div className="text-shu-400 text-sm animate-bounce font-bold">
+                  ◆ <Ruby>大漁</Ruby>！ +{tairyouCount}<Ruby>匹</Ruby>ボーナス！
+                </div>
+                {tairyouFishIds.length > 0 && (
+                  <div className="mt-1 flex flex-wrap justify-center gap-1.5">
+                    {tairyouFishIds.map((id, i) => (
+                      <span key={`${id}-${i}`} className="inline-flex items-center gap-1 text-xs text-washi/85 bg-ai-950/45 border border-kin-500/20 rounded-full pl-1 pr-2 py-0.5">
+                        <FishIllustration fishId={id} width={26} height={16} />
+                        <Ruby>{FISH_NAME.get(id) ?? id}</Ruby>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </>

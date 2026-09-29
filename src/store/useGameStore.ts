@@ -63,7 +63,8 @@ interface GameActions {
   repairEquipment: (itemId: string, cost: number) => void;
   mergeEquipment: (itemId1: string, itemId2: string) => void;
   skipShop: () => void;
-  applyEventCard: () => void;
+  /** fishId: 魚イベントで戦った魚。手に入れた魚と結果の文を返す */
+  applyEventCard: (fishId?: string) => { message: string; gained: CaughtFish[] } | null;
   applyCapitalChoice: (choiceId: string) => void;
   acknowledgeCapitalResult: () => void;
   doActionAgain: () => void;
@@ -594,7 +595,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       encyclopedias: newEncyclopedias,
       nodeActionsThisTurn: nodeActionsThisTurn + 1,
       fishingState: get().fishingState
-        ? { ...get().fishingState!, phase: 'result', escaped: false, tairyouCount: bonusFish?.length ?? 0 }
+        ? { ...get().fishingState!, phase: 'result', escaped: false, tairyouCount: bonusFish?.length ?? 0, tairyouFishIds: (bonusFish ?? []).map(f => f.fishId) }
         : null,
     });
   },
@@ -701,13 +702,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ turnPhase: 'action_choice' });
   },
 
-  applyEventCard: () => {
+  applyEventCard: (fishId) => {
     const { players, currentPlayerIndex, currentEvent, turn, encyclopedias } = get();
-    if (!currentEvent) return;
+    if (!currentEvent) return null;
 
     const player = players[currentPlayerIndex];
     const prevNode = player.currentNode;
-    const result = applyEvent(player, currentEvent, turn);
+    const result = applyEvent(player, currentEvent, turn, fishId);
     let updatedPlayer = result.player;
 
     // 移動系イベント(move / move_steps)で新しいノードに着いた場合、ゴール到達を処理する
@@ -758,6 +759,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     } else {
       set({ players: newPlayers, cityGoalClaims });
     }
+    return { message: result.message, gained: result.gained ?? [] };
   },
 
   applyCapitalChoice: (choiceId) => {
@@ -831,7 +833,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const success = random() < successChance;
 
         if (success) {
-          const caught: CaughtFish = { fishId: fishData.id, caughtAt: node.id, turn, size: 1.3 };
+          const caught: CaughtFish = { fishId: fishData.id, caughtAt: node.id, turn, size: 1.3, via: 'capital' };
           p.caughtFish = [...p.caughtFish, caught];
           p.money += effect.reward;
           const newEnc = { ...encyclopedias[currentPlayerIndex], [fishData.id]: true };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FACES, FACE_ROT, PIPS, REST_TILT, IDLE_ROT } from './diceFaces';
+import { FACES, PIPS, TOP_ROT, VIEW_TILT, diceTransform } from './diceFaces';
 import { hash01 } from './prng';
 import { finishLabel } from './nodeStyle';
 
@@ -16,18 +16,21 @@ function rotY(v: V, deg: number): V {
   const s = Math.sin(rad(deg));
   return [c * v[0] + s * v[2], v[1], -s * v[0] + c * v[2]];
 }
+/** "rotateX(a) rotateY(b) ..." をベクトルに適用する（CSS と同じく右から順にかかる） */
+function applyTransform(t: string, v: V): V {
+  const ops = [...t.matchAll(/rotate([XY])\((-?[\d.]+)deg\)/g)].reverse();
+  for (const [, axis, deg] of ops) v = axis === 'X' ? rotX(v, Number(deg)) : rotY(v, Number(deg));
+  return v;
+}
 /** 面の配置 transform（"rotateY(90deg) translateZ(h)" 等）から面の法線を求める */
-function faceNormal(value: number): V {
-  const t = FACES.find(f => f.value === value)!.transform(50);
-  let n: V = [0, 0, 1];
-  const ops = [...t.matchAll(/rotate([XY])\((-?\d+)deg\)/g)].reverse();
-  for (const [, axis, deg] of ops) n = axis === 'X' ? rotX(n, Number(deg)) : rotY(n, Number(deg));
-  return n;
-}
-/** 立方体の transform: rotateX(rx) rotateY(ry) → 右から順に適用 */
-function applyCube(n: V, rx: number, ry: number): V {
-  return rotX(rotY(n, ry), rx);
-}
+const faceNormal = (value: number): V => applyTransform(FACES.find(f => f.value === value)!.transform(50), [0, 0, 1]);
+/** 立方体の transform をかけたあとの各面の法線 */
+const normalsAfter = (t: string) => [1, 2, 3, 4, 5, 6].map(f => ({ f, n: applyTransform(t, faceNormal(f)) }));
+// 上向きは y が負。見下ろす傾きをかけた「真上」にいちばん近い面が上の面。手前（見る人の方）は z が正
+const UP = rotX([0, -1, 0], VIEW_TILT);
+const dot = (a: V, b: V) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const topFace = (t: string) => normalsAfter(t).reduce((a, b) => (dot(b.n, UP) > dot(a.n, UP) ? b : a)).f;
+const mostVisible = (t: string) => normalsAfter(t).reduce((a, b) => (b.n[2] > a.n[2] ? b : a)).f;
 
 describe('3D サイコロの向き', () => {
   it('向かい合う面の和は7で、1〜6が1面ずつある', () => {
@@ -42,30 +45,33 @@ describe('3D サイコロの向き', () => {
     }
   });
 
-  it('FACE_ROT で出目の面が正面（手前向き）に来る', () => {
+  it('TOP_ROT で出目の面が真上を向く', () => {
     for (let v = 1; v <= 6; v++) {
-      const [rx, ry] = FACE_ROT[v];
-      const n = applyCube(faceNormal(v), rx, ry);
-      expect(n[2]).toBeCloseTo(1);
+      const [rx, ry] = TOP_ROT[v];
+      expect(applyTransform(`rotateX(${rx}deg) rotateY(${ry}deg)`, faceNormal(v))[1]).toBeCloseTo(-1);
     }
   });
 
-  it('止まったときの傾きと余分な回転を足しても、出目の面がいちばん手前を向く', () => {
+  it('振って止まると、出目の面が上にあり、いちばん大きく見える（何回振っても・何個目でも）', () => {
     for (let v = 1; v <= 6; v++) {
-      const [fx, fy] = FACE_ROT[v];
-      const rx = fx + REST_TILT[0] + 360 * 3;
-      const ry = fy + REST_TILT[1] + 360 * 2;
-      const zs = [1, 2, 3, 4, 5, 6].map(f => ({ f, z: applyCube(faceNormal(f), rx, ry)[2] }));
-      const front = zs.reduce((a, b) => (b.z > a.z ? b : a));
-      expect(front.f).toBe(v);
-      // 斜め上から見下ろす（上面側の面も少し見える）ので、上を向いた面の z は正
-      expect(front.z).toBeGreaterThan(0.85);
+      for (const rollId of [1, 2, 7]) {
+        for (const seed of [0, 1, 2]) {
+          const t = diceTransform(v, rollId, seed);
+          expect(topFace(t)).toBe(v);
+          expect(mostVisible(t)).toBe(v);
+        }
+      }
     }
   });
 
-  it('振る前の構えは1の目が手前', () => {
-    const zs = [1, 2, 3, 4, 5, 6].map(f => ({ f, z: applyCube(faceNormal(f), IDLE_ROT[0], IDLE_ROT[1])[2] }));
-    expect(zs.reduce((a, b) => (b.z > a.z ? b : a)).f).toBe(1);
+  it('振る前の構えは1の目が上', () => {
+    expect(topFace(diceTransform(3, 0))).toBe(1);
+    expect(mostVisible(diceTransform(3, 0))).toBe(1);
+  });
+
+  it('振る前と後で transform の関数の並びが同じ（CSS の遷移で転がって見える）', () => {
+    const shape = (t: string) => [...t.matchAll(/(rotate[XY])\(/g)].map(m => m[1]).join(' ');
+    expect(shape(diceTransform(4, 3, 1))).toBe(shape(diceTransform(1, 0)));
   });
 
   it('目の数は出目と一致する', () => {

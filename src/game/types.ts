@@ -22,9 +22,6 @@ export type NodeType =
 // 街道テーマ（route ノードの装飾用）
 export type RouteTheme = 'mountain' | 'sea' | 'river' | 'town';
 
-// ボードタイプ（盤面のレイアウト方式）
-export type BoardType = 'realistic' | 'snake' | 'islands';
-
 export type Region = 'hokkaido' | 'tohoku' | 'kanto' | 'chubu' | 'kinki' | 'chugoku' | 'shikoku' | 'kyushu';
 
 export interface BoardNode {
@@ -131,6 +128,8 @@ export interface CaughtFish {
   turn: number;
   size: number; // 0.5-2.0 サイズ倍率
   bonusMultiplier?: number;
+  /** 釣り上げた以外の手に入れ方（魚籠の記録に出す。ふつうの釣りは無し） */
+  via?: 'tairyou' | 'event' | 'capital';
 }
 
 // ===== 装備関連 =====
@@ -229,6 +228,8 @@ export interface FishingState {
   escaped: boolean;
   boatFishing: boolean;
   tairyouCount: number;
+  /** 大漁で一緒に揚がった魚（結果画面に名前を出す） */
+  tairyouFishIds?: string[];
 }
 
 // ===== ゲーム全体 =====
