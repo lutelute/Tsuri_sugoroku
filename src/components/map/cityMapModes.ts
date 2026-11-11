@@ -1,7 +1,7 @@
 // まちづくり: データマップの種類
-export type DataMapMode = 'none' | 'pop' | 'power' | 'pollution' | 'happy' | 'land';
+export type DataMapMode = 'none' | 'pop' | 'power' | 'pollution' | 'happy' | 'land' | 'rail';
 
-export const DATA_MAP_ORDER: DataMapMode[] = ['none', 'pop', 'power', 'pollution', 'happy', 'land'];
+export const DATA_MAP_ORDER: DataMapMode[] = ['none', 'pop', 'power', 'pollution', 'happy', 'land', 'rail'];
 
 export const DATA_MAP_LABEL: Record<DataMapMode, string> = {
   none: 'データ表示なし',
@@ -10,6 +10,7 @@ export const DATA_MAP_LABEL: Record<DataMapMode, string> = {
   pollution: '公害',
   happy: '幸福度',
   land: '地価',
+  rail: '鉄道網',
 };
 
 

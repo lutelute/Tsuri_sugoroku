@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { FISH_DATABASE } from '../../data/fishDatabase';
 import type { Fish, FishRarity } from '../../game/types';
@@ -7,15 +8,10 @@ import FishDetail from './FishDetail';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
+import Stamp from '../fx/Stamp';
+import { FILTER_TEXT, HABITAT_GROUPS, NO_FILTER, RARITY_NAMES, RARITY_ORDER, REGION_LABELS, REGION_ORDER, filterFish, rarityProgress } from './encyclopediaFilter';
+import type { FishFilter } from './encyclopediaFilter';
 
-const RARITY_ORDER: FishRarity[] = ['common', 'uncommon', 'rare', 'legendary', 'mythical'];
-const RARITY_NAMES: Record<FishRarity, string> = {
-  common: 'コモン',
-  uncommon: 'アンコモン',
-  rare: 'レア',
-  legendary: 'レジェンダリー',
-  mythical: 'ミシカル',
-};
 // レア度色（セマンティクスを保ちつつ和モダンに調和）
 const RARITY_COLORS: Record<FishRarity, string> = {
   common: 'text-washi/55',
@@ -24,6 +20,43 @@ const RARITY_COLORS: Record<FishRarity, string> = {
   legendary: 'text-kin-300',
   mythical: 'text-shu-400',
 };
+// 達成の輪の色
+const RARITY_RING: Record<FishRarity, string> = {
+  common: '#d8c79e',
+  uncommon: '#6ee7b7',
+  rare: '#7fa9cd',
+  legendary: '#f1d893',
+  mythical: '#ef6a52',
+};
+
+const EMPTY_ENCYCLOPEDIA: Record<string, boolean> = {};
+
+/** しぼる札の1行（横に流せる） */
+function ChipRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="shrink-0 w-[3.4em] text-[11px] text-washi/55 font-mincho"><Ruby>{label}</Ruby></span>
+      <div className="fd-chiprow flex-1 min-w-0">{children}</div>
+    </div>
+  );
+}
+
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      className={`fd-chip ${on ? 'is-on' : ''}`}
+      onClick={e => {
+        onClick();
+        // 選んだ札が横の流れの外に隠れないよう、見える所へ寄せる
+        e.currentTarget.scrollIntoView({ inline: 'center', block: 'nearest' });
+      }}
+    >
+      {children}
+    </button>
+  );
+}
 
 interface EncyclopediaOverlayProps {
   onClose: () => void;
@@ -43,8 +76,14 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
   const [resetting, setResetting] = useState(false);
 
   const isStandalone = standaloneEncyclopedia != null;
-  const encyclopedia = isStandalone ? standaloneEncyclopedia : (encyclopedias[viewingPlayerIndex] ?? {});
+  const encyclopedia = useMemo(
+    () => standaloneEncyclopedia ?? encyclopedias[viewingPlayerIndex] ?? EMPTY_ENCYCLOPEDIA,
+    [standaloneEncyclopedia, encyclopedias, viewingPlayerIndex],
+  );
   const initEnc = isStandalone ? null : (initialEncyclopedias[viewingPlayerIndex] ?? null);
+  const [filter, setFilter] = useState<FishFilter>(NO_FILTER);
+  const filtered = useMemo(() => filterFish(FISH_DATABASE, filter, encyclopedia), [filter, encyclopedia]);
+  const progress = useMemo(() => rarityProgress(FISH_DATABASE, encyclopedia), [encyclopedia]);
   const caughtCount = FISH_DATABASE.filter(f => encyclopedia[f.id]).length;
   const totalCount = FISH_DATABASE.length;
   const percent = Math.round((caughtCount / totalCount) * 100);
@@ -121,7 +160,7 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
             <button
               onClick={onClose}
               aria-label="閉じる"
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-ai-800/60 border border-kin-500/30 text-washi/80 hover:text-washi hover:border-kin-500/50 transition cursor-pointer"
+              className="flex items-center justify-center w-11 h-11 rounded-full bg-ai-800/60 border border-kin-500/30 text-washi/80 hover:text-washi hover:border-kin-500/50 transition cursor-pointer"
             >
               <Icon name="close" size={18} />
             </button>
@@ -130,12 +169,12 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
 
         {/* プレイヤー切替タブ（ゲーム中のみ表示） */}
         {!isStandalone && players.length > 1 && (
-          <div className="flex gap-1.5 mt-2">
+          <div className="fd-chiprow mt-2">
             {players.map((p, i) => (
               <button
                 key={p.id}
                 onClick={() => setViewingPlayerIndex(i)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer
+                className={`flex items-center gap-1.5 px-3 min-h-[44px] shrink-0 rounded-lg text-xs font-medium transition cursor-pointer whitespace-nowrap
                   ${viewingPlayerIndex === i
                     ? 'bg-ai-600 text-washi border border-kin-500/40'
                     : 'bg-ai-800/50 text-washi/50 border border-transparent hover:bg-ai-700/60'
@@ -152,32 +191,88 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
         )}
       </div>
 
-      {/* 魚一覧 */}
-      <div className="p-4 space-y-6">
-        {RARITY_ORDER.map(rarity => {
-          const fishOfRarity = FISH_DATABASE.filter(f => f.rarity === rarity);
-          return (
-            <div key={rarity}>
-              <h3 className={`ink-underline inline-flex items-baseline gap-1.5 font-mincho text-sm font-bold mb-3 ${RARITY_COLORS[rarity]}`}>
-                {RARITY_NAMES[rarity]}
-                <span className="text-xs text-washi/45 tabular-nums">
-                  ({fishOfRarity.filter(f => encyclopedia[f.id]).length}/{fishOfRarity.length})
-                </span>
-              </h3>
-              <div className="grid grid-cols-5 gap-2">
-                {fishOfRarity.map(fish => (
-                  <FishCard
-                    key={fish.id}
-                    fish={fish}
-                    caught={!!encyclopedia[fish.id]}
-                    isNew={initEnc ? (!!encyclopedia[fish.id] && !initEnc[fish.id]) : false}
-                    onClick={() => setSelectedFish(fish)}
-                  />
-                ))}
-              </div>
+      <div className="mx-auto w-full max-w-6xl">
+        {/* めずらしさごとの達成（判子の列）。押すと、そのめずらしさだけにしぼる */}
+        <div className="px-3 sm:px-4 pt-3 grid grid-cols-5 gap-1.5 sm:gap-2">
+          {RARITY_ORDER.map(rarity => {
+            const { found, total } = progress[rarity];
+            const done = total > 0 && found >= total;
+            const on = filter.rarity === rarity;
+            return (
+              <button
+                key={rarity}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setFilter(f => ({ ...f, rarity: on ? 'all' : rarity }))}
+                className={`fd-rar ${on ? 'is-on' : ''}`}
+              >
+                {done ? (
+                  <Stamp tone="shu" size={40} tilt={-8} silent>達成</Stamp>
+                ) : (
+                  <span className="fd-ring" style={{ '--p': total ? (found / total) * 100 : 0, '--c': RARITY_RING[rarity] } as CSSProperties}>
+                    <span className="tabular-nums">{found}</span>
+                  </span>
+                )}
+                <span className={`text-[9px] sm:text-[11px] leading-tight whitespace-nowrap font-mincho ${RARITY_COLORS[rarity]}`}>{RARITY_NAMES[rarity]}</span>
+                <span className="text-[9px] sm:text-[10px] leading-none text-washi/45 tabular-nums">{found}/{total}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* しぼる札: 地方・すみか・見つけたか */}
+        <div className="px-3 sm:px-4 pt-3 space-y-1.5">
+          <ChipRow label={FILTER_TEXT.region}>
+            <Chip on={filter.region === 'all'} onClick={() => setFilter(f => ({ ...f, region: 'all' }))}><Ruby>{FILTER_TEXT.all}</Ruby></Chip>
+            {REGION_ORDER.map(r => (
+              <Chip key={r} on={filter.region === r} onClick={() => setFilter(f => ({ ...f, region: r }))}><Ruby>{REGION_LABELS[r]}</Ruby></Chip>
+            ))}
+          </ChipRow>
+          <ChipRow label={FILTER_TEXT.habitat}>
+            <Chip on={filter.habitat === 'all'} onClick={() => setFilter(f => ({ ...f, habitat: 'all' }))}><Ruby>{FILTER_TEXT.all}</Ruby></Chip>
+            {HABITAT_GROUPS.map(g => (
+              <Chip key={g.id} on={filter.habitat === g.id} onClick={() => setFilter(f => ({ ...f, habitat: g.id }))}><Ruby>{g.label}</Ruby></Chip>
+            ))}
+            <span className="shrink-0 w-px self-stretch my-2 bg-washi/15" aria-hidden="true" />
+            <Chip on={filter.found === 'found'} onClick={() => setFilter(f => ({ ...f, found: f.found === 'found' ? 'all' : 'found' }))}><Ruby>{FILTER_TEXT.found}</Ruby></Chip>
+            <Chip on={filter.found === 'yet'} onClick={() => setFilter(f => ({ ...f, found: f.found === 'yet' ? 'all' : 'yet' }))}><Ruby>{FILTER_TEXT.yet}</Ruby></Chip>
+          </ChipRow>
+        </div>
+
+        {/* 魚一覧 */}
+        <div className="p-3 sm:p-4 space-y-6">
+          {filtered.length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-sm text-washi/55 mb-3"><Ruby>{FILTER_TEXT.none}</Ruby></p>
+              <Button onClick={() => setFilter(NO_FILTER)} variant="secondary" size="sm" className="min-h-[44px]"><Ruby>{FILTER_TEXT.reset}</Ruby></Button>
             </div>
-          );
-        })}
+          )}
+          {RARITY_ORDER.map(rarity => {
+            const fishOfRarity = filtered.filter(f => f.rarity === rarity);
+            if (fishOfRarity.length === 0) return null;
+            return (
+              <section key={rarity} className="fd-cv">
+                <h3 className={`ink-underline inline-flex items-baseline gap-1.5 font-mincho text-sm font-bold mb-3 ${RARITY_COLORS[rarity]}`}>
+                  {RARITY_NAMES[rarity]}
+                  <span className="text-xs text-washi/45 tabular-nums">
+                    ({fishOfRarity.filter(f => encyclopedia[f.id]).length}/{fishOfRarity.length})
+                  </span>
+                </h3>
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
+                  {fishOfRarity.map(fish => (
+                    <FishCard
+                      key={fish.id}
+                      fish={fish}
+                      caught={!!encyclopedia[fish.id]}
+                      isNew={initEnc ? (!!encyclopedia[fish.id] && !initEnc[fish.id]) : false}
+                      onClick={() => setSelectedFish(fish)}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </div>
 
       {/* 詳細モーダル */}

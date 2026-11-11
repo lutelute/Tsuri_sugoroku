@@ -26,6 +26,8 @@ function HowToPanel({ initialMode }: { initialMode: HowToMode }) {
   const reduced = useReducedMotion();
   const [mode, setMode] = useState<HowToMode>(initialMode);
   const [page, setPage] = useState(0);
+  // もくじ（ページの題の一覧）。ページが多いので、調べたい題へじかに飛べるようにする
+  const [toc, setToc] = useState(false);
   const pages = HOWTO_PAGES[mode];
   const idx = Math.min(page, pages.length - 1);
   const p = pages[idx];
@@ -37,6 +39,7 @@ function HowToPanel({ initialMode }: { initialMode: HowToMode }) {
     if (to < 0 || to >= pages.length) return;
     playCardFlip();
     setPage(to);
+    setToc(false);
   }, [pages.length]);
 
   const switchMode = (m: HowToMode) => {
@@ -106,7 +109,28 @@ function HowToPanel({ initialMode }: { initialMode: HowToMode }) {
           ))}
         </div>
 
-        {/* 図解と文（ページを変えるたびに作り直して、アニメをはじめから） */}
+        {toc ? (
+          /* もくじ: 題を押すとそのページへ */
+          <div className={`mt-3${reduced ? '' : ' gd-page-in'}`}>
+            <ol className="grid grid-cols-2 gap-1.5" aria-label="もくじ">
+              {pages.map((pg, i) => (
+                <li key={pg.id}>
+                  <button
+                    onClick={() => go(i)}
+                    aria-current={i === idx ? 'page' : undefined}
+                    className={`w-full min-h-11 flex items-center gap-1.5 rounded-lg border px-2 py-1 text-left transition cursor-pointer ${
+                      i === idx ? 'border-kin-300 bg-kin-500/25 text-kin-200' : 'border-kin-500/25 bg-ai-900/50 text-washi/90 hover:bg-ai-700/60'
+                    }`}
+                  >
+                    <span className="w-5 shrink-0 text-right text-[11px] tabular-nums text-kin-300/80 font-mincho">{i + 1}</span>
+                    <span className="min-w-0 text-[13px] font-mincho font-bold leading-tight"><Ruby>{pg.title}</Ruby></span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : (
+        /* 図解と文（ページを変えるたびに作り直して、アニメをはじめから） */
         <div key={`${mode}-${p.id}`} className={reduced ? '' : 'gd-page-in'}>
           <div className="mt-3 rounded-xl overflow-hidden border border-kin-500/25 bg-gradient-to-b from-ai-800/80 to-ai-950/90">
             <HowToDiagram id={p.diagram} />
@@ -121,39 +145,56 @@ function HowToPanel({ initialMode }: { initialMode: HowToMode }) {
             ))}
           </div>
         </div>
+        )}
+
+        {/* いま何ページ目か（細い帯。押すとそのページへ） */}
+        <div className="mt-3 flex items-center gap-0.5" aria-label={`${idx + 1}ページ目`}>
+          {pages.map((pg, i) => (
+            <button
+              key={pg.id}
+              onClick={() => go(i)}
+              aria-label={`${i + 1}ページ目`}
+              aria-current={i === idx ? 'page' : undefined}
+              className="group flex-1 h-5 flex items-center cursor-pointer"
+            >
+              <span className={`block w-full h-1 rounded-full transition-colors ${i === idx ? 'bg-kin-300' : i < idx ? 'bg-kin-500/45' : 'bg-washi/25 group-hover:bg-washi/50'}`} />
+            </button>
+          ))}
+        </div>
 
         {/* ページ送り */}
-        <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="mt-1 flex items-center justify-between gap-2">
           <button
             onClick={() => go(idx - 1)}
             disabled={idx === 0}
-            className="px-3 py-2 rounded-xl text-sm font-mincho border border-kin-500/35 bg-ai-800/60 text-washi hover:bg-ai-700/70 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+            className="min-h-11 px-3 py-2 rounded-xl text-sm font-mincho border border-kin-500/35 bg-ai-800/60 text-washi hover:bg-ai-700/70 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
           >
             ‹ まえへ
           </button>
-          <div className="flex items-center gap-1.5" aria-label={`${idx + 1}ページ目`}>
-            {pages.map((pg, i) => (
-              <button
-                key={pg.id}
-                onClick={() => go(i)}
-                aria-label={`${i + 1}ページ目`}
-                aria-current={i === idx ? 'page' : undefined}
-                className={`h-2 rounded-full transition-all cursor-pointer ${i === idx ? 'w-5 bg-kin-300' : 'w-2 bg-washi/30 hover:bg-washi/55'}`}
-              />
-            ))}
-          </div>
+          <button
+            onClick={() => setToc(v => !v)}
+            aria-pressed={toc}
+            className={`min-h-11 px-3 py-2 rounded-xl text-sm font-mincho border cursor-pointer inline-flex items-center gap-1.5 ${
+              toc ? 'border-kin-300 bg-kin-500/25 text-kin-200' : 'border-kin-500/35 bg-ai-800/60 text-washi hover:bg-ai-700/70'
+            }`}
+          >
+            <svg width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">
+              <path d="M1 1.5h1.5M5 1.5h8M1 6h1.5M5 6h8M1 10.5h1.5M5 10.5h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+            もくじ
+          </button>
           {isLast ? (
             mode === 'fishing' ? (
               <button
                 onClick={() => switchMode('city')}
-                className="px-3 py-2 rounded-xl text-sm font-mincho font-bold bg-gradient-to-b from-kin-300 to-kin-600 text-[#3a2a0e] border border-kin-300/60 cursor-pointer"
+                className="min-h-11 px-3 py-2 rounded-xl text-sm font-mincho font-bold bg-gradient-to-b from-kin-300 to-kin-600 text-[#3a2a0e] border border-kin-300/60 cursor-pointer"
               >
                 まちづくり ›
               </button>
             ) : (
               <button
                 onClick={close}
-                className="px-3 py-2 rounded-xl text-sm font-mincho font-bold bg-gradient-to-b from-kin-300 to-kin-600 text-[#3a2a0e] border border-kin-300/60 cursor-pointer"
+                className="min-h-11 px-3 py-2 rounded-xl text-sm font-mincho font-bold bg-gradient-to-b from-kin-300 to-kin-600 text-[#3a2a0e] border border-kin-300/60 cursor-pointer"
               >
                 とじる
               </button>
@@ -161,7 +202,7 @@ function HowToPanel({ initialMode }: { initialMode: HowToMode }) {
           ) : (
             <button
               onClick={() => go(idx + 1)}
-              className="px-3 py-2 rounded-xl text-sm font-mincho font-bold bg-gradient-to-b from-kin-300 to-kin-600 text-[#3a2a0e] border border-kin-300/60 cursor-pointer"
+              className="min-h-11 px-3 py-2 rounded-xl text-sm font-mincho font-bold bg-gradient-to-b from-kin-300 to-kin-600 text-[#3a2a0e] border border-kin-300/60 cursor-pointer"
             >
               つぎへ ›
             </button>

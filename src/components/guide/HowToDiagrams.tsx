@@ -6,9 +6,26 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { DiagramId } from './howToPages';
 import { BuildingShapes } from '../city/BuildingGlyph';
 import BinboFigure from '../city/BinboFigure';
+import { HammerShapes } from '../city/RecoveryMark';
+import { MayorCrestShape } from '../city/MayorCrest';
+import { OrdinanceIcon } from '../city/OrdinanceCard';
+import { ORDINANCE_KINDS } from '../../game/mayor';
 import { PLAYER_COLORS } from '../../game/constants';
-import { CITY_ECONOMY } from '../../game/city';
+import { CITY_ECONOMY, RECOVERY } from '../../game/city';
+import type { BuildingKind } from '../../game/city';
 import { SPECIALTY_ECONOMY } from '../../game/citySpecialties';
+import { TOWN_TRAITS } from '../../data/cityTraits';
+import type { TownTraitId } from '../../data/cityTraits';
+import { QUEST_ECONOMY, QUEST_GROUPS } from '../../game/cityQuests';
+import { FISH_MARKET } from '../../game/fishMarket';
+import { RIGS, RIG_ORDER } from '../../game/fishing';
+import type { FishingRig } from '../../game/types';
+import RigGlyph from '../fishing/RigGlyph';
+import { VerdictMark } from '../city/BuildPreview';
+import { ADVICE } from '../../game/cityAdvice';
+import type { AdviceVerdict } from '../../game/cityAdvice';
+import { CPU_PERSONAS } from '../../data/cpuPersonas';
+import { CPU_STYLES } from '../../game/cpuAI';
 
 const W = 320;
 const H = 160;
@@ -113,7 +130,7 @@ function Seal({ x, y, text, kana, size = 44, tone = C.shu, className }: { x: num
 }
 
 /** 建物（町の画面の絵を拡大して使う） */
-function Building({ x, y, kind, level = 1, size = 34 }: { x: number; y: number; kind: 'res' | 'com' | 'ind' | 'power' | 'park' | 'tourism'; level?: number; size?: number }) {
+function Building({ x, y, kind, level = 1, size = 34 }: { x: number; y: number; kind: BuildingKind; level?: number; size?: number }) {
   const s = size / 24;
   return (
     <g transform={`translate(${x - size / 2} ${y - size / 2}) scale(${s})`}>
@@ -149,7 +166,29 @@ function DiceMove() {
   );
 }
 
-function Fork() {
+/** おすすめの理由の札（番号つき）。warn は注意の札 */
+function AdviceTag({ right, y, n, text, warn = false }: { right: number; y: number; n?: number; text: string; warn?: boolean }) {
+  const w = (n ? 20 : 10) + text.length * 8.2;
+  const x0 = right - w;
+  return (
+    <g>
+      <rect x={x0} y={y - 7.5} width={w} height={15} rx={7.5} fill={warn ? '#a92e1d' : 'rgba(12,31,51,0.94)'} stroke={warn ? '#ef9a86' : C.kin} strokeWidth="1" />
+      {n !== undefined && (
+        <>
+          <circle cx={x0 + 8} cy={y} r={5.2} fill={C.kin} />
+          <text x={x0 + 8} y={y + 0.5} fontSize={7.5} fill="#3a2a0e" fontWeight={900} textAnchor="middle" dominantBaseline="central" fontFamily={SANS}>{n}</text>
+        </>
+      )}
+      <text x={x0 + (n ? 16 : 5)} y={y + 0.5} fontSize={8} fill={warn ? '#fff' : C.kin} fontWeight={700} dominantBaseline="central" fontFamily={SANS}>{text}</text>
+    </g>
+  );
+}
+
+/**
+ * 分かれ道: 光るマスのうち、おすすめには金の輪と番号・理由の札。下の金のボタンを押すと、いちばんのおすすめへ1回で進む。
+ * city（まちづくり）では、買い物代のかかる行き先に注意の札も出す。
+ */
+function ForkAdvice({ city }: { city: boolean }) {
   const S = { x: 46, y: 84 };
   const up = 'M 46 84 L 120 50 L 196 38 L 270 44';
   const down = 'M 46 84 L 120 116 L 196 128 L 270 120';
@@ -166,19 +205,33 @@ function Fork() {
       <Sq x={196} y={128} glyph="道" color="#8a6a3a" r={7} />
       <circle cx={270} cy={44} r={17} fill="rgba(241,216,147,0.16)" stroke={C.kin} strokeWidth="2" className="gd-fb gd-pulse" />
       <circle cx={270} cy={120} r={17} fill="rgba(241,216,147,0.16)" stroke={C.kin} strokeWidth="2" className="gd-fb gd-pulse" style={delay(-0.5)} />
-      <Sq x={270} y={44} glyph="釣" color="#2e5e8c" />
-      <Sq x={270} y={120} glyph="店" color="#d4a843" />
-      <Kana x={270} y={20} size={9}>ひかるマス</Kana>
+      <Sq x={270} y={44} glyph={city ? '町' : '店'} color={city ? '#2e5e8c' : '#d4a843'} />
+      <Sq x={270} y={120} glyph={city ? '町' : '釣'} color="#2e5e8c" />
+      {/* おすすめの金の輪（いちばんは太い輪）と、番号・理由の札 */}
+      <circle cx={270} cy={120} r={16.5} fill="none" stroke={C.kin} strokeWidth="3" />
+      <circle cx={270} cy={44} r={16} fill="none" stroke={C.kinD} strokeWidth="1.8" />
+      <AdviceTag right={314} y={148} n={1} text={city ? 'もくてきちへ' : 'つりば'} />
+      <AdviceTag right={300} y={18} n={2} text={city ? 'ちかい まち' : 'おみせ'} />
+      {city && <AdviceTag right={300} y={71} text="！かいものだい" warn />}
+      <Kana x={104} y={22} size={9}>ひかるマスを タップ</Kana>
       <g transform="translate(270 108)">
         <g className="gd-fk-tok"><Pin color={P1} /></g>
       </g>
-      <g transform="translate(274 124)">
+      {/* 下の金のボタン: 1回押せば、いちばんのおすすめへ進む */}
+      <g transform="translate(96 141)">
+        <g className="gd-fb gd-fk-btn">
+          <rect x={-84} y={-11} width={168} height={22} rx={8} fill={C.kinD} stroke={C.kin} strokeWidth="1.4" />
+          <text y={3.4} fontSize={9.5} fill="#3a2a0e" fontFamily={SANS} fontWeight={800} textAnchor="middle">おすすめへ 1かいで すすむ</text>
+        </g>
+      </g>
+      <g transform="translate(150 136)">
         <g className="gd-fb gd-fk-hand"><Hand /></g>
       </g>
-      <Kana x={70} y={140} size={9} fill={C.kin}>タップして えらぶ</Kana>
     </>
   );
 }
+const Fork = () => <ForkAdvice city={false} />;
+const PathAdvice = () => <ForkAdvice city />;
 
 function FishingFlow() {
   const xs = [12, 88, 164, 240];
@@ -434,6 +487,14 @@ function Demand() {
       <DemandBar x={74} kanji="商" kana="しょう" cls="mid" />
       <DemandBar x={118} kanji="工" kana="こう" cls="down" />
       <Kana x={74} y={154} size={9} fill={C.kin}>みどりが のびると そだつ</Kana>
+      {/* この町に足りないもの（町の画面に出る行） */}
+      <Kana x={128} y={15} anchor="start" size={8} fill="rgba(244,236,216,0.75)">たりないもの</Kana>
+      {[{ t: 'でんき', x: 196, w: 30 }, { t: 'こうえん', x: 234, w: 38 }].map(c => (
+        <g key={c.t}>
+          <rect x={c.x - c.w / 2} y={5.5} width={c.w} height={13} rx={6.5} fill="rgba(169,46,29,0.35)" stroke="rgba(239,154,134,0.7)" strokeWidth="0.9" />
+          <Kana x={c.x} y={15} size={7.5}>{c.t}</Kana>
+        </g>
+      ))}
       {/* 発電所から電気が届く */}
       <g transform="translate(196 60)">
         <circle r={14} fill="none" stroke={C.kin} strokeWidth="2" className="gd-fb gd-wave" />
@@ -624,7 +685,476 @@ function YearEnd() {
   );
 }
 
+/** 災害と復興: 壊れた町 → 木槌（復興特需） → 安く建て直す。全壊の見舞金が飛ぶ */
+function Recovery() {
+  const off = Math.round((1 - RECOVERY.costMul) * 10);
+  return (
+    <>
+      <path d="M 16 118 H 304" stroke="rgba(244,236,216,0.35)" />
+      {/* 被災した建物（傾いてひびが入っている） */}
+      <Seal x={30} y={32} text="災" kana="さいがい" size={34} />
+      <g transform="rotate(-10 70 96)">
+        <Building x={70} y={96} kind="res" level={2} size={46} />
+      </g>
+      <path d="M 64 78 l 6 8 l -4 6 l 7 9" stroke={C.sumi} strokeWidth="2" fill="none" />
+      <Kana x={70} y={140} size={9} fill="#ef9a86">こわれた まち</Kana>
+      {/* 見舞金（全壊した建物の持ち主へ） */}
+      <g transform="translate(70 64)">
+        <g className="gd-coin" style={{ '--dx': '0px', '--dy': '-26px' } as CSSProperties}>
+          <circle r={8} fill={C.kin} stroke={C.kinD} strokeWidth="1.4" />
+          <text y={3.4} fontSize={10} fontWeight={900} fill={C.sumi} textAnchor="middle" fontFamily={SANS}>¥</text>
+        </g>
+      </g>
+      <Kana x={86} y={30} size={9} fill={C.kin} anchor="start" className="gd-late-pop">みまいきん</Kana>
+      {/* 木槌 → 復興特需 */}
+      <path d="M 106 86 H 138 M 132 81 L 138 86 L 132 91" stroke={C.road} strokeWidth="2.4" fill="none" />
+      <g transform="translate(147 46) scale(1.6)">
+        <g className="gd-fb gd-sq-pop">
+          <HammerShapes />
+        </g>
+      </g>
+      <Kana x={166} y={108} size={10} fill={C.kin}>ふっこうとくじゅ</Kana>
+      <Kana x={166} y={122} size={9}>{`${RECOVERY.months}かげつ`}</Kana>
+      {/* 新しい建物が安く建つ */}
+      <path d="M 196 86 H 222 M 216 81 L 222 86 L 216 91" stroke={C.road} strokeWidth="2.4" fill="none" />
+      <g className="gd-fb-b gd-late-pop">
+        <Building x={258} y={94} kind="com" level={2} size={48} />
+      </g>
+      <Kana x={258} y={140} size={9} fill={C.kin} className="gd-late-pop">{`けんせつ ${off}わりびき`}</Kana>
+    </>
+  );
+}
+
+
+// ===== v6 で足した図解（仕掛け・釣り場の札・お題・町の特色・魚市場・鉄道） =====
+
+/** 魚（左向き。原点は体の中ほど）。silhouette は影絵 */
+function FishShape({ scale = 1, silhouette = false, fill = '#f1d893' }: { scale?: number; silhouette?: boolean; fill?: string }) {
+  return (
+    <g transform={`scale(${scale})`}>
+      <path d="M -12 0 q 9 -9 20 -2 l 7 -5 v 12 l -7 -5 q -11 7 -20 0 z" fill={silhouette ? C.sumi : fill} stroke={silhouette ? 'none' : '#9a6f24'} strokeWidth="0.9" />
+      {!silhouette && <circle cx={-7} cy={-1.5} r={1.2} fill={C.sumi} />}
+    </g>
+  );
+}
+
+/** 小判（¥）。原点が中心 */
+function Coin({ r = 9 }: { r?: number }) {
+  return (
+    <>
+      <circle r={r} fill={C.kin} stroke="#9a6f24" strokeWidth="1.2" />
+      <text y={r * 0.4} fontSize={r * 1.1} fill="#7a5a2a" fontWeight={900} textAnchor="middle" fontFamily={SANS}>¥</text>
+    </>
+  );
+}
+
+/** 小さな旗（原点が竿の根元） */
+function Flag() {
+  return (
+    <>
+      <path d="M 0 0 V -20" stroke={C.washi} strokeWidth="1.8" />
+      <path d="M 0 -20 L 13 -15.5 L 0 -11 Z" fill={C.shu} stroke="#fff" strokeWidth="0.6" />
+    </>
+  );
+}
+
+const RIG_KANA: Record<FishingRig, { name: string; note: string }> = {
+  kazu: { name: 'かずねらい', note: 'こものが たくさん' },
+  futsu: { name: 'ふつう', note: 'なにが かかるかな' },
+  oomono: { name: 'おおものねらい', note: 'めずらしい さかな' },
+};
+
+/** 仕掛けを選ぶ: 3枚の札が順に光る。大物ねらいは2回ぶん。下に「雑魚は手早く」 */
+function Rigs() {
+  const w = 92;
+  return (
+    <>
+      {RIG_ORDER.map((rig, i) => {
+        const x = 10 + i * 104;
+        const slots = RIGS[rig].slots;
+        return (
+          <g key={rig} className="gd-rg-step" style={delay(i * 2)}>
+            <rect x={x} y={10} width={w} height={98} rx={9} fill="rgba(255,255,255,0.07)" stroke={C.kin} strokeWidth="1.3" />
+            <g transform={`translate(${x + w / 2 - 22} 16)`}>
+              <RigGlyph rig={rig} size={44} />
+            </g>
+            <Kana x={x + w / 2} y={74} size={10} fill={C.kin}>{RIG_KANA[rig].name}</Kana>
+            <Kana x={x + w / 2} y={88} size={8}>{RIG_KANA[rig].note}</Kana>
+            {/* 釣りの枠をいくつ使うか */}
+            {Array.from({ length: slots }, (_, k) => (
+              <circle key={k} cx={x + w / 2 - (slots - 1) * 5 + k * 10} cy={99} r={3} fill={C.kin} stroke="#9a6f24" strokeWidth="0.8" />
+            ))}
+          </g>
+        );
+      })}
+      <Kana x={10 + 2 * 104 + w / 2} y={121} size={8} fill="rgba(244,236,216,0.7)">{`${RIGS.oomono.slots}かいぶん つかう`}</Kana>
+      {/* 雑魚は手早く: 合わせただけで小物が跳ね上がる */}
+      <path d="M 14 146 q 9 -5 18 0 t 18 0 t 18 0" fill="none" stroke="rgba(127,169,205,0.8)" strokeWidth="1.6" />
+      <g transform="translate(40 132)">
+        <g className="gd-fb gd-rg-quick"><FishShape scale={0.8} /></g>
+      </g>
+      <Kana x={76} y={140} anchor="start" size={9} fill={C.kin}>ざこは てばやく</Kana>
+      <Kana x={76} y={153} anchor="start" size={8}>どうぐが そだつと あわせた だけで つれる</Kana>
+    </>
+  );
+}
+
+/** 釣り場の札: 種類の数と、まだ見ていない数。影絵の1つは釣ると姿が分かる */
+function Spot() {
+  const boxes = [
+    { x: 30, cap: 'まだ みていない' },
+    { x: 124, cap: 'まだ みていない' },
+    { x: 218, cap: 'そだてると あえる' },
+  ];
+  return (
+    <>
+      <rect x={10} y={8} width={300} height={144} rx={10} fill="rgba(10,26,44,0.55)" stroke="rgba(241,216,147,0.45)" strokeWidth="1.2" />
+      <Kana x={24} y={28} anchor="start" size={9}>この つりばの さかな</Kana>
+      <Kana x={132} y={29} anchor="start" size={14} fill={C.kin}>12</Kana>
+      <Kana x={152} y={28} anchor="start" size={8.5}>しゅるい</Kana>
+      <Kana x={206} y={28} anchor="start" size={9}>みていない</Kana>
+      <Kana x={262} y={29} anchor="start" size={14} fill={C.shu} className="gd-sp-old">5</Kana>
+      <Kana x={262} y={29} anchor="start" size={14} fill={C.shu} className="gd-sp-new">4</Kana>
+      {boxes.map((b, i) => (
+        <g key={b.x} transform={`translate(${b.x} 40)`}>
+          <g className="gd-fb gd-sq-pop" style={delay(i * 0.3)}>
+            <rect width={72} height={84} rx={7} fill="#f4ecd8" stroke={i === 2 ? '#9a6f24' : 'rgba(154,111,36,0.5)'} strokeWidth={i === 2 ? 1.6 : 1} strokeDasharray={i === 2 ? '4 3' : undefined} />
+            <text x={36} y={14} fontSize={7.5} fill="#6b5a3a" fontFamily={SANS} fontWeight={700} textAnchor="middle">{b.cap}</text>
+            <g transform="translate(34 42)">
+              {i === 0 ? (
+                <>
+                  <g className="gd-sp-sil"><FishShape scale={1.7} silhouette /></g>
+                  <g className="gd-sp-fish"><FishShape scale={1.7} fill="#ef8a6a" /></g>
+                </>
+              ) : (
+                <FishShape scale={i === 2 ? 2 : 1.5} silhouette />
+              )}
+            </g>
+            {i === 0 ? (
+              <>
+                <text x={36} y={72} fontSize={9} fill={C.sumi} fontFamily={SANS} fontWeight={800} textAnchor="middle" className="gd-sp-old">？？？</text>
+                <text x={36} y={72} fontSize={9} fill="#a92e1d" fontFamily={SANS} fontWeight={800} textAnchor="middle" className="gd-sp-new">つれた！</text>
+              </>
+            ) : (
+              <text x={36} y={72} fontSize={i === 2 ? 8 : 9} fill={C.sumi} fontFamily={SANS} fontWeight={800} textAnchor="middle">{i === 2 ? 'いい どうぐで' : '？？？'}</text>
+            )}
+          </g>
+        </g>
+      ))}
+      <Kana x={160} y={144} size={8.5} fill={C.kin}>かげえは まだ しらない さかな</Kana>
+    </>
+  );
+}
+
+const QUEST_ROWS = [
+  { glyph: '建', w: 68, from: 0.2 },
+  { glyph: '旗', w: 34, from: 0.1 },
+  { glyph: '魚', w: 22, from: 0 },
+];
+
+/** お題と今年の舞台: 棒が伸びて「達成」の判子と賞金。舞台の地方が金に染まり、そこに目的地の旗が立つ */
+function Quest() {
+  return (
+    <>
+      <Kana x={12} y={20} anchor="start" size={9.5} fill={C.kin}>{`4がつに おだいが ${QUEST_GROUPS.length}つ`}</Kana>
+      {QUEST_ROWS.map((r, i) => {
+        const y = 44 + i * 30;
+        return (
+          <g key={r.glyph}>
+            <rect x={12} y={y - 10} width={20} height={20} rx={4.5} fill="rgba(12,31,51,0.75)" stroke="rgba(241,216,147,0.5)" />
+            {i === 0 && <rect x={12} y={y - 10} width={20} height={20} rx={4.5} fill={C.shu} stroke="rgba(255,240,230,0.85)" className="gd-q-done" />}
+            <text x={22} y={y + 0.5} fontSize={12} fill={C.washi} fontFamily={MINCHO} fontWeight={900} textAnchor="middle" dominantBaseline="central">{r.glyph}</text>
+            <rect x={40} y={y - 4} width={72} height={8} rx={4} fill="rgba(0,0,0,0.35)" stroke="rgba(241,216,147,0.3)" />
+            <rect x={42} y={y - 2.5} width={r.w} height={5} rx={2.5} fill={i === 0 ? C.shu : C.kinD} className="gd-fb-l gd-q-bar" style={{ '--from': r.from } as CSSProperties} />
+          </g>
+        );
+      })}
+      <Seal x={138} y={44} text="達成" kana="たっせい" size={36} className="gd-fb gd-stamp-late" />
+      {[[-16, -22], [14, -24], [22, 4]].map(([dx, dy], i) => (
+        <circle key={i} cx={138} cy={44} r={4} fill={C.kin} stroke="#9a6f24" strokeWidth="1" className="gd-coin" style={{ '--dx': `${dx}px`, '--dy': `${dy}px` } as CSSProperties} />
+      ))}
+      <Kana x={12} y={134} anchor="start" size={9} fill={C.kin} className="gd-late-pop">{`さいしょの ひとは ×${QUEST_ECONOMY.firstMul}`}</Kana>
+      <Kana x={12} y={150} anchor="start" size={8.5}>だれでも たっせい できる</Kana>
+      {/* 今年の舞台（隣り合う2つの地方） */}
+      <Kana x={244} y={20} size={9.5} fill={C.kin}>ことしの ぶたい</Kana>
+      {[
+        'M 262 34 C 286 30 304 44 300 62 C 296 76 280 80 266 76 C 256 72 252 50 262 34 Z',
+        'M 226 66 C 244 60 262 70 266 82 C 270 98 252 108 236 104 C 222 100 216 78 226 66 Z',
+        'M 186 100 C 204 94 222 102 226 116 C 228 130 212 138 198 134 C 184 130 176 110 186 100 Z',
+      ].map((d, i) => (
+        <g key={i}>
+          <path d={d} fill="rgba(229,213,168,0.2)" stroke="rgba(241,216,147,0.45)" strokeWidth="1.2" />
+          {i < 2 && <path d={d} fill="rgba(230,194,102,0.55)" stroke={C.kin} strokeWidth="2" className="gd-q-stage" />}
+        </g>
+      ))}
+      <g transform="translate(244 92)"><g className="gd-fb-b gd-q-flag-a"><Flag /></g></g>
+      <g transform="translate(278 62)"><g className="gd-fb-b gd-q-flag-b"><Flag /></g></g>
+      <Kana x={244} y={150} size={9}>もくてきちが でやすい</Kana>
+    </>
+  );
+}
+
+const TRAIT_ORDER: TownTraitId[] = ['koto', 'joka', 'kowan', 'kogyo', 'yukiguni', 'yunomachi'];
+const mulText = (v: number | undefined) => String(Number((v ?? 1).toFixed(2)));
+const TRAIT_KANA: Record<TownTraitId, { name: string; effect: string }> = {
+  koto: { name: 'こと・もんぜんまち', effect: `かんこう ×${mulText(TOWN_TRAITS.koto.incomeMul?.tourism)}` },
+  joka: { name: 'じょうかまち', effect: 'おしろが めいしょに' },
+  kowan: { name: 'こうわんとし', effect: `しょうぎょう ×${mulText(TOWN_TRAITS.kowan.incomeMul?.com)}` },
+  kogyo: { name: 'こうぎょうちたい', effect: 'こうがいが すくない' },
+  yukiguni: { name: 'ゆきぐに', effect: 'ふゆは じゅうたく ▼' },
+  yunomachi: { name: 'ゆのまち', effect: 'ふゆは かんこう ▲' },
+};
+
+/** 町の特色: 6つの札が順に現れる（印と色は data/cityTraits.ts から） */
+function Traits() {
+  return (
+    <>
+      {TRAIT_ORDER.map((id, i) => {
+        const t = TOWN_TRAITS[id];
+        const x = 56 + (i % 3) * 104;
+        const y = 34 + Math.floor(i / 3) * 74;
+        return (
+          <g key={id}>
+            <g transform={`translate(${x} ${y})`}>
+              <g className="gd-fb gd-sq-pop" style={delay(i * 0.35)}>
+                <circle cy={1.5} r={17} fill="rgba(6,18,31,0.5)" />
+                <circle r={17} fill={t.color} stroke={C.kin} strokeWidth="1.6" />
+                <text y={0.5} fontSize={18} fill="#fff" fontFamily={MINCHO} fontWeight={900} textAnchor="middle" dominantBaseline="central">{t.mark}</text>
+              </g>
+            </g>
+            <Kana x={x} y={y + 31} size={8.5} fill={C.kin}>{TRAIT_KANA[id].name}</Kana>
+            <Kana x={x} y={y + 43} size={8}>{TRAIT_KANA[id].effect}</Kana>
+          </g>
+        );
+      })}
+    </>
+  );
+}
+
+/** 魚市場: 商業地と漁港で小判が増える。工場の公害で減る。7月は釣り大会 */
+function FishMarket() {
+  return (
+    <>
+      <Kana x={14} y={20} anchor="start" size={9.5} fill={C.kin}>つった さかなを うる</Kana>
+      <g transform="translate(36 58)"><FishShape scale={1.5} /></g>
+      <path d="M 62 58 H 80 M 75 53 L 81 58 L 75 63" stroke={C.road} strokeWidth="2.2" fill="none" />
+      {/* 売値の小判: はじめは1枚。商業地で2枚、漁港で3枚 */}
+      <g transform="translate(98 58)"><Coin /></g>
+      <g transform="translate(120 58)"><g className="gd-fb gd-fm-c2"><Coin /></g></g>
+      <g transform="translate(142 58)"><g className="gd-fb gd-fm-c3"><Coin /></g></g>
+      <g className="gd-fb-b gd-fm-b2"><Building x={92} y={104} kind="com" level={2} size={36} /></g>
+      <g className="gd-fb-b gd-fm-b3"><Building x={130} y={104} kind="port" size={36} /></g>
+      <Kana x={104} y={138} size={8.5}>しょうぎょうち と ぎょこう</Kana>
+      <Kana x={104} y={151} size={9} fill={C.kin}>たかく うれる</Kana>
+      {/* 工場の公害で漁場が荒れる */}
+      <g className="gd-fb-b gd-fm-ind"><Building x={234} y={104} kind="ind" level={2} size={38} /></g>
+      <g className="gd-fm-smoke">
+        <circle cx={244} cy={80} r={5} fill="#b9ae9a" className="gd-fb gd-smoke" />
+        <circle cx={244} cy={80} r={5} fill="#b9ae9a" className="gd-fb gd-smoke" style={delay(-1)} />
+      </g>
+      <g transform="translate(206 58)">
+        <g className="gd-fm-down">
+          <Coin r={8} />
+          <path d="M 14 -5 V 5 M 10 1 L 14 6 L 18 1" stroke={C.shu} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      </g>
+      <Kana x={234} y={138} size={8.5} fill="#ef9a86">こうがいで あれると</Kana>
+      <Kana x={234} y={151} size={9} fill="#ef9a86">やすくなる</Kana>
+      {/* 7月は釣り大会 */}
+      <Seal x={292} y={40} text="大会" kana="たいかい" size={36} className="gd-fb gd-stamp-late" />
+      <Kana x={292} y={76} size={9} fill={C.kin} className="gd-late-pop">{`${FISH_MARKET.derbyMonth}がつ`}</Kana>
+    </>
+  );
+}
+
+/** 鉄道: 自分の建物がある町の隣の道に線路を敷く → 歩かずに通り抜ける → ほかの人が通ると運賃 */
+function Rail() {
+  const y = 112;
+  const A = 40;
+  const B = 280;
+  const routes = [100, 160, 220];
+  return (
+    <>
+      <Kana x={8} y={20} anchor="start" size={8.5}>じぶんの たてものが ある まち</Kana>
+      <Plot x={A} y={54} size={34} owner={P1} />
+      <Building x={A} y={54} kind="res" level={1} size={26} />
+      <path d={`M ${A} ${y} H ${B}`} stroke={C.road} strokeWidth="3" strokeDasharray="6 5" />
+      {routes.map(x => <Sq key={x} x={x} y={y} glyph="道" color="#8a6a3a" r={6.5} />)}
+      {/* 線路（敷くと左から延びる） */}
+      <g className="gd-fb-l gd-rl-rail">
+        <line x1={54} y1={y} x2={266} y2={y} stroke="#14100c" strokeWidth="8" />
+        <line x1={54} y1={y} x2={266} y2={y} stroke="#fbf6e8" strokeWidth="3.4" strokeDasharray="7 7" />
+      </g>
+      <Sq x={A} y={y} glyph="町" color="#2e5e8c" r={12} />
+      <Sq x={B} y={y} glyph="町" color="#2e5e8c" r={12} />
+      <g transform={`translate(${routes[0] + 2} ${y + 6})`}>
+        <g className="gd-fb gd-rl-hand"><Hand /></g>
+      </g>
+      <Kana x={184} y={152} size={9} fill={C.kin}>となりの みちに しく</Kana>
+      <Kana x={284} y={152} size={8} fill="rgba(244,236,216,0.65)">まいつき いじひ</Kana>
+      {/* 自分の駒: 線路は歩数を使わずに通り抜ける（止まれない） */}
+      <g transform={`translate(${B} ${y - 12})`}>
+        <g className="gd-rl-me"><Pin color={P1} /></g>
+      </g>
+      <Kana x={166} y={62} size={9.5} fill={C.kin} className="gd-rl-lbl">あるかずに とおりぬける</Kana>
+      {/* ほかの人が通ると、持ち主に運賃 */}
+      <g transform={`translate(${A + 20} ${y - 12})`}>
+        <g className="gd-rl-other"><Pin color={P2} scale={0.9} /></g>
+      </g>
+      <g transform={`translate(${B} 62)`}>
+        <g className="gd-fb gd-rl-coin"><Coin /></g>
+      </g>
+      <Kana x={B} y={44} size={9} fill={C.kin} className="gd-rl-fare">うんちん</Kana>
+    </>
+  );
+}
+
+
+const ADVICE_ROWS: { verdict: AdviceVerdict; kind: BuildingKind; top: string; sub: string; bad?: boolean }[] = [
+  { verdict: 'best', kind: 'res', top: 'つきに ＋¥', sub: `${ADVICE.bestMonths}かげつまでに もとが とれる` },
+  { verdict: 'good', kind: 'com', top: 'つきに ＋¥', sub: `${ADVICE.goodMonths}かげつまでに もとが とれる` },
+  { verdict: 'slow', kind: 'tourism', top: 'つきに ＋¥', sub: 'もとが とれるのは おそい' },
+  { verdict: 'never', kind: 'ind', top: 'もうからない', sub: 'もとが とれない', bad: true },
+];
+
+/** 見込み札の読み方: 建てる物の札が順に現れ、◎の札を指で選ぶ。右に ♡（町の支え）と芽（育ちやすさ） */
+function Advice() {
+  return (
+    <>
+      {ADVICE_ROWS.map((r, i) => {
+        const y = 8 + i * 30;
+        return (
+          <g key={r.verdict} className="gd-fb gd-ad-row" style={delay(i * 0.35)}>
+            <rect x={8} y={y} width={190} height={26} rx={7} fill="rgba(12,31,51,0.75)" stroke={i === 0 ? C.kin : 'rgba(241,216,147,0.3)'} strokeWidth={i === 0 ? 1.6 : 1} />
+            <g transform={`translate(13 ${y + 3})`}><VerdictMark verdict={r.verdict} size={20} /></g>
+            <Building x={50} y={y + 13} kind={r.kind} level={1} size={22} />
+            <Kana x={68} y={y + 11} anchor="start" size={8.5} fill={r.bad ? '#ef9a86' : '#6ee7b7'}>{r.top}</Kana>
+            <Kana x={68} y={y + 22} anchor="start" size={7.5} fill={r.bad ? '#ef9a86' : C.washi}>{r.sub}</Kana>
+          </g>
+        );
+      })}
+      {/* いちばん良い物に「おすすめ」 */}
+      <g transform="translate(170 16)">
+        <g className="gd-fb gd-ad-pick">
+          <rect x={-22} y={-7} width={44} height={14} rx={7} fill={C.kinD} />
+          <text y={3.2} fontSize={8} fill="#3a2a0e" fontFamily={SANS} fontWeight={800} textAnchor="middle">おすすめ</text>
+        </g>
+      </g>
+      <g transform="translate(120 28)">
+        <g className="gd-fb gd-ad-hand"><Hand /></g>
+      </g>
+      <Kana x={103} y={140} size={9} fill={C.kin}>きんの「おすすめ」が いちばん とく</Kana>
+      <Kana x={103} y={153} size={8}>◎は はやく もとが とれる</Kana>
+      {/* ♡: 公園・発電所は、もうけは少なくても町の支え */}
+      <g className="gd-late-pop">
+        <g transform="translate(212 10)"><VerdictMark verdict="support" size={22} /></g>
+        <Kana x={240} y={20} anchor="start" size={9} fill="#7fa9cd">まちの ささえ</Kana>
+        <Building x={224} y={52} kind="park" size={26} />
+        <Building x={256} y={52} kind="power" size={26} />
+        <Kana x={262} y={78} size={7.5}>こうえん・はつでんしょ</Kana>
+      </g>
+      {/* 芽: 育ちやすさ（3つが最高） */}
+      <g className="gd-late-pop">
+        {[0, 1, 2].map(i => (
+          <path
+            key={i}
+            transform={`translate(${218 + i * 16} 96) scale(1.5)`}
+            d="M4.5 9.5 V4.5 M4.5 5 C4.5 2.6 2.8 1.2 0.8 1.2 C0.8 3.4 2.2 5 4.5 5 Z M4.5 6 C4.5 4.2 6 3 8.2 3 C8.2 4.9 6.8 6 4.5 6 Z"
+            fill={i < 2 ? '#6ee7b7' : 'none'} stroke={i < 2 ? '#6ee7b7' : 'rgba(244,236,216,0.4)'} strokeWidth="0.9" strokeLinejoin="round" strokeLinecap="round"
+          />
+        ))}
+        <Kana x={262} y={124} size={9} fill="#6ee7b7">そだちやすさ</Kana>
+        <Kana x={262} y={137} size={7.5}>めが おおいほど そだつ</Kana>
+      </g>
+    </>
+  );
+}
+
+
+const CPU_KANA: Record<string, { name: string; note: string }> = {
+  omatsu: { name: 'おまつ', note: 'けんじつ' },
+  gonzo: { name: 'ごんぞう', note: 'どくせん ねらい' },
+  hayata: { name: 'はやた', note: 'もくてきちへ いそぐ' },
+};
+
+/** CPU の3人: 印の判子が順に現れ、上の札（思案中の札）に「いまの狙い」が出る */
+function Cpu() {
+  const people = CPU_STYLES.map((style, i) => ({ p: CPU_PERSONAS[style][0], color: PLAYER_COLORS[i + 1] ?? P2 }));
+  const first = people[0];
+  return (
+    <>
+      {people.map(({ p, color }, i) => {
+        const x = 56 + i * 104;
+        return (
+          <g key={p.id}>
+            <g transform={`translate(${x} 34)`}>
+              <g className="gd-fb gd-sq-pop" style={delay(i * 0.4)}>
+                <rect x={-18} y={-18} width={36} height={36} rx={8} fill={color} stroke="rgba(255,255,255,0.75)" strokeWidth="1.6" transform="rotate(-6)" />
+                <text y={1} fontSize={21} fill="#fff" fontFamily={MINCHO} fontWeight={900} textAnchor="middle" dominantBaseline="central" transform="rotate(-6)" stroke="rgba(26,21,16,0.55)" strokeWidth="0.8" style={{ paintOrder: 'stroke' }}>{p.mark}</text>
+              </g>
+            </g>
+            <Kana x={x} y={70} size={10} fill={C.kin}>{CPU_KANA[p.id]?.name ?? p.name}</Kana>
+            <Kana x={x} y={83} size={8}>{CPU_KANA[p.id]?.note ?? ''}</Kana>
+          </g>
+        );
+      })}
+      {/* CPU の番に上に出る札: いまの狙いと、早送り */}
+      <g className="gd-late-pop">
+        <rect x={34} y={100} width={252} height={28} rx={14} fill="rgba(12,31,51,0.94)" stroke="rgba(241,216,147,0.55)" strokeWidth="1.2" />
+        <rect x={42} y={105} width={18} height={18} rx={4.5} fill={first.color} stroke="rgba(255,255,255,0.7)" />
+        <text x={51} y={114.5} fontSize={11} fill="#fff" fontFamily={MINCHO} fontWeight={900} textAnchor="middle" dominantBaseline="central">{first.p.mark}</text>
+        <Kana x={66} y={118} anchor="start" size={9}>{`${CPU_KANA[first.p.id]?.name ?? first.p.name}：もくてきちへ むかう`}</Kana>
+        <rect x={214} y={106} width={64} height={16} rx={8} fill="none" stroke="rgba(241,216,147,0.5)" />
+        <Kana x={246} y={117.5} size={7.5} fill="rgba(244,236,216,0.8)">▶▶ はやおくり</Kana>
+      </g>
+      <Kana x={160} y={148} size={9} fill={C.kin} className="gd-late-pop">うえの ふだに「いまの ねらい」が でる</Kana>
+    </>
+  );
+}
+
 /** 図解と、その一巡の長さ（秒）。CSS の --gd-cycle で各アニメの長さをそろえる */
+/** 町長と条例: 5区画のうち3つを建てると町長の家紋 → 条例の札が並ぶ */
+function Mayor() {
+  const xs = [30, 78, 126, 174, 222];
+  const kinds = ['res', 'com', 'res', 'ind', 'res'] as const;
+  return (
+    <>
+      {xs.map((x, i) => {
+        const mine = i < 3;
+        return (
+          <g key={x}>
+            <Plot x={x} y={48} size={42} owner={mine ? P1 : P2} />
+            {mine ? (
+              <g className="gd-fb gd-mono-b" style={delay(i * 0.45)}>
+                <Building x={x} y={48} kind={kinds[i]} level={1} size={30} />
+              </g>
+            ) : (
+              <Building x={x} y={48} kind={kinds[i]} level={1} size={30} />
+            )}
+          </g>
+        );
+      })}
+      <Kana x={126} y={86} size={9}>くかくの はんぶんより おおく もつと</Kana>
+      <g transform="translate(282 48)">
+        <g className="gd-fb gd-stamp-late">
+          <MayorCrestShape r={17} color={P1} />
+        </g>
+      </g>
+      <Kana x={282} y={82} size={9} fill={C.kin} className="gd-late-pop">ちょうちょう</Kana>
+      <g className="gd-late-pop">
+        <Kana x={20} y={126} anchor="start" size={9}>じょうれい</Kana>
+        <Kana x={252} y={126} anchor="start" size={8.5} fill={C.kin}>つきに 1かい</Kana>
+        {ORDINANCE_KINDS.map((k, i) => (
+          <g key={k} transform={`translate(${78 + i * 34} 112)`}>
+            <OrdinanceIcon kind={k} size={26} />
+          </g>
+        ))}
+        <Kana x={160} y={152} size={9} fill={C.washi}>ちょうぜい・かんこう しんこう … まちごと うごかす</Kana>
+      </g>
+    </>
+  );
+}
+
 const DIAGRAMS: Record<DiagramId, { draw: () => ReactNode; cycle: number }> = {
   'dice-move': { draw: DiceMove, cycle: 4.2 },
   fork: { draw: Fork, cycle: 4.6 },
@@ -641,6 +1171,17 @@ const DIAGRAMS: Record<DiagramId, { draw: () => ReactNode; cycle: number }> = {
   binbo: { draw: Binbo, cycle: 6.5 },
   seasons: { draw: Seasons, cycle: 8 },
   yearend: { draw: YearEnd, cycle: 5 },
+  recovery: { draw: Recovery, cycle: 5 },
+  mayor: { draw: Mayor, cycle: 5 },
+  rigs: { draw: Rigs, cycle: 6 },
+  spot: { draw: Spot, cycle: 5.5 },
+  quest: { draw: Quest, cycle: 6 },
+  traits: { draw: Traits, cycle: 6 },
+  'fish-market': { draw: FishMarket, cycle: 6.5 },
+  rail: { draw: Rail, cycle: 7 },
+  advice: { draw: Advice, cycle: 6 },
+  'path-advice': { draw: PathAdvice, cycle: 4.6 },
+  cpu: { draw: Cpu, cycle: 6 },
 };
 
 /** 図解（ページを開いている間だけ動く） */

@@ -4,17 +4,17 @@ import { useGameStore, MAX_FISHING_PER_TURN } from '../../store/useGameStore';
 import { NODE_MAP } from '../../data/boardNodes';
 import { getCapitalEvent } from '../../data/capitalEvents';
 import { chooseCpuPath, chooseCityAction, chooseShopPurchase, chooseCapitalChoice, shouldBuySpecialty } from '../../game/cpuAI';
-import { BUILDING_INFO, CITY_ACTIONS_PER_VISIT, getTownInfo } from '../../game/city';
+import { chooseOrdinance } from '../../game/mayorAI';
+import { BUILDING_INFO, CITY_ACTIONS_PER_VISIT, getTownInfo, monopolyOwner } from '../../game/city';
+import { describePath, pathAim, pathContextOf } from '../../game/pathAdvice';
+import { withCpuLine } from '../../data/cpuPersonas';
+import type { CpuScene } from '../../data/cpuPersonas';
+import { aimKey, setCpuAim } from './cpuAim';
 import { getEquippedItem, getEquipmentName } from '../../game/equipment';
 import { randomInt, random } from '../../utils/random';
 import { ROULETTE_MIN, ROULETTE_MAX } from '../../game/constants';
-import { fishingLastTurn } from '../../game/deadline';
+import { cpuTownCasts } from '../../game/fishMarket';
 
-/** CPU の道選びに渡す「最後の巡」。無制限（0）で誰もゴールしていなければ 0 のまま（cpuAI が中盤とみなす） */
-function cpuFishingLastTurn(firstFinishTurn: number | null, maxTurns: number): number {
-  const last = fishingLastTurn(firstFinishTurn, maxTurns);
-  return Number.isFinite(last) ? last : maxTurns;
-}
 import { playDiceRoll, playDiceLand } from '../../utils/sound';
 import { chooseCpuCard, rollDiceFaces, emptyPlotIndex } from '../../game/cityCards';
 import { distancesFrom } from '../../game/city';
@@ -41,6 +41,31 @@ function cardContext(isInTown: boolean): CpuCardContext {
 
 /** 町でのカード検討は1訪問1回まで（同じ手番で何度も考えない） */
 const cpuTownCardTried = new Set<string>();
+
+/** 道選びの先読み: 思案中の札に「狙い」を出すため、進む道を先に決めておく（同じ分かれ道なら1手でそのまま使う） */
+let plannedPath: { paths: string[][]; index: number } | null = null;
+
+/**
+ * 進む道を決め、狙いの文（選んだ道のいちばん効いている理由。行き先のおすすめと同じ札）を思案中の札に出す。
+ * 道選びの状況は pathContextOf（釣り旅: 誰かがゴールしたら締め切りを「最後の巡」として選ぶ）。
+ */
+function decideCpuPath(): number {
+  const st = useGameStore.getState();
+  if (plannedPath && plannedPath.paths === st.reachableNodes) return plannedPath.index;
+  const ctx = pathContextOf(st);
+  const index = chooseCpuPath(ctx);
+  plannedPath = { paths: st.reachableNodes, index };
+  setCpuAim({ key: aimKey(st.turn, st.currentPlayerIndex), text: pathAim(ctx, describePath(ctx, index)) });
+  return index;
+}
+
+/** CPU が分かれ道で考えはじめたときに呼ぶ（CpuDriver）。進む道と狙いを先に決めて、札に出す */
+export function planCpuPath() {
+  const st = useGameStore.getState();
+  const player = st.players[st.currentPlayerIndex];
+  if (!player?.isCpu || st.screen !== 'game' || st.turnPhase !== 'path_selection' || st.reachableNodes.length === 0) return;
+  decideCpuPath();
+}
 
 export function runCpuStep() {
   const st = useGameStore.getState();
@@ -69,23 +94,9 @@ export function runCpuStep() {
       st.rollDice(n);
       return;
     }
-    case 'path_selection': {
-      const idx = chooseCpuPath({
-        paths: st.reachableNodes,
-        mode: isCity ? 'city' : 'fishing',
-        player,
-        playerIndex: st.currentPlayerIndex,
-        city: st.city,
-        turn: st.turn,
-        // 釣り旅: 誰かがゴールしたら締め切りを「最後の巡」として道を選ぶ（間に合わずにゴールを逃さない）
-        maxTurns: isCity ? st.settings.maxTurns : cpuFishingLastTurn(st.firstFinishTurn, st.settings.maxTurns),
-        goalClaims: st.cityGoalClaims,
-        binboHolder: st.city?.binbo?.playerIndex ?? null,
-        playerNodes: st.players.map(p => p.currentNode),
-      });
-      st.selectPath(idx);
+    case 'path_selection':
+      st.selectPath(decideCpuPath());
       return;
-    }
     case 'fishing_choice':
       if (isCity) st.setTurnPhase('action_choice');
       else st.cpuFish();
@@ -158,25 +169,44 @@ export function runCpuStep() {
         if (!st.cityBuySpecialty()) return;
       }
       const monthsLeft = st.settings.maxTurns > 0 ? st.settings.maxTurns - st.turn + 1 : 24;
+      // 町長なら、まず条例を検討する（工事の回数は使わない。1か月に1回まで。お知らせはストアが出す）
+      const ord = chooseOrdinance(st.city, player.currentNode, st.currentPlayerIndex, player.money, st.turn);
+      if (ord && !st.cityEnact(ord.kind)) return;
       const act = chooseCityAction(st.city, player.currentNode, st.currentPlayerIndex, player.money, player.cpuStyle ?? 'steady', monthsLeft);
       if (!act) {
         st.setTurnPhase('action_choice');
         return;
       }
       const town = getTownInfo(player.currentNode)?.name ?? '';
+      // CPU の人物のせりふ（損得係）: お知らせの本文の頭に足す（件数は増やさない）。
+      // 1訪問の最初の工事だけ（続けて建てると同じ見出しに本文をつなぐので、2つ目からはせりふなし）。独占の完成はいつでも言う
+      const isMono = () => {
+        const t = useGameStore.getState().city?.towns[player.currentNode];
+        return !!t && monopolyOwner(t) === st.currentPlayerIndex;
+      };
+      const wasMono = isMono();
+      const say = (scene: CpuScene, body: string) => {
+        if (!wasMono && isMono()) return withCpuLine(player, 'monopoly', body, st.turn);
+        return st.cityActionsThisTurn === 0 ? withCpuLine(player, scene, body, st.turn) : body;
+      };
       if (act.type === 'build') {
-        if (!st.cityBuild(act.plot, act.kind)) st.announce(`${player.name}：建設`, `${town}に${BUILDING_INFO[act.kind].name}を建てた`);
+        if (!st.cityBuild(act.plot, act.kind)) st.announce(`${player.name}：建設`, say('build', `${town}に${BUILDING_INFO[act.kind].name}を建てた`));
         else st.setTurnPhase('action_choice');
       } else if (act.type === 'upgrade') {
         const kind = st.city.towns[player.currentNode]?.plots[act.plot]?.kind;
-        if (!st.cityUpgrade(act.plot)) st.announce(`${player.name}：再開発`, `${town}の${kind ? BUILDING_INFO[kind].name : '建物'}を再開発した`);
+        if (!st.cityUpgrade(act.plot)) st.announce(`${player.name}：再開発`, say('upgrade', `${town}の${kind ? BUILDING_INFO[kind].name : '建物'}を再開発した`));
         else st.setTurnPhase('action_choice');
       } else if (act.type === 'renovate') {
         if (!st.cityRenovate(act.plot)) st.announce(`${player.name}：修繕`, `${town}の空き家を直した`);
         else st.setTurnPhase('action_choice');
+      } else if (act.type === 'enact') {
+        // 条例・線路のお知らせはストアが出す
+        if (st.cityEnact(act.ordinance)) st.setTurnPhase('action_choice');
+      } else if (act.type === 'rail') {
+        if (st.cityLayRail(act.route)) st.setTurnPhase('action_choice');
       } else {
         const prev = st.city.towns[player.currentNode]?.plots[act.plot];
-        if (!st.cityAcquire(act.plot)) st.announce(`${player.name}：買収`, `${town}の${prev ? BUILDING_INFO[prev.kind].name : '建物'}を${prev ? st.players[prev.owner]?.name : ''}から買収した`);
+        if (!st.cityAcquire(act.plot)) st.announce(`${player.name}：買収`, say('acquire', `${town}の${prev ? BUILDING_INFO[prev.kind].name : '建物'}を${prev ? st.players[prev.owner]?.name : ''}から買収した`));
         else st.setTurnPhase('action_choice');
       }
       return;
@@ -189,6 +219,11 @@ export function runCpuStep() {
       if (!isCity && node && (node.type === 'fishing' || node.type === 'fishing_special')
         && st.nodeActionsThisTurn < MAX_FISHING_PER_TURN && getEquippedItem(player.equipment, 'rod')) {
         st.doActionAgain();
+        return;
+      }
+      // まちづくり: 釣り場の町では、工事を終えたら決まった回数だけ釣る（魚市場。お知らせは1訪問1件。fishingSlice の cpuFishTown）
+      if (isCity && st.city && cpuTownCasts(node?.type, player.equipment, st.nodeActionsThisTurn) > 0) {
+        st.cpuFishTown();
         return;
       }
       // まちづくりの工事は到着時の町パネルで済ませている（ここで開き直すと往復し続ける恐れがある）

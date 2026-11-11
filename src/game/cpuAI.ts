@@ -8,13 +8,19 @@
 import type { Player, BoardNode, CapitalEvent, EquipmentType, Fish } from './types';
 import type { CityState, BuildingKind, Plot } from './city';
 import {
-  getTownInfo, computeAllStats, plotIncome, poweredTownsWithBuildings, monopolyOwner, distancesFrom,
-  build, upgrade, acquire, renovate, buildCost, canBuild, isUpgradable, MAX_BUILDING_LEVEL, CITY_ECONOMY, visitorFees,
+  getTownInfo, monopolyOwner,
+  build, upgrade, acquire, renovate, buildCost, canBuild, isUpgradable, MAX_BUILDING_LEVEL, visitorFees,
+  recoveryMonthsLeft,
 } from './city';
+import { playerMonthlyIncome } from './cityAdvice';
 import { NODE_MAP } from '../data/boardNodes';
 import { EQUIPMENT_DATA } from '../data/equipmentData';
 import { SHOP_TIER_MAX_LEVEL, MAX_EQUIPMENT_LEVEL } from './constants';
 import { isSpecialtyNode, specialtyBuyCost, regionOfSpecialty, regionSpecialtyIds } from './citySpecialties';
+import type { OrdinanceKind } from './mayor';
+import { mayorOf, mayorStanding } from './mayor';
+import { chooseOrdinance, mayorSeatValue } from './mayorAI';
+import { RAIL_CPU, RAIL_ECONOMY, layRail, railDistancesFrom, railFares, railOptions, railPlanValue } from './railways';
 import { getEquippedLevel, getEquipmentLevels, getEquippedItem } from './equipment';
 import { computeDistanceToGoal } from '../utils/pathfinding';
 import { random } from '../utils/random';
@@ -66,9 +72,40 @@ function canUpgradeAtShop(player: Player, node: BoardNode): boolean {
   });
 }
 
-function scoreFishingEndpoint(ctx: PathContext, nodeId: string): number {
+/**
+ * 道の点の「理由」。点は理由ごとの内訳（ScorePart）の合計で、CPU の道選びと、人に見せる行き先のおすすめ（pathAdvice.ts）が
+ * 同じ内訳を使う（重みを変えると、おすすめの理由の札も一緒に変わる）。
+ */
+export type PathReason =
+  // まちづくり
+  | 'destination' | 'toward' | 'build' | 'recovery' | 'inspect' | 'rescue' | 'monopoly' | 'ordinance' | 'fee' | 'fare' | 'binbo' | 'village_good' | 'village_bad'
+  // 釣り旅（マスの種類）とゴール
+  | 'special' | 'fishing' | 'festival' | 'shop' | 'start' | 'event_good' | 'event_random' | 'event_bad' | 'rest' | 'road' | 'goal' | 'goal_toward'
+  | 'unknown';
+
+export interface ScorePart {
+  reason: PathReason;
+  /** 道の点への寄与（負なら減点） */
+  value: number;
+  /** 理由に添える数（toward・goal_toward: 残りのマス数 / monopoly: 残りの空き地 / fee・fare: 払う額） */
+  amount?: number;
+}
+
+function sumParts(parts: ScorePart[]): number {
+  let s = 0;
+  for (const p of parts) s += p.value;
+  return s;
+}
+
+const FISHING_NODE_REASON: Record<BoardNode['type'], PathReason> = {
+  fishing_special: 'special', fishing: 'fishing', capital: 'festival', shop: 'shop', start: 'start',
+  event_good: 'event_good', event_random: 'event_random', event_bad: 'event_bad', rest: 'rest', route: 'road', goal: 'goal',
+};
+
+/** 釣り旅: 行き先のマスの点の内訳 */
+export function fishingEndpointParts(ctx: PathContext, nodeId: string): ScorePart[] {
   const node = NODE_MAP.get(nodeId);
-  if (!node) return -99;
+  if (!node) return [{ reason: 'unknown', value: -99 }];
   const hasRod = !!getEquippedItem(ctx.player.equipment, 'rod');
   const lateness = ctx.maxTurns > 0 ? ctx.turn / ctx.maxTurns : 0.4;
   let s = 0;
@@ -89,41 +126,77 @@ function scoreFishingEndpoint(ctx: PathContext, nodeId: string): number {
   const d0 = GOAL_DIST.get(ctx.player.currentNode) ?? 40;
   const d1 = GOAL_DIST.get(nodeId) ?? 40;
   const w = Math.max(0, Math.min(1, (lateness - 0.45) * 2.5)) * (ctx.player.cpuStyle === 'racer' ? 1.6 : 1);
-  s += (d0 - d1) * 1.1 * w;
-  return s;
+  return [
+    { reason: FISHING_NODE_REASON[node.type], value: s },
+    { reason: 'goal_toward', value: (d0 - d1) * 1.1 * w, amount: d1 },
+  ];
 }
 
-function scoreCityEndpoint(ctx: PathContext, nodeId: string): number {
+/** 町長として条例を出しに寄る点（視察の 2 と同じくらい。建てられる町の 4 よりは軽い） */
+const ORDINANCE_VISIT = 2;
+
+/** まちづくり: 行き先のマスの点の内訳 */
+export function cityEndpointParts(ctx: PathContext, nodeId: string): ScorePart[] {
   const city = ctx.city!;
   const node = NODE_MAP.get(nodeId);
-  if (!node) return -99;
+  if (!node) return [{ reason: 'unknown', value: -99 }];
   const style = ctx.player.cpuStyle ?? 'steady';
-  let s = 0;
+  const parts: ScorePart[] = [];
   // 目的地
   if (city.destination) {
-    if (nodeId === city.destination) s += 25;
-    const dd = distancesFrom(city.destination);
+    if (nodeId === city.destination) parts.push({ reason: 'destination', value: 25 });
+    // 線路は歩数を使わないので、線路を考えた距離で近さを測る（線路の入口に近いマスも評価される）
+    const dd = railDistancesFrom(city.rails, city.destination);
     const d0 = dd.get(ctx.player.currentNode) ?? 40;
     const d1 = dd.get(nodeId) ?? 40;
-    s += (d0 - d1) * (style === 'racer' ? 3.2 : style === 'monopoly' ? 1.4 : 2);
+    parts.push({ reason: 'toward', value: (d0 - d1) * (style === 'racer' ? 3.2 : style === 'monopoly' ? 1.4 : 2), amount: d1 });
   }
   const town = city.towns[nodeId];
   if (town) {
     const empty = town.plots.filter(p => !p).length;
     const mine = town.plots.filter(p => p && p.owner === ctx.playerIndex).length;
     const others = town.plots.filter(p => p && p.owner !== ctx.playerIndex).length;
-    if (empty > 0 && ctx.player.money >= cheapestBuildCost(nodeId, city)) s += 4;
+    if (empty > 0 && ctx.player.money >= cheapestBuildCost(nodeId, city)) parts.push({ reason: 'build', value: 4 });
+    // 復興特需の町は建設・再開発が安く、需要も高い（建てられる・育てられる建物があれば寄る）
+    if (recoveryMonthsLeft(town) > 0 && ((empty > 0 && ctx.player.money >= cheapestBuildCost(nodeId, city)) || mine > 0)) parts.push({ reason: 'recovery', value: 3 });
     // 自分の建物がある町は視察になる。空き家が迫っていれば優先して見に行く
-    if (mine > 0) s += 2 + (style === 'monopoly' ? 1.5 : 0);
-    if (town.plots.some(p => p && p.owner === ctx.playerIndex && (p.vacant || (p.lowMonths ?? 0) > 0))) s += 3;
-    if (mine > 0 && others === 0 && empty > 0 && empty <= 2) s += style === 'monopoly' ? 8 : 5; // 独占が目前
+    if (mine > 0) parts.push({ reason: 'inspect', value: 2 + (style === 'monopoly' ? 1.5 : 0) });
+    if (town.plots.some(p => p && p.owner === ctx.playerIndex && (p.vacant || (p.lowMonths ?? 0) > 0))) parts.push({ reason: 'rescue', value: 3 });
+    if (mine > 0 && others === 0 && empty > 0 && empty <= 2) parts.push({ reason: 'monopoly', value: style === 'monopoly' ? 8 : 5, amount: empty }); // 独占が目前
+    // 町長として出したい条例がある町（条例は工事の回数を使わないので、寄れば出せる。今月もう決めた町は chooseOrdinance が null）
+    if (mine > 0 && mayorOf(town) === ctx.playerIndex && chooseOrdinance(city, nodeId, ctx.playerIndex, ctx.player.money, ctx.turn)) {
+      parts.push({ reason: 'ordinance', value: ORDINANCE_VISIT });
+    }
   }
   // 他人の店の多い町は買い物代がかかる（¥200ごとに1点減点）
-  s -= visitorFees(city, nodeId, ctx.playerIndex, ctx.player.money).total / 200;
-  if (node.type === 'event_good') s += 2;
-  if (node.type === 'event_bad') s -= 2.5;
-  if (node.type === 'goal') s += ctx.goalClaims.includes(ctx.playerIndex) ? -1 : 8;
-  return s;
+  const fee = visitorFees(city, nodeId, ctx.playerIndex, ctx.player.money, ctx.turn).total;
+  parts.push({ reason: 'fee', value: -(fee / 200), amount: fee });
+  if (node.type === 'event_good') parts.push({ reason: 'village_good', value: 2 });
+  if (node.type === 'event_bad') parts.push({ reason: 'village_bad', value: -2.5 });
+  if (node.type === 'goal') parts.push({ reason: 'goal', value: ctx.goalClaims.includes(ctx.playerIndex) ? -1 : 8 });
+  return parts;
+}
+
+/** 1本の道の点の内訳（行き先のマス + 道中の運賃 + 貧乏神の押し付け）。合計が道の点（気まぐれを足す前） */
+export function pathScoreParts(ctx: PathContext, path: string[]): ScorePart[] {
+  const end = path[path.length - 1];
+  const parts = ctx.mode === 'city' && ctx.city ? cityEndpointParts(ctx, end) : fishingEndpointParts(ctx, end);
+  // 他人の線路を通ると運賃がかかる（¥200ごとに1点減点。町の利用料と同じ重み）
+  if (ctx.mode === 'city' && ctx.city?.rails) {
+    const fare = railFares(ctx.city.rails, path, ctx.playerIndex, ctx.player.money).total;
+    parts.push({ reason: 'fare', value: -(fare / 200), amount: fare });
+  }
+  // 貧乏神がとりついていたら、他の駒のいるマスを通って押し付ける
+  if (ctx.binboHolder === ctx.playerIndex && ctx.playerNodes) {
+    const others = new Set(ctx.playerNodes.filter((_, j) => j !== ctx.playerIndex));
+    if (path.slice(1).some(id => others.has(id))) parts.push({ reason: 'binbo', value: 7 });
+  }
+  return parts;
+}
+
+/** 1本の道の点（気まぐれを足す前。人へのおすすめはこの点の順） */
+export function scorePath(ctx: PathContext, path: string[]): number {
+  return sumParts(pathScoreParts(ctx, path));
 }
 
 /** 進む経路の index を返す */
@@ -131,14 +204,7 @@ export function chooseCpuPath(ctx: PathContext): number {
   let best = 0;
   let bestScore = -Infinity;
   ctx.paths.forEach((path, i) => {
-    const end = path[path.length - 1];
-    let base = ctx.mode === 'city' && ctx.city ? scoreCityEndpoint(ctx, end) : scoreFishingEndpoint(ctx, end);
-    // 貧乏神がとりついていたら、他の駒のいるマスを通って押し付ける
-    if (ctx.binboHolder === ctx.playerIndex && ctx.playerNodes) {
-      const others = new Set(ctx.playerNodes.filter((_, j) => j !== ctx.playerIndex));
-      if (path.slice(1).some(id => others.has(id))) base += 7;
-    }
-    const score = base + random() * 0.9; // 同点を散らす程度の気まぐれ
+    const score = scorePath(ctx, path) + random() * 0.9; // 同点を散らす程度の気まぐれ
     if (score > bestScore) {
       bestScore = score;
       best = i;
@@ -149,34 +215,28 @@ export function chooseCpuPath(ctx: PathContext): number {
 
 // ===== まちづくり: 工事の判断 =====
 
-/** プレイヤーの月収の見込み（月末処理の収入計算と同じ考え方。成長・災害は含めない） */
-export function playerMonthlyIncome(state: CityState, playerIndex: number): number {
-  const stats = computeAllStats(state);
-  let total = 0;
-  for (const [id, town] of Object.entries(state.towns)) {
-    const st = stats.get(id);
-    if (!st) continue;
-    const mono = monopolyOwner(town);
-    for (const p of town.plots) {
-      if (!p || p.owner !== playerIndex) continue;
-      let v = plotIncome(p, id, st, p.kind === 'power' ? poweredTownsWithBuildings(state, id) : 0);
-      if (v > 0 && mono === playerIndex) v = Math.round(v * CITY_ECONOMY.monopolyMul);
-      total += v;
-    }
-  }
-  return total;
-}
+// プレイヤーの月収の見込み（playerMonthlyIncome）は、人に見せる「見込み札」と同じ計算を使うため cityAdvice.ts に置いた。
+export { playerMonthlyIncome };
 
 export type CityAction =
   | { type: 'build'; plot: number; kind: BuildingKind }
   | { type: 'upgrade'; plot: number }
   | { type: 'acquire'; plot: number }
-  | { type: 'renovate'; plot: number };
+  | { type: 'renovate'; plot: number }
+  /** 町長として条例を出す（null は今の条例をやめる） */
+  | { type: 'enact'; ordinance: OrdinanceKind | null }
+  /** 隣の中継マスに線路を敷く */
+  | { type: 'rail'; route: string };
 
 const RESERVE: Record<CpuStyle, number> = { steady: 3000, monopoly: 1200, racer: 1800 };
 const HORIZON = 18; // 何か月で元を取れるかの見通し
+/** 復興特需の町で建てる・育てる価値の上乗せ（残り1か月あたり）。月収の見込みには成長が入らないため */
+const RECOVERY_GROWTH_BONUS = 150;
 
-/** 今いる町で行う工事を1つ選ぶ（なければ null） */
+/**
+ * 今いる町で行う工事を1つ選ぶ（なければ null）。
+ * 条例は工事の回数を使わないので、ここでは選ばない（cpuStep が町に入ったらまず chooseOrdinance で出す）。
+ */
 export function chooseCityAction(state: CityState, nodeId: string, playerIndex: number, money: number, style: CpuStyle, monthsLeft: number): CityAction | null {
   const town = state.towns[nodeId];
   const info = getTownInfo(nodeId);
@@ -185,6 +245,7 @@ export function chooseCityAction(state: CityState, nodeId: string, playerIndex: 
   const horizon = Math.max(3, Math.min(HORIZON, monthsLeft));
   const baseIncome = playerMonthlyIncome(state, playerIndex);
   const wasMono = monopolyOwner(town) === playerIndex;
+  const wasMayor = mayorOf(town) === playerIndex;
 
   const candidates: { action: CityAction; value: number }[] = [];
   const evaluate = (action: CityAction, next: CityState, cost: number) => {
@@ -194,8 +255,16 @@ export function chooseCityAction(state: CityState, nodeId: string, playerIndex: 
     let value = gain * horizon - cost * 0.55;
     const nowMono = monopolyOwner(next.towns[nodeId]) === playerIndex;
     if (nowMono && !wasMono) value += (style === 'monopoly' ? 9000 : 4500);
+    // 町長の座: なれば条例で町ごと動かせる（町税・観光振興…）。座そのものと、出せる条例の得を足す
+    if (!wasMayor && mayorOf(next.towns[nodeId]) === playerIndex) value += mayorSeatValue(next, nodeId, playerIndex, horizon, style);
+    // 復興特需の町: 安く建てられるうえ需要が高く育ちやすい（買収は割引も成長も関係ないので除く）
+    if (action.type !== 'acquire') value += recoveryMonthsLeft(town) * RECOVERY_GROWTH_BONUS;
     candidates.push({ action, value });
   };
+
+  // あと1軒で町長になれるなら、独占型でなくても買収を検討する
+  const standing = mayorStanding(town, playerIndex);
+  const nearSeat = !wasMayor && standing.mine + 1 >= standing.need;
 
   const empty = town.plots.findIndex(p => !p);
   if (empty >= 0) {
@@ -213,15 +282,43 @@ export function chooseCityAction(state: CityState, nodeId: string, playerIndex: 
     } else if (p.owner === playerIndex && isUpgradable(p.kind) && p.level < MAX_BUILDING_LEVEL) {
       const r = upgrade(state, nodeId, i, playerIndex, money);
       if (r.ok) evaluate({ type: 'upgrade', plot: i }, r.state, r.cost);
-    } else if (p.owner !== playerIndex && (style === 'monopoly' || empty < 0)) {
+    } else if (p.owner !== playerIndex && (style === 'monopoly' || empty < 0 || nearSeat)) {
       const r = acquire(state, nodeId, i, playerIndex, money);
       if (r.ok) evaluate({ type: 'acquire', plot: i }, r.state, r.cost);
     }
   });
 
+  // 鉄道: 余裕のあるときだけ、建物と同じ尺度で比べる
+  for (const rc of railCandidates(state, nodeId, playerIndex, money, style, monthsLeft)) {
+    candidates.push({ action: { type: 'rail', route: rc.route }, value: rc.value });
+  }
+
   candidates.sort((a, b) => b.value - a.value);
   const best = candidates[0];
   return best && best.value > 0 ? best.action : null;
+}
+
+/**
+ * 鉄道: 今いる町の隣の中継マスに線路を敷く候補と、その値打ち（chooseCityAction と同じ尺度）。
+ * 近所が増えて伸びる収入から維持費を引き、自分の町どうしを結ぶ得と目的地への近道の得（railPlanValue）を足す。
+ * 資産に残るのは値段の一部なので、建物より費用を重く見る。予備費に上乗せして余裕のあるときだけ。
+ */
+export function railCandidates(state: CityState, nodeId: string, playerIndex: number, money: number, style: CpuStyle, monthsLeft: number): { route: string; value: number }[] {
+  if (!state.towns[nodeId]) return [];
+  const reserve = RESERVE[style] + RAIL_CPU.extraReserve;
+  const horizon = Math.max(3, Math.min(HORIZON, monthsLeft));
+  const opts = railOptions(state, nodeId, playerIndex, money).filter(o => !o.reason && money - o.price >= reserve);
+  if (!opts.length) return [];
+  const baseIncome = playerMonthlyIncome(state, playerIndex);
+  const out: { route: string; value: number }[] = [];
+  for (const opt of opts) {
+    const r = layRail(state, nodeId, opt.routeId, playerIndex, money);
+    if (!r.ok) continue;
+    const gain = playerMonthlyIncome(r.state, playerIndex) - baseIncome - RAIL_ECONOMY.upkeep;
+    const plan = railPlanValue(state, nodeId, opt.routeId, playerIndex, style === 'racer') * Math.min(1, monthsLeft / 12);
+    out.push({ route: opt.routeId, value: gain * horizon - r.cost * RAIL_CPU.costWeight + plan });
+  }
+  return out.sort((a, b) => b.value - a.value);
 }
 
 // ===== 釣り旅: 買い物・祭り・釣り =====

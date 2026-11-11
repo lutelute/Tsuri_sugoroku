@@ -10,6 +10,8 @@ interface MapNodeProps {
   isReachable: boolean;
   isCurrentPlayer: boolean;
   steps?: number;
+  /** 分かれ道で選べないマス（少し暗くして、選べるマスを目立たせる） */
+  dimmed?: boolean;
 }
 
 // 和モダン パレット（藍×朱×金を基調に）
@@ -80,7 +82,7 @@ function darken(hex: string, a: number): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
-function MapNodeImpl({ node, isReachable, isCurrentPlayer, steps }: MapNodeProps) {
+function MapNodeImpl({ node, isReachable, isCurrentPlayer, steps, dimmed = false }: MapNodeProps) {
   const isCapital = node.type === 'capital';
   const isRoute = node.type === 'route';
   // routeはrouteThemeに応じて色を上書き
@@ -103,7 +105,7 @@ function MapNodeImpl({ node, isReachable, isCurrentPlayer, steps }: MapNodeProps
   const cy = node.y;
 
   return (
-    <g className="cursor-pointer" data-node-id={node.id}>
+    <g className={isRoute ? 'cursor-pointer node-route' : 'cursor-pointer'} data-node-id={node.id}>
       <title>
         {node.name}{dist !== undefined && dist > 0 ? ` - ゴールまで${dist}マス` : dist === 0 ? ' - ゴール' : ''}
       </title>
@@ -125,12 +127,14 @@ function MapNodeImpl({ node, isReachable, isCurrentPlayer, steps }: MapNodeProps
         </>
       )}
 
-      {/* 到達可能ハイライト（金の波紋） */}
+      {/* 到達可能ハイライト: 金の後光と輪。波紋は出たときの数回だけ（CSS の tw-reach-pulse。常時ループにしない） */}
       {isReachable && (
-        <circle cx={cx} cy={cy} r={R + 6.6} fill="rgba(241,216,147,0.16)" stroke="#f1d893" strokeWidth="1.8" className="pointer-events-none">
-          <animate attributeName="r" values={`${R + 4.8};${R + 10.2};${R + 4.8}`} dur="1.1s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="1;0.45;1" dur="1.1s" repeatCount="indefinite" />
-        </circle>
+        <>
+          <circle cx={cx} cy={cy} r={R + 8.6} fill="rgba(255,226,140,0.26)" className="pointer-events-none" />
+          <circle cx={cx} cy={cy} r={R + 5.2} fill="none" stroke="#1a130c" strokeWidth="3.6" opacity="0.5" className="pointer-events-none" />
+          <circle cx={cx} cy={cy} r={R + 5.2} fill="none" stroke="#ffe08a" strokeWidth="2.4" className="pointer-events-none" />
+          <circle cx={cx} cy={cy} r={R + 5.2} fill="none" stroke="#fff3c4" strokeWidth="2" className="pointer-events-none tw-reach-pulse" />
+        </>
       )}
 
       {/* 影 */}
@@ -205,6 +209,9 @@ function MapNodeImpl({ node, isReachable, isCurrentPlayer, steps }: MapNodeProps
           </text>
         </>
       )}
+
+      {/* 分かれ道で選べないマスは、上から藍をかぶせて沈める（グループの不透明度は使わない＝描き直しが軽い） */}
+      {dimmed && <circle cx={cx} cy={cy} r={R + 1.3} fill="rgba(8,20,36,0.5)" className="pointer-events-none" />}
 
       {/* 地名ラベルは JapanMap 側の専用レイヤーで最前面に描画する（隣接ノードの円に隠れないように） */}
     </g>

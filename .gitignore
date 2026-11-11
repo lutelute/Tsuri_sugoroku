@@ -28,3 +28,6 @@ dist-ssr
 
 # 生成物（魚図鑑プレビュー）
 design-preview.html
+
+# Playwright MCP の撮影ファイル（作業用）
+.playwright-mcp/

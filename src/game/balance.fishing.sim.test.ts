@@ -14,14 +14,17 @@
 //  - 締め切りはストアと同じ deadline.fishingLastTurn（最初のゴール + GOAL_CLOSE_ROUNDS。ただし MIN_CLOSE_TURN 巡目までは続く）。
 //    寄り道型は締め切りまでの巡数を見て急ぐ（画面上部の「締切まで N巡」を見て動く人を想定）。
 //    CPU は cpuStep.ts と同じく、締め切りの巡を最大巡数として道を選ぶ。
+//  - 仕掛け（数ねらい・ふつう・大物ねらい）: 人のボットは「ふつう」で釣る（これまでの釣りと同じ抽選・同じ乱数の使い方）。
+//    「仕掛けの比較」だけ、選べるときはいつもその仕掛けで釣る局を回して、1局の得点が「ふつう」の2割以内に収まることを確かめる。
+//    「雑魚は手早く」（道具が育つと小物のやり取りを省く）は成功率をほとんど変えない（common 99%→100%・uncommon 97%→100%）ので模擬しない。
 //  - cpu 型は本物の CPU の判断（cpuAI.ts の chooseCpuPath / cpuCatchChance / chooseShopPurchase / chooseCapitalChoice と
 //    cpuStep.ts の流れ）で動く。性格は席順に 堅実・独占・目的地（ストアの割り当てと同じ）。
 //
 // 計測結果を見たいときは BALANCE_REPORT_DIR=/path npx vitest run src/game/balance.fishing.sim.test.ts
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { writeFileSync } from 'node:fs';
-import type { Player, EquipmentType, FishRarity, EventCard, PlayerEquipment, ScoreBreakdown, CapitalChoiceEffect } from './types';
-import { selectFish, createCaughtFish, checkTairyou, getEffectiveLevel, getStrikeGreenZone } from './fishing';
+import type { Player, EquipmentType, FishRarity, FishingRig, EventCard, PlayerEquipment, ScoreBreakdown, CapitalChoiceEffect } from './types';
+import { selectFish, createCaughtFish, checkTairyou, getEffectiveLevel, getStrikeGreenZone, RIGS, RIG_ORDER, rigBlockReason } from './fishing';
 import {
   createInitialEquipment, createEquipmentItem, applyDurabilityLoss, getEquipmentLevels, getEquippedItem,
   getEquippedLevel, isBroken, calculateRepairCost, repairItem,
@@ -74,6 +77,7 @@ interface Tracker {
   recent: string[];
   speciesByRegion: Record<string, Set<string>>; // 釣った場所の地方ごとの魚種
   freeUpgrades: number;
+  rigCasts: Record<FishingRig, number>; // 仕掛けごとの投げた回数
 }
 
 function emptyRarity(): Record<FishRarity, number> {
@@ -101,6 +105,7 @@ function newTracker(policy: Policy): Tracker {
     recent: [],
     speciesByRegion: {},
     freeUpgrades: 0,
+    rigCasts: { kazu: 0, futsu: 0, oomono: 0 },
   };
 }
 
@@ -185,6 +190,8 @@ export interface GameOptions {
   cpuDeadlineAware?: boolean;
   /** 締め切りはこの巡より前には来ない（既定 MIN_CLOSE_TURN = 本番。0 は v4.3.0 までの締め切り） */
   minCloseTurn?: number;
+  /** 人（寄り道型・直行型）が使う仕掛け（既定は「ふつう」= これまでの釣り。仕掛けの比較で上書きする） */
+  rig?: FishingRig;
 }
 
 interface Game {
@@ -197,6 +204,7 @@ interface Game {
   cpuDeadlineAware: boolean;
   minCloseTurn: number;
   firstFinish: number | null;
+  rig: FishingRig;
 }
 
 /** 実際に遊べる最後の巡。既定の設定ではストアと同じ fishingLastTurn を使い、掃引で上書きしたときだけ同じ式に上書き値を入れる */
@@ -283,19 +291,25 @@ function chooseEndpoint(g: Game, i: number, paths: string[][], turn: number): st
   return best;
 }
 
-/** 1回釣る（成功/失敗にかかわらず耐久度が減る＝endFishing と同じ） */
-function fishOnce(g: Game, i: number, node: BoardNode, turn: number, boat: boolean) {
+/**
+ * 1回釣る（成功/失敗にかかわらず耐久度が減る＝endFishing と同じ）。
+ * rig は仕掛け（「ふつう」ならこれまでと同じ抽選・同じ乱数の使い方）。大物ねらいで逃がすと耐久度が倍減る。
+ */
+function fishOnce(g: Game, i: number, node: BoardNode, turn: number, boat: boolean, rig: FishingRig = 'futsu') {
   const p = g.players[i];
   const tr = g.trackers[i];
   const isSpecial = node.type === 'fishing_special';
-  const fish = selectFish(node.id, node.region, p.equipment, isSpecial, boat);
+  const R = RIGS[rig];
+  const fish = selectFish(node.id, node.region, p.equipment, isSpecial, boat, R.select);
   tr.attempts++;
+  tr.rigCasts[rig]++;
+  let wear = 1;
   if (random() < successProb(p.equipment, fish.rarity)) {
     tr.successes++;
     const all = [createCaughtFish(fish.id, node.id, turn, p.equipment)];
-    const bonus = checkTairyou(p.equipment, isSpecial);
+    const bonus = checkTairyou(p.equipment, isSpecial, R.tairyouAdd);
     for (let k = 0; k < bonus; k++) {
-      const extra = selectFish(node.id, node.region, p.equipment, isSpecial, boat);
+      const extra = selectFish(node.id, node.region, p.equipment, isSpecial, boat, R.select);
       all.push(createCaughtFish(extra.id, node.id, turn, p.equipment));
     }
     let sale = 0;
@@ -307,8 +321,11 @@ function fishOnce(g: Game, i: number, node: BoardNode, turn: number, boat: boole
     p.caughtFish = [...p.caughtFish, ...all.map(c => ({ ...c, bonusMultiplier: p.fishBonusMultiplier }))];
     p.money += sale;
     tr.income.fish += sale;
+  } else {
+    wear = R.escapeWearMul;
   }
-  p.equipment = reequip(applyDurabilityLoss(p.equipment));
+  for (let k = 0; k < wear; k++) p.equipment = applyDurabilityLoss(p.equipment);
+  p.equipment = reequip(p.equipment);
 }
 
 function doFishing(g: Game, i: number, node: BoardNode, turn: number) {
@@ -322,9 +339,12 @@ function doFishing(g: Game, i: number, node: BoardNode, turn: number) {
     tr.spend.boat += BOAT_FISHING_COST;
     tr.boatTrips++;
   }
-  for (let k = 0; k < MAX_FISHING_PER_TURN; k++) {
+  // 仕掛け: 船釣りは「ふつう」。選べない仕掛け（竿のレベル・残りの枠が足りない）も「ふつう」に戻す（ストアの startFishing と同じ）
+  for (let used = 0; used < MAX_FISHING_PER_TURN;) {
     if (!getEquippedItem(p.equipment, 'rod')) break;
-    fishOnce(g, i, node, turn, boat);
+    const rig: FishingRig = !boat && rigBlockReason(g.rig, p.equipment, MAX_FISHING_PER_TURN - used) === null ? g.rig : 'futsu';
+    fishOnce(g, i, node, turn, boat, rig);
+    used += RIGS[rig].slots;
   }
 }
 
@@ -657,6 +677,7 @@ export function simulateFishingGame(seed: number, policies: Policy[], maxTurns =
     cpuDeadlineAware: opts.cpuDeadlineAware ?? true,
     minCloseTurn: opts.minCloseTurn ?? MIN_CLOSE_TURN,
     firstFinish: null,
+    rig: opts.rig ?? 'futsu',
   };
   let rounds = maxTurns;
   for (let turn = 1; turn <= maxTurns; turn++) {
@@ -927,6 +948,120 @@ function formatClose(s: CloseSummary): string {
 }
 
 const CLOSE_SWEEP = ENV.BALANCE_CLOSE_SWEEP; // 例: '5,6,7,8,10'
+
+// ===== 仕掛け（数ねらい・ふつう・大物ねらい）の比較 =====
+
+export interface RigSummary {
+  rig: FishingRig;
+  /** 1局の得点（平均） */
+  total: number;
+  /** 釣りで決まる部分: 魚の点・めずらしさ・地域制覇・図鑑・巨大魚 ＋ 魚の売値の得点換算 */
+  fishing: number;
+  score: Record<keyof ScoreBreakdown, number>;
+  fishIncome: number;
+  attempts: number;
+  successRate: number;
+  /** その仕掛けで投げた回数（1局あたり） */
+  rigCasts: number;
+  fishedPerGame: Record<FishRarity, number>;
+  lv3Turn: number;
+  regions8: number;
+}
+
+/** 1人・寄り道型で、選べるときはいつもその仕掛けで釣る局を seeds 回まわす（種は3つの仕掛けで共通） */
+export function runRig(rig: FishingRig, seeds: number): RigSummary {
+  const rows: { tr: Tracker; score: ScoreBreakdown; player: Player }[] = [];
+  for (let sd = 1; sd <= seeds; sd++) {
+    const res = simulateFishingGame(3000 + sd, ['wander'], DEFAULT_MAX_TURNS, { rig });
+    rows.push({ tr: res.trackers[0], score: res.scores[0], player: res.players[0] });
+  }
+  const sm = summarize(RIGS[rig].name, rows);
+  const fishing = sm.score.fishPoints + sm.score.rarityBonus + sm.score.regionBonus + sm.score.encyclopediaBonus + sm.score.giantFishBonus
+    + Math.round(sm.income.fish * MONEY_TO_POINTS_RATE);
+  return {
+    rig,
+    total: sm.score.total,
+    fishing,
+    score: sm.score,
+    fishIncome: sm.income.fish,
+    attempts: sm.attemptsPerGame,
+    successRate: sm.successRate,
+    rigCasts: r2(mean(rows.map(r => r.tr.rigCasts[rig]))),
+    fishedPerGame: sm.fishedPerGame,
+    lv3Turn: sm.lv3TurnMedian,
+    regions8: sm.regionsWith[8],
+  };
+}
+
+function formatRig(s: RigSummary, base: RigSummary): string {
+  const pct = (a: number, b: number) => `${r0((a / Math.max(1, b)) * 100)}%`;
+  return `| ${RIGS[s.rig].name} | ${s.total}（${pct(s.total, base.total)}） | ${s.fishing}（${pct(s.fishing, base.fishing)}） | ${s.score.fishPoints} | ${s.score.rarityBonus} | ${s.score.regionBonus} | ¥${s.fishIncome} | ${s.attempts}回・${s.successRate}%（うち${RIGS[s.rig].name} ${s.rigCasts}回） | ${RARITIES.map(k => s.fishedPerGame[k]).join(' / ')} | ${s.lv3Turn} | ${s.regions8} |`;
+}
+
+const RIG_SWEEP = ENV.BALANCE_RIG_SWEEP; // 例: 'kazu.tairyouAdd=0.15,0.2,0.25;oomono.rareMul=2.5,3'（select の中身は rareMul / commonMul で指定）
+
+describe.skipIf(!RIG_SWEEP)('釣り旅: 仕掛けの数値の掃引（調整用）', () => {
+  it('掃引', () => {
+    const G = Number(ENV.BALANCE_RIG_GAMES ?? 100);
+    const base = runRig('futsu', G);
+    const out: string[] = ['| 設定 | 1局の得点 | 釣りで決まる部分 | 魚の点 | めずらしさ | 地域制覇 | 魚の売値 | 投げた回数・成功率 | 釣果/局 | 平均Lv3到達巡 | 8種以上の地方 |', '|---|---|---|---|---|---|---|---|---|---|---|', formatRig(base, base)];
+    for (const spec of RIG_SWEEP!.split(';')) {
+      const [path, vals] = spec.split('=');
+      const [rigId, key] = path.split('.') as [FishingRig, string];
+      const R = RIGS[rigId] as unknown as Record<string, number> & { select?: Record<string, number> };
+      const inSelect = key === 'rareMul' || key === 'commonMul';
+      const holder = inSelect ? (R.select ??= {}) : R;
+      const orig = holder[key];
+      for (const v of vals.split(',').map(Number)) {
+        holder[key] = v;
+        out.push(formatRig(runRig(rigId, G), base).replace(`| ${RIGS[rigId].name} |`, `| ${RIGS[rigId].name} ${key}=${v} |`));
+      }
+      holder[key] = orig;
+    }
+    if (REPORT_DIR) writeFileSync(`${REPORT_DIR}/fishing-rig-sweep.md`, out.join('\n'));
+  }, 600_000);
+});
+
+describe.skipIf(!!CLOSE_SWEEP)('釣り旅: 仕掛けの比較（数ねらい・ふつう・大物ねらい）', () => {
+  let rigs: Record<FishingRig, RigSummary>;
+
+  beforeAll(() => {
+    const G = Number(ENV.BALANCE_RIG_GAMES ?? 100);
+    rigs = Object.fromEntries(RIG_ORDER.map(r => [r, runRig(r, G)])) as Record<FishingRig, RigSummary>;
+    report.push(
+      `### 仕掛けの比較（1人・寄り道型・${G}局。選べるときはいつもその仕掛け。カッコ内は「ふつう」との比）`,
+      ['| 仕掛け | 1局の得点 | 釣りで決まる部分 | 魚の点 | めずらしさ | 地域制覇 | 魚の売値 | 投げた回数・成功率 | 釣果/局（common〜mythical） | 平均Lv3到達巡 | 8種以上の地方 |', '|---|---|---|---|---|---|---|---|---|---|---|',
+        ...RIG_ORDER.map(r => formatRig(rigs[r], rigs.futsu))].join('\n'),
+    );
+  }, 120_000);
+
+  it('「ふつう」の局は、すべての1投が「ふつう」（補正なしの抽選＝仕掛けを入れる前と同じ釣り）', () => {
+    expect(rigs.futsu.rigCasts).toBe(rigs.futsu.attempts);
+  });
+
+  it('数ねらい・大物ねらいだけで釣っても、1局の得点は「ふつう」の2割以内に収まる（どれか一択にならない）', () => {
+    for (const r of ['kazu', 'oomono'] as FishingRig[]) {
+      const ratio = rigs[r].total / rigs.futsu.total;
+      expect(ratio, `${RIGS[r].name}の得点の比`).toBeGreaterThanOrEqual(0.8);
+      expect(ratio, `${RIGS[r].name}の得点の比`).toBeLessThanOrEqual(1.2);
+    }
+  });
+
+  it('釣りで決まる部分（魚の点・めずらしさ・地域制覇・図鑑・巨大魚・売値）も「ふつう」の2割以内', () => {
+    for (const r of ['kazu', 'oomono'] as FishingRig[]) {
+      const ratio = rigs[r].fishing / rigs.futsu.fishing;
+      expect(ratio, `${RIGS[r].name}の釣りの得点の比`).toBeGreaterThanOrEqual(0.8);
+      expect(ratio, `${RIGS[r].name}の釣りの得点の比`).toBeLessThanOrEqual(1.2);
+    }
+  });
+
+  it('仕掛けに持ち味がある: 数ねらいは匹数と売値、大物ねらいはレア以上の匹数で「ふつう」を上回る', () => {
+    const count = (s: RigSummary) => RARITIES.reduce((a, k) => a + s.fishedPerGame[k], 0);
+    const high = (s: RigSummary) => s.fishedPerGame.rare + s.fishedPerGame.legendary + s.fishedPerGame.mythical;
+    expect(count(rigs.kazu)).toBeGreaterThan(count(rigs.futsu));
+    expect(high(rigs.oomono)).toBeGreaterThan(high(rigs.futsu));
+  });
+});
 
 describe.skipIf(!CLOSE_SWEEP)('釣り旅: 締め切り巡数の比較（調整用）', () => {
   it('掃引', () => {

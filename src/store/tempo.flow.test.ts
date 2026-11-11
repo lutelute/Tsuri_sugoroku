@@ -442,12 +442,12 @@ describe('お知らせの順番待ち（ストア）', () => {
     expect(useGameStore.getState().noticeQueue).toEqual([]);
   });
 
-  it('いま出ている瓦版と同じ見出しの続報は、本文をつないで1件のまま', () => {
+  it('いま出ている瓦版と同じ見出しの続報は、本文をつないで1件のまま（同じ文は並べずに「×2」）', () => {
     const st = useGameStore.getState();
     st.announce('CPU1：建設', '札幌に住宅を建てた');
     st.announce('CPU1：建設', '札幌に商業を建てた');
     st.announce('CPU1：建設', '札幌に商業を建てた');
-    expect(useGameStore.getState().cityToast?.body).toBe('札幌に住宅を建てた／札幌に商業を建てた');
+    expect(useGameStore.getState().cityToast?.body).toBe('札幌に住宅を建てた／札幌に商業を建てた ×2');
     expect(useGameStore.getState().noticeQueue).toEqual([]);
   });
 

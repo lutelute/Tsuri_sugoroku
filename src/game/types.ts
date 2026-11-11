@@ -215,6 +215,9 @@ export type FishingPhase = 'cast' | 'waiting' | 'strike' | 'reeling' | 'result';
 
 export type FishingMiniGame = 'reeling' | 'target' | 'reaction' | 'rhythm';
 
+/** 仕掛け: 数ねらい（浅場）・ふつう・大物ねらい（深場）。中身は fishing.ts の RIGS */
+export type FishingRig = 'kazu' | 'futsu' | 'oomono';
+
 export interface FishingState {
   phase: FishingPhase;
   miniGame: FishingMiniGame;
@@ -230,6 +233,12 @@ export interface FishingState {
   tairyouCount: number;
   /** 大漁で一緒に揚がった魚（結果画面に名前を出す） */
   tairyouFishIds?: string[];
+  /** 仕掛け（無ければ「ふつう」） */
+  rig?: FishingRig;
+  /** 雑魚は手早く: やり取りを省いて釣り上げている最中（合わせの演出の文を替える） */
+  quick?: boolean;
+  /** 釣果の売値（結果画面に出す）。mul はまちづくりの魚市場の倍率（賑わい×漁場×物価）、boom は大物で町おこしが起きたか */
+  sale?: { total: number; main: number; mul: number; boom?: boolean };
 }
 
 // ===== ゲーム全体 =====

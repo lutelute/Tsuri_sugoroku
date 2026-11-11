@@ -4,11 +4,12 @@ import { useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
-import { calendarLabel, BUILDING_INFO, getTownInfo } from '../../game/city';
+import { calendarLabel, BUILDING_INFO, getTownInfo, RECOVERY } from '../../game/city';
 import type { CityPlayerReport } from '../../game/city';
 import type { Player } from '../../game/types';
 import Button from '../shared/Button';
 import Ruby from '../shared/Ruby';
+import RecoveryIcon from './RecoveryMark';
 import Stamp from '../fx/Stamp';
 import ScreenFlash from '../fx/ScreenFlash';
 import { useCountUp } from '../fx/useCountUp';
@@ -61,6 +62,16 @@ function ReportRow({ r, player, index, top }: { r: CityPlayerReport; player: Pla
           )}
           {r.grown === 0 && r.declined === 0 && !(r.vacated ?? 0) && <span className="text-[#9a8a70]">—</span>}
         </span>
+        {/* 町長と条例の内訳（収入・維持費に含まれている） */}
+        {(r.mayorTax ?? 0) > 0 && (
+          <span className="whitespace-nowrap" title="町長として受け取った町税（収入に含む）"><Ruby>町税</Ruby> <b className="tabular-nums text-[#1f6b3a]">+¥{(r.mayorTax ?? 0).toLocaleString()}</b></span>
+        )}
+        {(r.taxPaid ?? 0) > 0 && (
+          <span className="whitespace-nowrap" title="ほかの町長に払った町税（維持費に含む）"><Ruby>町税の支払い</Ruby> <b className="tabular-nums text-[#a92e1d]">−¥{(r.taxPaid ?? 0).toLocaleString()}</b></span>
+        )}
+        {(r.ordinanceCost ?? 0) > 0 && (
+          <span className="whitespace-nowrap" title="町長として払った条例の負担（維持費に含む）"><Ruby>条例の負担</Ruby> <b className="tabular-nums text-[#a92e1d]">−¥{(r.ordinanceCost ?? 0).toLocaleString()}</b></span>
+        )}
       </div>
     </div>
   );
@@ -147,6 +158,31 @@ export default function CityReportOverlay() {
           </div>
           </div>
         ))}
+
+        {/* 見舞金（全壊した建物の持ち主へ。保険で戻った建物は対象外） */}
+        {report.players.some(r => (r.aid ?? 0) > 0) && (
+          <div
+            className="fx-rise mb-2 rounded-lg bg-[#1f6b3a]/10 border border-[#1f6b3a]/30 p-2"
+            style={{ '--d': `${afterRows + report.disasters.length * 120 + 60}ms` } as CSSProperties}
+          >
+            <p className="flex items-center gap-1.5 text-sm font-bold text-[#1f6b3a] font-mincho">
+              <RecoveryIcon size={16} />
+              <Ruby>見舞金</Ruby>
+              <span className="text-[10px] font-normal text-[#6b5a44]"><Ruby>全壊した建物の建設費の</Ruby>{Math.round(RECOVERY.aidRate * 100)}%</span>
+            </p>
+            <ul className="text-[11px] text-[#4a3a28]">
+              {report.players.map((r, i) =>
+                (r.aid ?? 0) > 0 ? (
+                  <li key={i} className="flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: players[i]?.color }} />
+                    <span className="truncate">{players[i]?.name}</span>
+                    <span className="ml-auto tabular-nums font-bold text-[#1f6b3a]">+¥{(r.aid ?? 0).toLocaleString()}</span>
+                  </li>
+                ) : null,
+              )}
+            </ul>
+          </div>
+        )}
 
         {report.headlines.length > 0 && (
           <ul className="mb-3 text-xs text-[#4a3a28] space-y-0.5">

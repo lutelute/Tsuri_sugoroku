@@ -1,7 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../store/useGameStore';
-import { getBiteDelay, createCaughtFish, getEffectiveLevel, checkTairyou, selectFish, getStrikeGreenZone } from '../game/fishing';
+import { useSettingsStore } from '../store/useSettingsStore';
+import {
+  getBiteDelay, createCaughtFish, getEffectiveLevel, checkTairyou, selectFish, getStrikeGreenZone,
+  RIGS, mergeSelectOpts, canQuickCatch, QUICK_CATCH_PERFECT_SIZE,
+} from '../game/fishing';
+import { fisheryOf } from '../game/fishMarket';
 import { NODE_MAP } from '../data/boardNodes';
 import { NO_LURE_BITE_DELAY_MULTIPLIER } from '../game/constants';
 import { getEquippedItem } from '../game/equipment';
@@ -9,7 +14,7 @@ import { judgeStrike, drawMiniGame } from '../components/fishing/strike';
 import type { StrikeJudge } from '../components/fishing/strike';
 import type { FailReason } from '../components/fishing/miniGameMeta';
 import { buzz, HAPTIC } from '../components/fishing/haptics';
-import { playHook, playMiss } from '../utils/sound';
+import { playHook, playMiss, playCatch } from '../utils/sound';
 
 // ミニゲーム共通の難易度・手触りの数値は src/components/fishing/ 配下に集約:
 //   - やり取り（リーリング）のレア度別の手応え: reelSim.ts の RARITY_DIFFICULTY
@@ -20,6 +25,8 @@ import { playHook, playMiss } from '../utils/sound';
 const CAST_MS = 1500;
 /** 合わせ成功の演出を見せる時間（ms） */
 const STRIKE_SUCCESS_MS = 1000;
+/** 雑魚は手早く: 合わせに成功してから釣果が出るまでの短い演出（ms） */
+export const QUICK_CATCH_MS = 1200;
 /** 合わせ失敗の理由（早すぎ/遅すぎ/見逃し）を読ませる時間（ms） */
 const STRIKE_FAIL_MS = 1600;
 /** 当たり前に押した（早合わせ）ときに当たりが遅れる時間（ms） */
@@ -31,16 +38,16 @@ const EARLY_TAP_MAX_PENALTIES = 3;
 export type StrikeOutcome = StrikeJudge | 'missed';
 
 export function useFishing() {
-  const { fishingState, player, turn, updateFishingState, catchFish, failFishing } = useGameStore(
+  const { fishingState, player, updateFishingState, catchFish, failFishing } = useGameStore(
     useShallow(s => ({
       fishingState: s.fishingState,
       player: s.players[s.currentPlayerIndex],
-      turn: s.turn,
       updateFishingState: s.updateFishingState,
       catchFish: s.catchFish,
       failFishing: s.failFishing,
     })),
   );
+  const quickCatch = useSettingsStore(s => s.quickCatch);
 
   const [strikeOutcome, setStrikeOutcome] = useState<StrikeOutcome | null>(null);
   const [failReason, setFailReason] = useState<FailReason | null>(null);
@@ -79,10 +86,12 @@ export function useFishing() {
 
   // waiting フェーズ: バイト待ち
   const phase = fishingState?.phase;
+  const rig = fishingState?.rig ?? 'futsu';
   useEffect(() => {
     if (phase !== 'waiting') return;
 
-    let delay = getBiteDelay(player.equipment);
+    // 仕掛けでアタリ待ちが変わる（数ねらいは早く、大物ねらいは遅い）
+    let delay = getBiteDelay(player.equipment) * RIGS[rig].biteMul;
     // ルアーなしペナルティ: バイト待ちが大幅に遅くなる
     if (!getEquippedItem(player.equipment, 'lure')) {
       delay *= NO_LURE_BITE_DELAY_MULTIPLIER;
@@ -94,7 +103,7 @@ export function useFishing() {
       if (biteTimerRef.current !== null) clearTimeout(biteTimerRef.current);
       biteTimerRef.current = null;
     };
-  }, [phase, player.equipment, scheduleBite]);
+  }, [phase, rig, player.equipment, scheduleBite]);
 
   /**
    * 当たり前に押した（早合わせ）。魚が警戒して当たりが少し遅れる。
@@ -109,6 +118,34 @@ export function useFishing() {
     return true;
   }, [fishingState, scheduleBite]);
 
+  // 釣り上げる（釣果＋大漁判定）。遅れて呼ばれても古い値を掴まないよう、ストアの今の値を読む。
+  // sizeBonus は「手早く」で会心の合わせだったときの大きさの上乗せ
+  const land = useCallback((sizeBonus = 0) => {
+    const st = useGameStore.getState();
+    const fs = st.fishingState;
+    const me = st.players[st.currentPlayerIndex];
+    if (!fs || !fs.targetFish || !me) return;
+    const made = createCaughtFish(fs.targetFish.id, me.currentNode, st.turn, me.equipment);
+    const caught = sizeBonus > 0 ? { ...made, size: made.size + sizeBonus } : made;
+
+    const node = NODE_MAP.get(me.currentNode);
+    const isSpecial = node?.type === 'fishing_special';
+    // 大漁: 仕掛け（数ねらいは確率が上がる）と、まちづくりの漁場の状態は、一緒に揚がる魚にも効く
+    const rigInfo = RIGS[fs.rig ?? 'futsu'];
+    const bonusCount = checkTairyou(me.equipment, isSpecial, rigInfo.tairyouAdd);
+    const bonusFish: typeof caught[] = [];
+    if (bonusCount > 0 && node) {
+      const opts = mergeSelectOpts(rigInfo.select, st.city ? fisheryOf(st.city, node.id).select : undefined);
+      for (let i = 0; i < bonusCount; i++) {
+        const extraFish = selectFish(node.id, node.region, me.equipment, isSpecial, fs.boatFishing, opts);
+        bonusFish.push({ ...createCaughtFish(extraFish.id, me.currentNode, st.turn, me.equipment), via: 'tairyou' });
+      }
+    }
+
+    updateFishingState({ caughtSize: caught.size, reelingProgress: 100 });
+    catchFish(caught, bonusFish);
+  }, [updateFishingState, catchFish]);
+
   // ストライク（合わせ）: t = 当たりからの正規化時間（0.5 が金の帯の中心）
   const handleStrike = useCallback((t: number) => {
     if (!fishingState || fishingState.phase !== 'waiting' || !fishingState.hasBite) return;
@@ -121,7 +158,17 @@ export function useFishing() {
     if (judge === 'perfect' || judge === 'good') {
       buzz(judge === 'perfect' ? HAPTIC.perfect : HAPTIC.hook);
       playHook(judge === 'perfect');
-      const game = drawMiniGame(fishingState.targetFish?.rarity ?? 'common');
+      const rarity = fishingState.targetFish?.rarity ?? 'common';
+      if (quickCatch && canQuickCatch(rarity, player.equipment)) {
+        // 雑魚は手早く: 道具が育っていれば、小物はやり取りを省いて釣り上げる
+        updateFishingState({ phase: 'strike', strikeSuccess: true, quick: true });
+        later(() => {
+          playCatch();
+          land(judge === 'perfect' ? QUICK_CATCH_PERFECT_SIZE : 0);
+        }, QUICK_CATCH_MS);
+        return;
+      }
+      const game = drawMiniGame(rarity);
       updateFishingState({ phase: 'strike', strikeSuccess: true });
       later(() => updateFishingState({ phase: 'reeling', miniGame: game }), STRIKE_SUCCESS_MS);
     } else {
@@ -131,7 +178,7 @@ export function useFishing() {
       updateFishingState({ phase: 'strike', strikeSuccess: false });
       later(() => failFishing(), STRIKE_FAIL_MS);
     }
-  }, [fishingState, player.equipment, updateFishingState, failFishing, later]);
+  }, [fishingState, player.equipment, quickCatch, land, updateFishingState, failFishing, later]);
 
   // 当たりを見逃した（輪が消えるまで押さなかった）
   const handleMiss = useCallback(() => {
@@ -145,24 +192,7 @@ export function useFishing() {
   }, [fishingState, updateFishingState, failFishing, later]);
 
   // ミニゲーム共通: 成功（釣果＋大漁判定）
-  const handleMiniGameSuccess = useCallback(() => {
-    if (!fishingState || !fishingState.targetFish) return;
-    const caught = createCaughtFish(fishingState.targetFish.id, player.currentNode, turn, player.equipment);
-
-    const node = NODE_MAP.get(player.currentNode);
-    const isSpecial = node?.type === 'fishing_special';
-    const bonusCount = checkTairyou(player.equipment, isSpecial);
-    const bonusFish: typeof caught[] = [];
-    if (bonusCount > 0 && node) {
-      for (let i = 0; i < bonusCount; i++) {
-        const extraFish = selectFish(node.id, node.region, player.equipment, isSpecial, fishingState.boatFishing);
-        bonusFish.push({ ...createCaughtFish(extraFish.id, player.currentNode, turn, player.equipment), via: 'tairyou' });
-      }
-    }
-
-    updateFishingState({ caughtSize: caught.size, reelingProgress: 100 });
-    catchFish(caught, bonusFish);
-  }, [fishingState, player.equipment, player.currentNode, turn, updateFishingState, catchFish]);
+  const handleMiniGameSuccess = useCallback(() => land(), [land]);
 
   // ミニゲーム共通: 失敗（理由は結果画面のヒントに使う）
   const handleMiniGameFail = useCallback((reason: FailReason = 'short') => {

@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { GEO_PREFECTURES, GEO_COAST, GEO_PREF_BORDERS, GEO_REGION_BORDERS } from '../../data/japanGeo';
 import type { GeoRegion } from '../../data/japanGeo';
 import { REGION_LAND, REGION_ACCENT, REGION_NAME, REGION_LABEL_POS, SEA_LABELS, projectLatLon } from './mapTheme';
+import SeaDecor from './SeaDecor';
 
 // 山のグリフ配置 [緯度, 経度, 大きさ, 冠雪]
 const MOUNTAINS: [number, number, number, boolean][] = [
@@ -100,6 +101,8 @@ function MapTerrainImpl() {
       {/* 海 */}
       <rect x={-2400} y={-2400} width={6200} height={6400} fill="url(#sea-grad)" />
       <rect x={-2400} y={-2400} width={6200} height={6400} fill="url(#sea-wave)" />
+      {/* 海の飾り（帆かけ舟・波頭。止まった絵） */}
+      <SeaDecor />
 
       {/* 大陸棚（沿岸の浅瀬の明るみ） */}
       <path d={GEO_COAST} fill="none" stroke="rgba(120,190,230,0.10)" strokeWidth="22" strokeLinejoin="round" strokeLinecap="round" />

@@ -17,52 +17,72 @@ import Stamp from '../fx/Stamp';
 import Confetti from '../fx/Confetti';
 import ScreenFlash from '../fx/ScreenFlash';
 import MoneyTicker from '../fx/MoneyTicker';
-import type { CapitalChoice, CapitalChoiceEffect, CapitalResult } from '../../game/types';
+import type { CapitalChoice, CapitalResult } from '../../game/types';
+import { priceScale } from '../../game/city';
+import { choiceText } from './choiceText';
+import FestivalArt, { ChoiceArt } from './FestivalArt';
+import { festivalArtFor } from './festivalArtPick';
+import type { FestivalKind } from './festivalArtPick';
+import { GearTile } from '../shop/GearArt';
 
-function effectIcon(effect: CapitalChoiceEffect) {
-  switch (effect.kind) {
-    case 'feast': return <Icon name="creel" size={20} className="text-kin-300" />;
-    case 'specialty_shop': return <Icon name="cart" size={20} className="text-ai-300" />;
-    case 'special_fishing': return <Icon name="fish" size={20} className="text-shu-300" />;
-    case 'lore_event': return <Icon name="info" size={20} className="text-emerald-300" />;
-    case 'money': return <Icon name="coin" size={20} className="text-kin-300" />;
-    case 'extra_turn': return <Icon name="dice" size={20} className="text-ai-300" />;
+/** 選択肢の札に添える絵（宴のお膳・名物の魚・特産の道具・巻物 など） */
+function ChoicePicture({ choice }: { choice: CapitalChoice }) {
+  const eff = choice.effect;
+  if (eff.kind === 'specialty_shop') return <GearTile type={eff.equipmentType} level={eff.level} size={52} />;
+  if (eff.kind === 'special_fishing') {
+    const fish = FISH_DATABASE.find(f => f.id === eff.fishId);
+    if (fish) {
+      return (
+        <span className="fd-gear is-lv3" style={{ width: 52, height: 52 }}>
+          <FishIllustration fishId={fish.id} width={46} height={31} />
+        </span>
+      );
+    }
   }
+  return <ChoiceArt kind={eff.kind} size={52} />;
 }
 
-function ChoiceCard({ choice, money, onPick }: { choice: CapitalChoice; money: number; onPick: () => void }) {
+/** 祭りの飾り絵（札の上いっぱい。下は藍に溶かして見出しを重ねる） */
+function FestivalBanner({ kind }: { kind: FestivalKind }) {
+  return (
+    <div className="fd-festival" aria-hidden="true">
+      <FestivalArt kind={kind} />
+    </div>
+  );
+}
+
+function ChoiceCard({ choice, money, onPick, scale = 1 }: { choice: CapitalChoice; money: number; onPick: () => void; scale?: number }) {
   const eff = choice.effect;
+  const scaled = eff.kind === 'feast' && scale > 1 && !!eff.moneyBonus;
   let disabledReason: string | null = null;
   if (eff.kind === 'specialty_shop' && money < eff.price) disabledReason = `所持金が足りない (¥${eff.price.toLocaleString()})`;
-
-  const fish = eff.kind === 'special_fishing' ? FISH_DATABASE.find(f => f.id === eff.fishId) : null;
 
   return (
     <button
       onClick={onPick}
       disabled={!!disabledReason}
-      className={`w-full text-left rounded-xl border p-3 transition group flex items-start gap-3
+      className={`w-full text-left rounded-xl border p-2.5 transition group flex items-center gap-3 min-h-[64px]
         ${disabledReason
           ? 'border-washi/10 bg-ai-900/30 opacity-60 cursor-not-allowed'
           : 'border-kin-500/30 bg-ai-800/60 hover:bg-ai-700/70 hover:border-kin-400/60 cursor-pointer'}`}
     >
-      <div className="shrink-0 mt-0.5">{effectIcon(eff)}</div>
+      <ChoicePicture choice={choice} />
       <div className="flex-1 min-w-0">
-        <div className="font-mincho font-bold text-sm text-washi">
+        <div className="font-mincho font-bold text-sm text-washi flex items-center gap-1.5 flex-wrap">
           <Ruby>{choice.label}</Ruby>
+          {scaled && (
+            <span className="text-[10px] font-sans px-1.5 py-0.5 rounded-full border border-kin-400/50 bg-kin-500/15 text-kin-200" title="まちづくりでは年度が進むと賞金が上がる">
+              <Ruby>物価</Ruby> ×{scale}
+            </span>
+          )}
         </div>
         <div className="text-xs text-washi/65 mt-1 leading-snug">
-          <Ruby>{choice.description}</Ruby>
+          <Ruby>{choiceText(choice, scale)}</Ruby>
         </div>
         {disabledReason && (
           <div className="text-xs text-shu-300/80 mt-1.5"><Ruby>{disabledReason}</Ruby></div>
         )}
       </div>
-      {fish && (
-        <div className="shrink-0">
-          <FishIllustration fishId={fish.id} width={56} height={36} />
-        </div>
-      )}
     </button>
   );
 }
@@ -102,7 +122,7 @@ function Lanterns() {
   );
 }
 
-function ResultView({ result, onOk, moneyFrom, money }: { result: CapitalResult; onOk: () => void; moneyFrom: number; money: number }) {
+function ResultView({ result, onOk, moneyFrom, money, art }: { result: CapitalResult; onOk: () => void; moneyFrom: number; money: number; art: FestivalKind | null }) {
   const fish = result.fishId ? FISH_DATABASE.find(f => f.id === result.fishId) : null;
   useEffect(() => {
     if (result.success) playGood();
@@ -112,10 +132,11 @@ function ResultView({ result, onOk, moneyFrom, money }: { result: CapitalResult;
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       {result.success && <Confetti variant="festive" mode="burst" count={46} seed={result.choiceLabel.length + 3} originY="38%" />}
       <ScreenFlash color={result.success ? '#fff1c4' : '#7fa9cd'} opacity={0.3} />
-      <div className={`w-[92%] max-w-md ${result.success ? '' : 'fx-shake'}`}>
+      <div className={`w-[92%] max-w-md md:max-w-xl ${result.success ? '' : 'fx-shake'}`}>
       <div className={`panel-ai animate-bounce-in relative rounded-2xl shadow-2xl p-6 border-2 ${result.success ? 'border-kin-500/50' : 'border-shu-500/50'}`}>
         {result.success && <div className="fx-rays" style={{ zIndex: -1 }} />}
-        <div className="relative text-center mb-4">
+        {art && <div className="-mx-6 -mt-6 mb-1 rounded-t-[0.9rem] overflow-hidden"><FestivalBanner kind={art} /></div>}
+        <div className={`relative text-center mb-4 ${art ? '-mt-10' : ''}`}>
           <div className="flex justify-center mb-2">
             <Stamp tone={result.success ? 'shu' : 'sumi'} size={58} delay={180} tilt={-10}>{result.success ? '成功' : '無念'}</Stamp>
           </div>
@@ -166,6 +187,8 @@ export default function CapitalEventOverlay() {
   const lastCapitalResult = useGameStore(s => s.lastCapitalResult);
   const acknowledgeCapitalResult = useGameStore(s => s.acknowledgeCapitalResult);
   const isCity = useGameStore(s => s.settings.mode === 'city');
+  // まちづくりは年度が進むと宴の賞金が上がる（物価）
+  const scale = useGameStore(s => (s.settings.mode === 'city' ? priceScale(s.turn) : 1));
 
   const player = players[currentPlayerIndex];
   const node = NODE_MAP.get(player?.currentNode || '');
@@ -179,26 +202,29 @@ export default function CapitalEventOverlay() {
 
   // 結果表示モード
   if (lastCapitalResult) {
-    return <ResultView result={lastCapitalResult} onOk={acknowledgeCapitalResult} moneyFrom={moneyAtOpen} money={player?.money ?? 0} />;
+    return <ResultView result={lastCapitalResult} onOk={acknowledgeCapitalResult} moneyFrom={moneyAtOpen} money={player?.money ?? 0} art={event ? festivalArtFor(event.id) : null} />;
   }
 
   if (!event) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="panel-ai fx-rise relative rounded-2xl border-kin-500/50 shadow-2xl p-6 pt-12 w-[92%] max-w-md max-h-[88vh] overflow-y-auto">
+      <div className="panel-ai fx-rise relative rounded-2xl border-kin-500/50 shadow-2xl p-6 pt-0 w-[92%] max-w-md md:max-w-xl max-h-[88vh] overflow-y-auto">
+        {/* 祭りの飾り絵の上に提灯を渡し、見出しを絵の裾に重ねる */}
+        <div className="-mx-6 pt-8 bg-[#081626]"><FestivalBanner kind={festivalArtFor(event.id)} /></div>
         <Lanterns />
         {/* ヘッダ */}
-        <div className="text-center mb-4">
-          <div className="text-[10px] tracking-[0.4em] text-kin-300/80 font-mincho mb-1"><Ruby>県メインイベント</Ruby></div>
+        <div className="relative text-center mb-4 -mt-5">
+          <div className="text-[10px] tracking-[0.4em] text-kin-300/90 font-mincho mb-1 [text-shadow:0_1px_3px_#0a1a2c]"><Ruby>県メインイベント</Ruby></div>
           <div className="flex items-center justify-center gap-2">
             <Stamp tone="shu" size={40} delay={350} tilt={-10}>{node?.id === 'tokyo' || node?.id === 'kyoto' ? '都' : '祭'}</Stamp>
             <h2 className="font-brush text-3xl text-kin-300 kinpaku">
               <Ruby>{event.title}</Ruby>
             </h2>
           </div>
-          <div className="text-xs text-washi/55 mt-2 mb-3">
-            📍 <Ruby>{node?.name ?? ''}</Ruby>
+          <div className="text-xs text-washi/60 mt-2 mb-3 flex items-center justify-center gap-1">
+            <svg viewBox="0 0 12 14" width="10" height="12" aria-hidden="true"><path d="M6 0.8 C3 0.8 1 3 1 5.6 C1 8.8 6 13.2 6 13.2 C6 13.2 11 8.8 11 5.6 C11 3 9 0.8 6 0.8Z" fill="#e34a33" stroke="#f4ecd8" strokeWidth="0.8" /><circle cx="6" cy="5.4" r="1.7" fill="#f4ecd8" /></svg>
+            <Ruby>{node?.name ?? ''}</Ruby>
           </div>
           <p className="text-sm text-washi/75 font-mincho leading-relaxed ink-underline inline-block">
             <Ruby>{event.flavor}</Ruby>
@@ -219,6 +245,7 @@ export default function CapitalEventOverlay() {
                 choice={c}
                 money={player?.money ?? 0}
                 onPick={() => applyCapitalChoice(c.id)}
+                scale={scale}
               />
             </div>
           ))}

@@ -10,7 +10,7 @@
 //
 // 状態は CityState に `binbo?: BinboState` として足す想定。ここでは引数で受け取り、新しい値を返すだけ。
 import type { BuildingKind, CityState, Plot } from './city';
-import { BUILDING_INFO, distancesFrom, getTownInfo, plotValue } from './city';
+import { BUILDING_INFO, distancesFrom, getTownInfo, plotValue, priceScale } from './city';
 import { weightedRandom } from '../utils/random';
 
 // ===== 型 =====
@@ -69,11 +69,11 @@ export const BINBO = {
   weights: { waste: 40, sell: 25, give: 20, none: 15 } as Record<BinboMischiefKind, number>,
   /** 無駄遣い: 所持金のこの割合（¥100 単位に切り捨て、最低 ¥100） */
   wasteRate: 0.1,
-  /** 無駄遣いの上限 */
+  /** 無駄遣いの上限（1年目の額。物価 priceScale を掛ける: 3年目は ¥12,000） */
   wasteCap: 3000,
   /** 建物を売るときの値段（資産価値に対する率） */
   sellPriceRate: 0.5,
-  /** 他の人に渡す額 */
+  /** 他の人に渡す額（1年目の額。物価 priceScale を掛ける: 3年目は ¥4,000） */
   giveAmount: 1000,
 };
 
@@ -198,11 +198,14 @@ export function tickMonth(binbo: BinboState | undefined): BinboState {
 
 const yen = (v: number) => `¥${v.toLocaleString()}`;
 
-/** 無駄遣いする額: 所持金 × 率を ¥100 単位に切り捨て（最低 ¥100）、上限つき。所持金を超えない */
-export function binboWasteAmount(money: number, multiplier = 1): number {
+/**
+ * 無駄遣いする額: 所持金 × 率を ¥100 単位に切り捨て（最低 ¥100）、上限つき。所持金を超えない。
+ * scale は物価（priceScale）。上限にだけ掛ける（率は所持金に比例するので、そのままで年ごとに重くなる）。
+ */
+export function binboWasteAmount(money: number, multiplier = 1, scale = 1): number {
   if (money <= 0) return 0;
   const byRate = Math.max(100, Math.floor((money * BINBO.wasteRate * multiplier) / 100) * 100);
-  return Math.min(money, byRate, BINBO.wasteCap * multiplier);
+  return Math.min(money, byRate, BINBO.wasteCap * multiplier * scale);
 }
 
 /**
@@ -253,6 +256,7 @@ function poorestOther(moneys: number[], playerIndex: number): number | null {
  *  - 渡す相手がいない（1人） → 何もしない
  * 大貧乏神なら被害2倍（無駄遣いの率と上限・売る軒数・渡す額が2倍）。
  * names を渡すと、お金を渡された人の名前をメッセージに入れる。
+ * turn を渡すと、無駄遣いの上限と渡す額に物価（priceScale）が掛かる（省くと1年目の額）。
  */
 export function binboMischief(
   binbo: BinboState | undefined,
@@ -260,9 +264,11 @@ export function binboMischief(
   playerIndex: number,
   moneys: number[],
   names?: string[],
+  turn = 1,
 ): BinboMischiefResult {
   const great = isGreat(binbo);
   const mul = great ? BINBO.greatMultiplier : 1;
+  const scale = priceScale(turn);
   const who = great ? '大貧乏神' : '貧乏神';
   const moneyDeltas = moneys.map(() => 0);
   const rolled = weightedRandom(KIND_ORDER, KIND_ORDER.map(k => BINBO.weights[k]));
@@ -273,7 +279,7 @@ export function binboMischief(
   if (playerIndex < 0 || playerIndex >= moneys.length) return nothing(`${who}は今月、何もしなかった`);
 
   const doWaste = (prefix: string): BinboMischiefResult => {
-    const amount = binboWasteAmount(money, mul);
+    const amount = binboWasteAmount(money, mul, scale);
     if (amount <= 0) return nothing(`${prefix}財布が空っぽで、${who}もがっかり。今月は何もできなかった`);
     moneyDeltas[playerIndex] = -amount;
     const flavor = WASTE_FLAVORS[Math.floor(amount / 100) % WASTE_FLAVORS.length];
@@ -303,7 +309,7 @@ export function binboMischief(
   if (rolled === 'give') {
     const to = poorestOther(moneys, playerIndex);
     if (to === null) return nothing(`${who}は今月、何もしなかった`);
-    const amount = Math.min(money, BINBO.giveAmount * mul);
+    const amount = Math.min(money, BINBO.giveAmount * mul * scale);
     if (amount <= 0) return nothing(`財布が空っぽで、${who}もがっかり。今月は何もできなかった`);
     moneyDeltas[playerIndex] = -amount;
     moneyDeltas[to] += amount;

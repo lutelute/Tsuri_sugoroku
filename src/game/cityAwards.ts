@@ -1,7 +1,7 @@
 // まちづくり: 年度末（3月）の大決算と称号。純粋関数。
 // 称号は桃鉄の決算のように、その場の賞金（公害大王は罰金）で盛り上げる。
 import type { CityState } from './city';
-import { cityScore, computeAllStats, computePowered, distancesFrom, POWER_RANGE, monopolyOwner, calendarLabel } from './city';
+import { cityScore, computeAllStats, computePowered, distancesFrom, POWER_RANGE, monopolyOwner, calendarLabel, priceScale } from './city';
 import { regionalMonopolies, specialtyTitle } from './citySpecialties';
 import type { Region } from './types';
 
@@ -24,6 +24,8 @@ export interface YearEndResult {
   year: number;
   ranking: YearEndRank[];
   titles: CityTitle[];
+  /** 対局の最後の月の決算（最終決算）。閉じると結果発表へ進む */
+  final?: boolean;
 }
 
 // 長者（総資産1位）は名誉だけ。首位に賞金を足すと逃げ切りやすくなるため（難易度調整係の計測: 称号の賞金が序盤収入の6.5%）。
@@ -107,10 +109,12 @@ export function computeYearEnd(state: CityState, moneys: number[], turn: number,
     kogai = topOf(ind);
   }
 
+  // 賞金・罰金は物価に合わせて年ごとに上がる（TITLE_DEF は1年目の額）
+  const scale = priceScale(turn);
   const titles: CityTitle[] = [];
   const add = (id: CityTitle['id'], who: number | null, reason: string) => {
     if (who === null) return;
-    titles.push({ id, name: TITLE_DEF[id].name, playerIndex: who, reason, prize: TITLE_DEF[id].prize });
+    titles.push({ id, name: TITLE_DEF[id].name, playerIndex: who, reason, prize: TITLE_DEF[id].prize * scale });
   };
   add('choja', ranking[0] && ranking[0].assets > 0 ? ranking[0].playerIndex : null, `総資産 ¥${(ranking[0]?.assets ?? 0).toLocaleString()}`);
   const pop = scores.map(s => s.population);
@@ -123,7 +127,7 @@ export function computeYearEnd(state: CityState, moneys: number[], turn: number,
   // 地方の名産をすべて持つ「○○の顔役」（地方ごとに1つ）
   for (const [region, who] of Object.entries(regionalMonopolies(state.specialties)) as [Region, number][]) {
     if (who === undefined || who >= n) continue;
-    titles.push({ id: 'kaoyaku', name: specialtyTitle(region), playerIndex: who, reason: '地方の名産をすべて所有', prize: TITLE_DEF.kaoyaku.prize });
+    titles.push({ id: 'kaoyaku', name: specialtyTitle(region), playerIndex: who, reason: '地方の名産をすべて所有', prize: TITLE_DEF.kaoyaku.prize * scale });
   }
 
   return { year, ranking, titles };

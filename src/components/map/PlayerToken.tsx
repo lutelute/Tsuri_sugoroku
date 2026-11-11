@@ -91,12 +91,16 @@ function PlayerTokenImpl({ player, index, isCurrent, move, stackIndex, stackSize
       <g key={moving ? shownNode : 'rest'} className={moving ? 'token-hop' : undefined}>
       {/* 取り憑いた貧乏神は自分のピンの真上に乗せる（隣の駒と見分けがつくよう中心を揃える） */}
       {/* 外の g は地図の LOD で拡大（引いた表示でも見える）、内の g はとりついた瞬間の落下 */}
+      {/* 県名の字や地形に埋もれないよう、人形は大きめにして紫の影（大貧乏神は金の縁）を背負わせる */}
       {binbo && (() => {
-        const h = binbo === 'great' ? 26 : 22;
+        const great = binbo === 'great';
+        const h = great ? 34 : 30;
         return (
           <g className="token-binbo">
             <g className={binboEntering ? 'fx-binbo-in' : undefined} onAnimationEnd={() => setBinboEntering(false)}>
-              <BinboFigure size={h} great={binbo === 'great'} x={-(h * 5) / 12} y={-12.5 - h} />
+              <ellipse cx={0} cy={-12.5 - h * 0.47} rx={h * 0.56} ry={h * 0.6} fill={great ? '#2a1140' : '#3b1d5e'} opacity={0.34} />
+              <ellipse cx={0} cy={-12.5 - h * 0.47} rx={h * 0.47} ry={h * 0.53} fill={great ? '#2a1140' : '#44236b'} opacity={0.86} stroke={great ? '#e6c266' : '#c9a3ef'} strokeWidth={great ? 1.3 : 1} />
+              <BinboFigure size={h} great={great} x={-(h * 5) / 12} y={-12.5 - h} />
             </g>
           </g>
         );

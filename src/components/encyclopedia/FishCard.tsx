@@ -10,6 +10,9 @@ const RARITY_COLORS: Record<string, string> = {
   mythical: 'border-shu-500/40 bg-shu-500/15',
 };
 
+// まだの魚の影絵の大きさ（魚の大きさの区分ごと）
+const SHADOW_SCALE: Record<string, number> = { small: 0.66, medium: 0.82, large: 0.94, huge: 1 };
+
 interface FishCardProps {
   fish: Fish;
   caught: boolean;
@@ -17,14 +20,16 @@ interface FishCardProps {
   onClick: () => void;
 }
 
+/** 図鑑の1枚。釣った魚は色つきの絵と名前（2行まで）、まだの魚は障子に映る本物の形の影絵。 */
 export default function FishCard({ fish, caught, isNew, onClick }: FishCardProps) {
+  // 影絵は魚の大きさの区分で大きさを変える（小魚は小さく、大物は札いっぱい）
+  const k = caught ? 1 : SHADOW_SCALE[fish.appearance?.size ?? 'medium'] ?? 0.82;
   return (
     <button
       onClick={onClick}
-      className={`relative rounded-lg p-2 border text-center transition-all cursor-pointer hover:scale-105 ${
-        caught
-          ? RARITY_COLORS[fish.rarity]
-          : 'border-washi/5 bg-ai-900/40'
+      data-fish-card={caught ? 'caught' : 'shadow'}
+      className={`fd-fishcard relative rounded-lg px-1.5 pt-2 pb-1.5 border text-center cursor-pointer ${
+        caught ? RARITY_COLORS[fish.rarity] : 'is-shadow'
       }`}
     >
       {caught && isNew && (
@@ -32,14 +37,10 @@ export default function FishCard({ fish, caught, isNew, onClick }: FishCardProps
           NEW
         </span>
       )}
-      <div className="mb-1 flex justify-center">
-        {caught ? (
-          <FishIllustration fishId={fish.id} width={48} height={32} />
-        ) : (
-          <FishIllustration fishId={fish.id} width={48} height={32} silhouette />
-        )}
+      <div className="fd-fishcard-stage">
+        <FishIllustration fishId={fish.id} width={Math.round(72 * k)} height={Math.round(48 * k)} silhouette={!caught} className="fd-fishcard-art" />
       </div>
-      <div className={`text-xs truncate font-mincho ${caught ? 'text-washi' : 'text-washi/40'}`}>
+      <div className={`fd-fishcard-name font-mincho ${caught ? 'text-washi' : 'text-washi/40'}`}>
         {caught ? <Ruby>{fish.name}</Ruby> : '???'}
       </div>
     </button>

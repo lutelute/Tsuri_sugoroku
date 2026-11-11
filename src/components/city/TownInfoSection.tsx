@@ -3,14 +3,17 @@
 import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
-import { getTownInfo, computeAllStats, TOWN_CLASS_INFO, BUILDING_INFO, buildCost, monopolyOwner, effectiveLandValue, CITY_ECONOMY, TIER_LABEL } from '../../game/city';
+import { getTownInfo, computeAllStats, TOWN_CLASS_INFO, BUILDING_INFO, buildCost, monopolyOwner, effectiveLandValue, CITY_ECONOMY, TIER_LABEL, recoveryMonthsLeft, RECOVERY } from '../../game/city';
 import { getSpecialty, ownerOf, isSpecialtyMonopolized } from '../../game/citySpecialties';
 import BuildingGlyph from './BuildingGlyph';
 import SpecialtyIcon from './SpecialtyIcon';
+import RecoveryIcon from './RecoveryMark';
+import TownTraitBadges from './TownTraitBadges';
+import TownScene from './TownScene';
 import Ruby from '../shared/Ruby';
 
 export default function TownInfoSection({ nodeId }: { nodeId: string }) {
-  const { city, players } = useGameStore(useShallow(s => ({ city: s.city, players: s.players })));
+  const { city, players, turn } = useGameStore(useShallow(s => ({ city: s.city, players: s.players, turn: s.turn })));
   const stats = useMemo(() => (city ? computeAllStats(city) : null), [city]);
   const info = getTownInfo(nodeId);
   if (!city || !info || !stats) return null;
@@ -30,7 +33,16 @@ export default function TownInfoSection({ nodeId }: { nodeId: string }) {
         {(town.tier ?? 0) > 0 && <span className="px-2 py-0.5 rounded-full bg-shu-600/30 border border-shu-400/50 text-shu-100"><Ruby>発展度</Ruby> {TIER_LABEL[town.tier ?? 0]}</span>}
         <span className="text-washi/60"><Ruby>地価</Ruby> ×{effectiveLandValue(nodeId, town).toFixed(2)}（<Ruby>住宅</Ruby> ¥{buildCost('res', nodeId, town).toLocaleString()}〜）</span>
         {isDest && <span className="px-2 py-0.5 rounded-full bg-shu-600/40 border border-shu-400/50 text-shu-100"><Ruby>目的地</Ruby> ¥{city.destinationReward.toLocaleString()}</span>}
+        {recoveryMonthsLeft(town) > 0 && (
+          <span className="px-2 py-0.5 rounded-full bg-kin-500/25 border border-kin-400/55 text-kin-100 inline-flex items-center gap-1" title="災害の後の復興特需。建設・再開発・空き家の修理が割引き">
+            <RecoveryIcon size={13} />
+            <Ruby>復興特需</Ruby> <Ruby>あと</Ruby>{recoveryMonthsLeft(town)}<Ruby>か月</Ruby>（{Math.round((1 - RECOVERY.costMul) * 10)}<Ruby>割引き</Ruby>）
+          </span>
+        )}
       </div>
+      <TownTraitBadges nodeId={nodeId} compact />
+      {/* 町の今の姿（押せない街並みの絵。小さめに置く） */}
+      <TownScene city={city} nodeId={nodeId} players={players} turn={turn} stats={st} className="mb-2 mx-auto max-w-[19rem]" />
       {sp && (
         <div className="flex items-center gap-1.5 text-[11px] mb-2 rounded-md bg-washi/10 border border-kin-500/25 px-2 py-1">
           <SpecialtyIcon icon={sp.icon} size={20} className="shrink-0" />
@@ -50,7 +62,7 @@ export default function TownInfoSection({ nodeId }: { nodeId: string }) {
       )}
       <div className="grid grid-cols-4 gap-1 text-center text-[11px] mb-2">
         <div><div className="text-washi/45"><Ruby>人口</Ruby></div><div className="font-bold tabular-nums">{st.population.toLocaleString()}</div></div>
-        <div><div className="text-washi/45"><Ruby>幸福度</Ruby></div><div className="font-bold tabular-nums">{st.happiness.toFixed(1)}</div></div>
+        <div><div className="text-washi/45"><Ruby>幸福度</Ruby></div><div className="font-bold tabular-nums">{Math.max(0, st.happiness).toFixed(1)}</div></div>
         <div><div className="text-washi/45"><Ruby>公害</Ruby></div><div className="font-bold tabular-nums">{st.pollution.toFixed(1)}</div></div>
         <div><div className="text-washi/45"><Ruby>電力</Ruby></div><div className={`font-bold ${st.powered ? 'text-kin-300' : 'text-shu-400'}`}>{st.powered ? '有' : '無'}</div></div>
       </div>

@@ -3,6 +3,10 @@ import { loadScoreRankings, loadEncyclopediaRankings } from '../../lib/firestore
 import type { RankingEntry } from '../../game/types';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
+import Stamp from '../fx/Stamp';
+
+/** 上位3人の判子（壱・弐・参） */
+const RANK_MARK = ['壱', '弐', '参'];
 
 type RankingTab = 'score' | 'encyclopedia';
 
@@ -91,9 +95,7 @@ export default function RankingOverlay({ onClose }: RankingOverlayProps) {
                 <div className="flex items-center gap-3">
                   <span className="w-8 flex items-center justify-center">
                     {i < 3 ? (
-                      <span className="seal w-8 h-8 rounded-full font-mincho text-sm font-bold tabular-nums">
-                        {i + 1}
-                      </span>
+                      <Stamp tone={i === 0 ? 'kin' : 'shu'} size={32} tilt={-6} delay={i * 90} silent>{RANK_MARK[i]}</Stamp>
                     ) : (
                       <span className="text-lg font-mincho font-bold text-washi/50 tabular-nums">
                         {i + 1}
@@ -131,8 +133,12 @@ export default function RankingOverlay({ onClose }: RankingOverlayProps) {
                     <span className="inline-flex items-center gap-0.5">
                       <Icon name="fish" size={11} className="text-ai-300/70" />{entry.breakdown.fishPoints}
                     </span>
-                    <span>💎{entry.breakdown.rarityBonus}</span>
-                    <span>🗾{entry.breakdown.regionBonus}</span>
+                    <span className="inline-flex items-center gap-0.5">
+                      <Icon name="gem" size={11} className="text-ai-300/70" />{entry.breakdown.rarityBonus}
+                    </span>
+                    <span className="inline-flex items-center gap-0.5">
+                      <Icon name="map" size={11} className="text-ai-300/70" />{entry.breakdown.regionBonus}
+                    </span>
                     <span className="inline-flex items-center gap-0.5">
                       <Icon name="book" size={11} className="text-ai-300/70" />{entry.breakdown.encyclopediaBonus}
                     </span>

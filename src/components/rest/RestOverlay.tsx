@@ -1,50 +1,18 @@
 import { useEffect, useState } from 'react';
 import { playBuild, playChime } from '../../utils/sound';
-import type { CSSProperties } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { REST_MONEY_BONUS } from '../../game/constants';
 import MoneyTicker from '../fx/MoneyTicker';
 import { calculateRepairCost, isBroken } from '../../game/equipment';
 import { getEquipment } from '../../data/equipmentData';
-import type { EquipmentType, EquipmentItem } from '../../game/types';
+import type { EquipmentItem } from '../../game/types';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
-import type { IconName } from '../shared/Icon';
 import Ruby from '../shared/Ruby';
-
-const TYPE_ICONS: Record<EquipmentType, IconName> = {
-  rod: 'rod',
-  reel: 'reel',
-  lure: 'lure',
-};
-
-/** 温泉マーク（湯気が数回立ちのぼる） */
-function OnsenMark() {
-  return (
-    <svg width="72" height="64" viewBox="0 0 72 64" aria-hidden="true" className="mx-auto">
-      {/* 静止の薄い湯気（アニメが終わっても湯気が残る） */}
-      {[18, 36, 54].map(x => (
-        <path key={`s${x}`} d={`M${x} 34 c-5 -5 5 -9 0 -14 c-5 -5 5 -9 0 -14`} fill="none" stroke="#f4ecd8" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
-      ))}
-      {[18, 36, 54].map((x, i) => (
-        <path
-          key={x}
-          className="fx-steam"
-          style={{ '--d': `${i * 280}ms` } as CSSProperties}
-          d={`M${x} 34 c-5 -5 5 -9 0 -14 c-5 -5 5 -9 0 -14`}
-          fill="none"
-          stroke="#f4ecd8"
-          strokeWidth="3.4"
-          strokeLinecap="round"
-        />
-      ))}
-      <path d="M8 40 Q36 30 64 40 Q64 60 36 60 Q8 60 8 40 Z" fill="#e34a33" />
-      <path d="M8 40 Q36 30 64 40" fill="none" stroke="#f1d893" strokeWidth="2" />
-      <ellipse cx="28" cy="46" rx="10" ry="3" fill="#fff" opacity="0.25" />
-    </svg>
-  );
-}
+import OnsenScene from './OnsenScene';
+import { GearTile } from '../shop/GearArt';
+import { DurabilityBamboo } from '../shop/GearStats';
 
 interface RestOverlayProps {
   nodeName: string;
@@ -76,16 +44,17 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto">
-      <div data-guide="rest" className="panel-ai relative rounded-2xl p-6 max-w-sm w-[90%] my-4 max-h-[90vh] overflow-y-auto">
+      <div data-guide="rest" className="panel-ai relative rounded-2xl p-5 sm:p-6 pt-0 sm:pt-0 max-w-sm md:max-w-md w-[90%] my-4 max-h-[90vh] overflow-y-auto">
+        {/* 露天風呂の一枚絵（札の上いっぱい） */}
+        <div className="-mx-5 sm:-mx-6 mb-4 border-b border-kin-500/40"><OnsenScene /></div>
         <button
           onClick={onClose}
           aria-label="閉じる"
-          className="absolute top-3 right-3 flex items-center justify-center w-8 h-8 rounded-full bg-ai-800/60 border border-kin-500/30 text-washi/70 hover:text-washi transition-colors"
+          className="absolute top-2 right-2 z-10 flex items-center justify-center w-11 h-11 rounded-full bg-ai-900/70 border border-kin-500/40 text-washi/80 hover:text-washi transition-colors"
         >
-          <Icon name="close" size={16} />
+          <Icon name="close" size={18} />
         </button>
         <div className="text-center mb-4">
-          <div className="mb-2"><OnsenMark /></div>
           <h3 className="font-mincho text-kin-300 text-xl font-bold mb-1 ink-underline inline-block animate-ink-rise"><Ruby>{nodeName}</Ruby><Ruby>で休憩</Ruby></h3>
           <p className="text-washi/60 text-sm mt-2"><Ruby>ゆっくり湯に浸かって体力回復! ¥500を獲得した!</Ruby></p>
           <p className="text-sm text-kin-300 mt-3 inline-flex items-center gap-1">
@@ -122,10 +91,10 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
                         : 'washi-card'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Icon name={TYPE_ICONS[item.type]} size={20} className={broken ? 'text-shu-400' : 'text-ai-700'} />
-                        <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <GearTile type={item.type} level={item.level} size={44} broken={broken} />
+                        <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="font-mincho text-sm font-bold"><Ruby>{eqData?.name || '???'}</Ruby></span>
                             {broken && (
@@ -134,17 +103,8 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <div className="w-16 h-1.5 bg-ai-900/30 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${
-                                  item.durability > 50 ? 'bg-emerald-400' :
-                                  item.durability > 20 ? 'bg-kin-400' : 'bg-shu-400'
-                                }`}
-                                style={{ width: `${item.durability}%` }}
-                              />
-                            </div>
-                            <span className="text-[10px] text-ai-700/60 tabular-nums">{item.durability}%</span>
+                          <div className="mt-1">
+                            <DurabilityBamboo value={item.durability} onWashi={!broken} />
                           </div>
                         </div>
                       </div>
@@ -170,7 +130,7 @@ export default function RestOverlay({ nodeName, onClose }: RestOverlayProps) {
           </p>
         )}
 
-        <Button onClick={onClose} variant="primary" className="w-full mt-4">
+        <Button onClick={onClose} variant="primary" className="w-full mt-4 min-h-[44px]">
           OK
         </Button>
       </div>

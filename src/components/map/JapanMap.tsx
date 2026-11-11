@@ -14,11 +14,17 @@ import type { GeoRegion } from '../../data/japanGeo';
 import { useMapCamera } from './useMapCamera';
 import { LABEL_LAYOUT } from './labelLayout';
 import { CityDataLayer, CitySkyline, DestinationMarker, SpecialtyMarks } from './CityLayer';
-import { DATA_MAP_LABEL, DATA_MAP_ORDER } from './cityMapModes';
+import { RailLines, RailNetworkMap } from './RailLayer';
+import StageHighlight from './StageHighlight';
+import { countedSteps } from '../../game/railways';
+import { DATA_MAP_ORDER } from './cityMapModes';
+import DataMapLegend from './DataMapLegend';
 import type { DataMapMode } from './cityMapModes';
 import type { Bounds } from './useMapCamera';
 import Ruby from '../shared/Ruby';
 import GuideMapLayer from './GuideMapLayer';
+import { PathAdvicePanel, PathAdviceRings } from './PathAdvice';
+import { usePathAdvice } from './usePathAdvice';
 
 const PAN_BOUNDS: Bounds = { ...MAP_BOUNDS };
 
@@ -37,6 +43,7 @@ const NodesLayer = memo(function NodesLayer({ reachableSteps, currentNode }: { r
           isReachable={reachableSteps.has(node.id)}
           isCurrentPlayer={currentNode === node.id}
           steps={reachableSteps.get(node.id)}
+          dimmed={reachableSteps.size > 0 && !reachableSteps.has(node.id) && currentNode !== node.id}
         />
       ))}
     </g>
@@ -53,7 +60,7 @@ const LabelsLayer = memo(function LabelsLayer({ reachable }: { reachable: Set<st
         if (!L) return null;
         const isMajor = node.type === 'capital' || node.type === 'start' || node.type === 'goal';
         const isReach = reachable.has(node.id);
-        const cls = `lbl ${isMajor ? 'lbl-cap' : 'lbl-node'}${L.farVisible || isReach ? '' : ' lod-hide-far'}`;
+        const cls = `lbl ${isMajor ? 'lbl-cap' : 'lbl-node'}${L.farVisible || isReach ? '' : ' lod-hide-far'}${reachable.size > 0 && !isReach ? ' tw-lbl-dim' : ''}`;
         return (
           <text
             key={node.id}
@@ -86,23 +93,31 @@ const LabelsLayer = memo(function LabelsLayer({ reachable }: { reachable: Set<st
 });
 
 // ===== 到達可能ルート（エッジと同じ曲線で金色に強調） =====
+// 分かれ道のあいだは、陸と道を藍で少し沈め、選べるマスまでの道だけを金で浮かせる。
+// 金の道を流れる光は出たときの数回だけ（CSS の tw-fork-flow。地図は重い絵なので常時ループにしない）。
 const ReachableRoutes = memo(function ReachableRoutes({ paths }: { paths: string[][] }) {
+  // 同じ区間は1回だけ描く（行き先が多いと、手前の区間が何本も重なるため）
+  const segs = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { key: string; d: string }[] = [];
+    for (const path of paths) {
+      for (let i = 1; i < path.length; i++) {
+        const key = `${path[i - 1]}>${path[i]}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const a = NODE_MAP.get(path[i - 1]);
+        const b = NODE_MAP.get(path[i]);
+        if (a && b) out.push({ key, d: curvePath(a, b) }); // 進む向きに描く（曲線の形は向きによらず同じ）
+      }
+    }
+    return out;
+  }, [paths]);
   return (
     <g aria-hidden="true" className="pointer-events-none">
-      {paths.map((path, pi) =>
-        path.slice(1).map((nid, si) => {
-          const a = NODE_MAP.get(path[si]);
-          const b = NODE_MAP.get(nid);
-          if (!a || !b) return null;
-          const d = a.id < b.id ? curvePath(a, b) : curvePath(b, a);
-          return (
-            <g key={`${pi}-${si}`}>
-              <path d={d} fill="none" stroke="rgba(20,14,6,0.55)" strokeWidth="5.2" strokeLinecap="round" />
-              <path d={d} fill="none" stroke="#f7d774" strokeWidth="2.6" strokeLinecap="round" />
-            </g>
-          );
-        }),
-      )}
+      <rect x={-2400} y={-2400} width={6200} height={6400} className="tw-fork-dim" />
+      {segs.map(s => <path key={`c${s.key}`} d={s.d} fill="none" stroke="rgba(20,14,6,0.72)" strokeWidth="6.8" strokeLinecap="round" />)}
+      {segs.map(s => <path key={`g${s.key}`} d={s.d} fill="none" stroke="#f7d774" strokeWidth="3.8" strokeLinecap="round" />)}
+      {segs.map(s => <path key={`f${s.key}`} d={s.d} fill="none" className="tw-fork-flow" />)}
     </g>
   );
 });
@@ -144,10 +159,13 @@ function JapanMapImpl() {
   const reachableSteps = useMemo(() => {
     const m = new Map<string, number>();
     if (!isPathSelection) return m;
-    for (const path of reachableNodes) m.set(path[path.length - 1], path.length - 1);
+    // 線路の上は歩数に数えない（出目と同じ数が出るように）
+    for (const path of reachableNodes) m.set(path[path.length - 1], countedSteps(path, city?.rails));
     return m;
-  }, [reachableNodes, isPathSelection]);
+  }, [reachableNodes, isPathSelection, city?.rails]);
   const reachableSet = useMemo(() => new Set(reachableSteps.keys()), [reachableSteps]);
+  // 行き先のおすすめ（損得係）: 人の手番の分かれ道で、おすすめ順と理由（設定で切れる）
+  const advice = usePathAdvice();
 
   // タップ: パス選択中なら移動、そうでなければマス情報
   const onTap = useCallback(
@@ -208,7 +226,8 @@ function JapanMapImpl() {
     if (!isPathSelection || !curNodeId) return;
     const ends = reachableNodes.map(p => p[p.length - 1]);
     const b = boundsOf([curNodeId, ...ends], 50);
-    if (b) fitBounds(b, { pad: 20, minW: Math.min(followWidth(), 520) });
+    // 下の「おすすめ」のボタンと一覧の入口に候補が隠れないよう、下側に余白を足す
+    if (b) fitBounds({ ...b, maxY: b.maxY + (b.maxY - b.minY) * 0.2 }, { pad: 20, minW: Math.min(followWidth(), 520) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPathSelection, reachableNodes]);
 
@@ -248,8 +267,13 @@ function JapanMapImpl() {
         data-lod="far"
       >
         <MapTerrain />
+        {/* お題: 今年の舞台の地方を金で示す（道とマスの下） */}
+        {city?.quests && <StageHighlight stage={city.quests.stage} />}
         <MapEdges />
-        {city && <CityDataLayer city={city} mode={dataMap} />}
+        {/* 鉄道: 線路は道の上・マスの下。データマップ「鉄道網」では持ち主の色と、つながった町の数 */}
+        {city && <RailLines rails={city.rails} colors={playerColors} />}
+        {city && dataMap !== 'rail' && <CityDataLayer city={city} mode={dataMap} />}
+        {city && dataMap === 'rail' && <RailNetworkMap city={city} colors={playerColors} />}
         {isPathSelection && <ReachableRoutes paths={reachableNodes} />}
         {/* 案内役: 分かれ道に流れる光・目的地への矢印（地図の座標で描くのでカメラに追従する） */}
         <GuideMapLayer layer="under" />
@@ -258,6 +282,8 @@ function JapanMapImpl() {
         {city && <SpecialtyMarks owners={city.specialties} colors={playerColors} />}
         <LabelsLayer reachable={reachableSet} />
         {city && <DestinationMarker nodeId={city.destination} reward={city.destinationReward} />}
+        {/* 行き先のおすすめ: 上位3つに金の輪と理由の札（マスと地名の上・駒の下） */}
+        {advice && <PathAdviceRings ranked={advice} />}
         {players.map((player, i) => (
           <PlayerToken
             key={player.id}
@@ -291,14 +317,11 @@ function JapanMapImpl() {
         )}
         {city && (
           <div className="flex items-center gap-1.5">
-            {dataMap !== 'none' && (
-              <span className="text-[10px] bg-ai-900/85 border border-kin-500/30 rounded-full px-2 py-0.5 text-kin-200 font-mincho">
-                <Ruby>{DATA_MAP_LABEL[dataMap]}</Ruby>
-              </span>
-            )}
+            {/* データマップの名前の札と、色の物差し（凡例） */}
+            {dataMap !== 'none' && <DataMapLegend mode={dataMap} players={players} />}
             <MapButton
               onClick={() => setDataMap(m => DATA_MAP_ORDER[(DATA_MAP_ORDER.indexOf(m) + 1) % DATA_MAP_ORDER.length])}
-              label="データマップ切替（人口/電力網/公害/幸福度/地価）"
+              label="データマップ切替（人口/電力網/公害/幸福度/地価/鉄道網）"
               active={dataMap !== 'none'}
             >
               図
@@ -328,7 +351,7 @@ function JapanMapImpl() {
 
       {/* パス選択の代替操作: 行き先一覧（折りたたみ。地図のマスを直接タップしてもよい） */}
       {isPathSelection && reachableNodes.length > 0 && (
-        <PathList paths={reachableNodes} onSelect={selectPath} />
+        <PathAdvicePanel paths={reachableNodes} steps={reachableSteps} ranked={advice} onSelect={selectPath} />
       )}
 
       {infoNode && <NodeInfoOverlay node={infoNode} onClose={() => setInfoNodeId(null)} />}
@@ -336,44 +359,7 @@ function JapanMapImpl() {
   );
 }
 
-const TYPE_ORDER: Record<string, number> = { capital: 0, fishing_special: 1, fishing: 2, shop: 3, rest: 4, event_good: 5, event_random: 6, event_bad: 7, goal: 8, start: 9, route: 10 };
-const TYPE_GLYPH: Record<string, string> = { capital: '祭', fishing_special: '名', fishing: '釣', shop: '店', rest: '湯', event_good: '吉', event_random: '籤', event_bad: '凶', goal: '旗', start: '始', route: '道' };
-
-function PathList({ paths, onSelect }: { paths: string[][]; onSelect: (i: number) => void }) {
-  const [open, setOpen] = useState(false);
-  const items = paths
-    .map((path, i) => ({ i, node: NODE_MAP.get(path[path.length - 1]), steps: path.length - 1 }))
-    .filter((x): x is { i: number; node: NonNullable<typeof x.node>; steps: number } => !!x.node)
-    .sort((a, b) => (TYPE_ORDER[a.node.type] ?? 9) - (TYPE_ORDER[b.node.type] ?? 9) || b.steps - a.steps);
-  return (
-    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 w-[min(94%,560px)] flex flex-col items-center gap-1.5">
-      {open && (
-        <div className="w-full max-h-[38vh] overflow-y-auto rounded-xl bg-ai-900/92 backdrop-blur-sm border border-kin-500/35 shadow-2xl p-2 grid grid-cols-2 sm:grid-cols-3 gap-1" role="group" aria-label="移動先を選択">
-          {items.map(({ i, node, steps }) => (
-            <button
-              key={node.id}
-              onClick={() => onSelect(i)}
-              className={`flex items-center gap-1.5 text-left rounded-lg px-2 py-1.5 text-xs transition cursor-pointer border ${
-                node.type === 'route' ? 'bg-ai-800/50 border-transparent text-washi/60 hover:bg-ai-700/60' : 'bg-amber-700/40 border-amber-500/30 text-washi hover:bg-amber-600/60'
-              }`}
-            >
-              <span className="w-5 h-5 shrink-0 rounded-full bg-ai-950/60 flex items-center justify-center font-mincho text-[11px] text-kin-200">{TYPE_GLYPH[node.type] ?? '・'}</span>
-              <span className="truncate font-bold"><Ruby>{node.name}</Ruby></span>
-              <span className="ml-auto opacity-60 tabular-nums">{steps}</span>
-            </button>
-          ))}
-        </div>
-      )}
-      <button
-        onClick={() => setOpen(v => !v)}
-        data-guide="path-list"
-        className="bg-amber-600/90 hover:bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg backdrop-blur-sm transition-colors cursor-pointer"
-      >
-        {open ? '▼ 一覧を閉じる' : `▲ 行き先を一覧から選ぶ（${items.length}）`}
-      </button>
-    </div>
-  );
-}
+// 分かれ道の一覧（行き先のおすすめつき）は PathAdvice.tsx の PathAdvicePanel。
 
 function MapButton({ onClick, label, children, active }: { onClick: () => void; label: string; children: React.ReactNode; active?: boolean }) {
   return (

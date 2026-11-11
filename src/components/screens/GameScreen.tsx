@@ -52,8 +52,9 @@ export default function GameScreen() {
     turnPhase, players, currentPlayerIndex, nodeActionsThisTurn,
     setTurnPhase, executeNodeAction, endTurn, doActionAgain, rouletteResult,
     setScreen, endGame, lastMove, isCity, cityToast, dismissCityToast, pendingDiceCount, pendingDiceCap,
-    binboToast, binboEvent, dismissBinboToast, acknowledgeBinboEvent, turn, noticeWaiting, skipMonthEnd, anyCpu,
+    binboToast, binboEvent, dismissBinboToast, acknowledgeBinboEvent, turn, noticeWaiting, skipMonthEnd, anyCpu, rails,
   } = useGameStore(useShallow(s => ({
+    rails: s.city?.rails,
     turn: s.turn,
     noticeWaiting: s.noticeQueue.length,
     skipMonthEnd: s.skipMonthEnd,
@@ -162,7 +163,8 @@ export default function GameScreen() {
     return false;
   })();
 
-  const actionLabel = canDoActionAgain ? `もう一度釣る (${nodeActionsThisTurn}/${MAX_FISHING_PER_TURN})` : '';
+  // 使った数ではなく残りで書く（大物ねらいは1投で2回ぶん進むので「2/3」だと分かりにくい。釣り方を選ぶ画面・町の帯の「あと○回」と言い方をそろえる）
+  const actionLabel = canDoActionAgain ? `もう一度釣る（あと${MAX_FISHING_PER_TURN - nodeActionsThisTurn}回）` : '';
 
   // 「ターンを終了する」しか選べないときは押させずに終える（町の画面を開き直せる・もう一度釣れるときは選んでもらう）
   const autoEndTurn = turnPhase === 'action_choice' && !!player && !player.isCpu
@@ -198,14 +200,21 @@ export default function GameScreen() {
         {turnPhase === 'path_selection' && (
           <div className="absolute top-2 left-1/2 z-20 animate-slide-in-down washi-card rounded-full pl-2 pr-4 py-1.5 shadow-xl flex items-center gap-2 text-sm font-bold font-mincho text-[#2a2118]" role="status">
             {rouletteResult ? <MiniDie value={rouletteResult} size={26} /> : null}
-            <span><Ruby>光っているマスをタップ！</Ruby></span>
+            <span className="whitespace-nowrap"><Ruby>光っているマスをタップ！</Ruby></span>
           </div>
         )}
 
         {/* 移動中は残りマスを数え、着いたら巻物＋判子で到着を知らせる */}
         {turnPhase === 'node_action' && node && (
           <>
-            {moveSteps > 0 && <StepCountdown key={`cd-${lastMove?.seq ?? 0}`} steps={moveSteps} stepMs={stepMs} />}
+            {moveSteps > 0 && (
+              <StepCountdown
+                key={`cd-${lastMove?.seq ?? 0}`}
+                steps={moveSteps}
+                stepMs={stepMs}
+                counted={rails && lastMove ? lastMove.path.slice(1).map(id => rails[id] === undefined) : undefined}
+              />
+            )}
             <ArrivalBanner
               key={`ar-${lastMove?.seq ?? 0}`}
               name={node.name}
@@ -220,7 +229,7 @@ export default function GameScreen() {
 
         {/* === フローティング: サイコロボタン === */}
         {turnPhase === 'idle' && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-md flex flex-col items-center gap-2">
+          <div className="absolute bottom-4 left-4 right-[4.5rem] sm:right-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[calc(100%-2rem)] z-20 max-w-md flex flex-col items-center gap-2">
             {/* まちづくり: 振る前に使えるカード（急行・ぶっとび・牛歩・保険・地上げ） */}
             {isCity && !player?.isCpu && <CardPlayBar timing="before_roll" compact />}
             {isCity && pendingDiceCount > 1 && (
@@ -244,7 +253,7 @@ export default function GameScreen() {
 
         {/* === フローティング: アクション選択 === */}
         {turnPhase === 'action_choice' && !autoEndTurn && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-xs space-y-2" data-guide="action-choice">
+          <div className="absolute bottom-4 left-4 right-[4.5rem] sm:right-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[calc(100%-2rem)] z-20 max-w-xs space-y-2" data-guide="action-choice">
             <div className="fx-rise text-center text-xs text-washi/80 bg-ai-950/70 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-kin-500/25 font-mincho">
               <span className="text-kin-300 font-bold"><Ruby>{node?.name || '???'}</Ruby></span> — <Ruby>何をする？</Ruby>
             </div>
@@ -283,7 +292,7 @@ export default function GameScreen() {
         <div className="absolute left-3 top-2 flex flex-col gap-2 z-20">
           <button
             onClick={() => setScreen('title')}
-            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex items-center justify-center text-washi transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex items-center justify-center text-washi transition cursor-pointer"
             title="タイトルに戻る（中断保存）"
             aria-label="タイトルに戻る"
           >
@@ -291,7 +300,7 @@ export default function GameScreen() {
           </button>
           <button
             onClick={() => setShowQuitConfirm(true)}
-            className="bg-ai-900/55 hover:bg-shu-700/60 backdrop-blur-sm border border-shu-500/40 rounded-full w-14 h-14 flex items-center justify-center text-shu-200 transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-shu-700/60 backdrop-blur-sm border border-shu-500/40 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex items-center justify-center text-shu-200 transition cursor-pointer"
             title="ここで終了して結果を見る"
             aria-label="ここで終了して結果を見る"
           >
@@ -307,7 +316,7 @@ export default function GameScreen() {
           <button
             onClick={() => setShowInventory(true)}
             data-guide="side-tools"
-            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex items-center justify-center text-washi transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex items-center justify-center text-washi transition cursor-pointer"
             title="道具箱"
             aria-label="道具箱を開く"
           >
@@ -316,7 +325,7 @@ export default function GameScreen() {
           <button
             onClick={() => setShowCreel(true)}
             data-guide="side-tools"
-            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex items-center justify-center text-washi transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex items-center justify-center text-washi transition cursor-pointer"
             title="魚籠"
             aria-label="魚籠を開く"
           >
@@ -325,7 +334,7 @@ export default function GameScreen() {
           <button
             onClick={() => setShowEncyclopedia(true)}
             data-guide="side-tools"
-            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex items-center justify-center text-washi transition cursor-pointer"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex items-center justify-center text-washi transition cursor-pointer"
             title="図鑑"
             aria-label="魚図鑑を開く"
           >
@@ -489,12 +498,12 @@ function CpuSpeedToggle() {
     <button
       onClick={cycle}
       data-guide="cpu-speed"
-      className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex flex-col items-center justify-center text-washi transition cursor-pointer leading-none"
+      className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex flex-col items-center justify-center text-washi transition cursor-pointer leading-none"
       title={`CPU の速さ：${label}（押すと切り替え）`}
       aria-label={`CPU の速さ ${label}。押すと切り替え`}
     >
       <span className="text-[11px] tracking-tighter text-kin-300" aria-hidden="true">{speed === 'slow' ? '▶' : speed === 'normal' ? '▶▶' : '▶▶▶'}</span>
-      <span className="text-[10px] font-mincho mt-1">{label}</span>
+      <span className="hidden sm:block text-[10px] font-mincho mt-1">{label}</span>
     </button>
   );
 }
@@ -506,13 +515,13 @@ function SoundToggle() {
   return (
     <button
       onClick={toggleSound}
-      className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex flex-col items-center justify-center text-washi transition cursor-pointer leading-none"
+      className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex flex-col items-center justify-center text-washi transition cursor-pointer leading-none"
       title={soundEnabled ? '効果音を消す' : '効果音を鳴らす'}
       aria-label={soundEnabled ? '効果音を消す' : '効果音を鳴らす'}
       aria-pressed={soundEnabled}
     >
       <span className="text-lg" aria-hidden="true">{soundEnabled ? '♪' : '×'}</span>
-      <span className="text-[10px] font-mincho mt-0.5">おと</span>
+      <span className="hidden sm:block text-[10px] font-mincho mt-0.5">おと</span>
     </button>
   );
 }

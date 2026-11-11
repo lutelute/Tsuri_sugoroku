@@ -18,7 +18,8 @@ export interface Bounds {
 
 export type Lod = 'far' | 'mid' | 'near';
 
-const MIN_W = 220;
+// いちばん寄ったときの見える幅（地図の単位）。スマホ幅でも PC と同じ 2.6 倍まで寄れるように小さめにしてある
+const MIN_W = 140;
 const MAX_W = 5200;
 const DRAG_THRESHOLD = 6;
 

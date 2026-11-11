@@ -8,6 +8,7 @@ import { useFinish } from './useFinish';
 import { buzz, HAPTIC } from './haptics';
 import { playHit, playTap } from '../../utils/sound';
 import { Splash } from './FishingScene';
+import { StageAnchor, StageScope } from './scene/FishingStage';
 import MiniGameIntro from './MiniGameIntro';
 import FinishFlash from './FinishFlash';
 import FishIllustration from '../shared/FishIllustration';
@@ -48,7 +49,12 @@ interface TargetPhaseProps {
 
 interface Fx { id: number; x: number; y: number; hit: boolean }
 
-export default function TargetPhase({ fish, equipment, headStart = false, onSuccess, onFail }: TargetPhaseProps) {
+/** 的当て。舞台の外（イベントの釣り）で呼ばれたら、その場に水中の絵を敷く */
+export default function TargetPhase(props: TargetPhaseProps) {
+  return <StageScope><TargetGame {...props} /></StageScope>;
+}
+
+function TargetGame({ fish, equipment, headStart = false, onSuccess, onFail }: TargetPhaseProps) {
   const required = HITS_REQUIRED[fish.rarity];
 
   // 装備効果: 竿=当たり判定拡大 / リール=制限時間延長 / ルアー=魚がゆっくり
@@ -205,27 +211,28 @@ export default function TargetPhase({ fish, equipment, headStart = false, onSucc
 
   return (
     <div className="relative w-full h-full flex flex-col items-center px-4 pb-4 pt-2 fg-touch">
-      <div className="w-full max-w-md flex items-center justify-between h-12 shrink-0">
-        <p className="font-mincho text-xl font-bold text-washi/90"><Ruby>魚をタップ！</Ruby></p>
-        <span className={`rounded-full px-3 py-1 text-sm tabular-nums border ${frame.timeLeft <= 4 ? 'bg-shu-600/80 border-shu-400 text-washi fg-blink' : 'bg-ai-950/60 border-kin-500/30 text-washi/85'}`}>
+      <div className="relative z-[1] w-full max-w-md md:max-w-3xl lg:max-w-5xl flex items-center justify-between h-12 shrink-0">
+        <p className="um-ink font-mincho text-xl sm:text-2xl font-bold text-washi"><Ruby>魚をタップ！</Ruby></p>
+        <span className={`um-pill ${frame.timeLeft <= 4 ? 'is-urgent fg-blink' : ''}`}>
           <Ruby>残り</Ruby> {Math.ceil(frame.timeLeft)}<Ruby>秒</Ruby>
         </span>
       </div>
 
       {/* ヒット数（珠） */}
-      <div className="flex gap-2 mb-2 shrink-0" aria-label={`${hits}/${required}`}>
+      <div className="relative z-[1] flex gap-2 mb-2 shrink-0" aria-label={`${hits}/${required}`}>
         {Array.from({ length: required }, (_, i) => (
-          <span key={i} className={`w-4 h-4 rounded-full border-2 ${i < hits ? 'bg-kin-400 border-kin-300 fg-pop' : 'border-kin-500/40 bg-ai-950/50'}`} />
+          <span key={i} className={`um-bead ${i < hits ? 'is-on fg-pop' : ''}`} />
         ))}
       </div>
 
-      {/* 水槽 */}
+      {/* 窓の向こうは水中（水面は窓の上）。広い画面では窓だけを広げ、魚の泳ぐ生け簀はこれまでと同じ大きさ（最大 448px）に保つ */}
+      <div className="um-window is-rimless w-full max-w-md md:max-w-3xl lg:max-w-5xl flex-1 min-h-[240px] flex justify-center">
+        <StageAnchor surface={-0.1} />
       <div
         ref={areaRef}
-        className="relative w-full max-w-md flex-1 min-h-[240px] rounded-2xl overflow-hidden border border-kin-500/20 bg-gradient-to-b from-ai-600/70 via-ai-800/85 to-ai-950 cursor-crosshair"
+        className="um-netpen relative w-full max-w-md cursor-crosshair"
         onPointerDown={handleTap}
       >
-        <div className="absolute inset-0 w-[calc(100%+96px)] fg-waves opacity-40 pointer-events-none" />
         {/* 魚 */}
         <div
           className="absolute pointer-events-none"
@@ -237,32 +244,36 @@ export default function TargetPhase({ fish, equipment, headStart = false, onSucc
         {fx.map(f => (
           f.hit ? (
             <div key={f.id} className="absolute w-0 h-0 pointer-events-none" style={{ left: f.x, top: f.y }}>
-              <Splash count={8} distance={40} />
-              <span className="absolute -translate-x-1/2 -translate-y-[160%] fg-pop font-brush text-2xl text-kin-300 whitespace-nowrap drop-shadow-[0_2px_0_rgba(10,26,44,0.9)]"><Ruby>当たり</Ruby></span>
+              <span className="fg-ripple" style={{ width: 96, height: 96, borderColor: 'rgba(247,231,184,0.9)', borderWidth: 3 }} />
+              <Splash count={8} distance={44} color="#f7e7b8" />
+              <span className="um-ink absolute -translate-x-1/2 -translate-y-[160%] fg-pop font-brush text-2xl text-kin-300 whitespace-nowrap"><Ruby>当たり</Ruby></span>
             </div>
           ) : (
             <span
               key={f.id}
-              className="absolute rounded-full border-2 border-washi/50 fg-tap-miss"
+              className="absolute rounded-full border-2 border-washi/60 fg-tap-miss"
               style={{ left: f.x, top: f.y, width: 44, height: 44 }}
             />
           )
         ))}
       </div>
+      </div>
 
       {/* 残り時間バー */}
-      <div className="w-full max-w-md mt-3 h-2 rounded-full bg-ai-950/70 overflow-hidden border border-kin-500/15 shrink-0">
-        <div
-          className={`h-full rounded-full ${timeRatio > 0.4 ? 'bg-ai-300' : timeRatio > 0.2 ? 'bg-kin-500' : 'bg-shu-500'}`}
-          style={{ width: `${timeRatio * 100}%` }}
-        />
+      <div className="relative z-[1] w-full max-w-md md:max-w-3xl lg:max-w-5xl mt-3 shrink-0">
+        <div className="um-gauge is-slim">
+          <div
+            className="um-gauge-fill"
+            style={{ width: `calc((100% - 6px) * ${Math.max(0, Math.min(1, timeRatio))})`, backgroundColor: timeRatio > 0.4 ? '#7fa9cd' : timeRatio > 0.2 ? '#d4a843' : '#e34a33' }}
+          />
+        </div>
       </div>
-      <p className="text-xs text-washi/50 mt-2 shrink-0 fg-tall-only"><Ruby>外すと魚が驚いて速くなる</Ruby></p>
+      <p className="relative z-[1] text-xs text-washi/70 mt-2 shrink-0 fg-tall-only"><Ruby>外すと魚が驚いて速くなる</Ruby></p>
 
       {!started && (
         <MiniGameIntro game="target" bonusText={headStart ? `会心の合わせ: 時間 +${HEAD_START_TIME_S}秒` : undefined} onDone={() => setStarted(true)} />
       )}
-      {finished && <FinishFlash state={finished} />}
+      {finished && <FinishFlash state={finished} fishId={fish.id} rarity={fish.rarity} />}
     </div>
   );
 }

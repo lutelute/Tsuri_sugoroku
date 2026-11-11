@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
-  pushNotice, noticeDurationMs, isNotableMonth, showBinboFullScreen, hasActionChoices, tempoScale, scaled,
+  pushNotice, mergeNoticeBody, showFeeNotice, showInspectNotice, FEE_NOTICE_MIN,
+  noticeDurationMs, isNotableMonth, showBinboFullScreen, hasActionChoices, tempoScale, scaled,
   NOTICE_QUEUE_MAX, TOAST_MS, TOAST_BUSY_MS, TOAST_MIN_MS, BINBO_TOAST_MS, CPU_SKIP_SCALE, CPU_SPEED_SCALE,
 } from './tempo';
 import type { Notice } from './tempo';
+import { CPU_LINES } from '../data/cpuPersonas';
 
 const city = (title: string, body = '本文', important = false): Notice => ({ kind: 'city', title, body, important });
 const binbo: Notice = { kind: 'binbo', reason: 'pass', playerIndex: 1, great: false };
@@ -30,10 +32,29 @@ describe('tempo: お知らせの順番待ち', () => {
     expect(pushNotice([city('一')], city('二')).map(n => (n.kind === 'city' ? n.title : ''))).toEqual(['一', '二']);
   });
 
-  it('同じ見出しが続くときは本文をつなぎ、まったく同じものは重ねない', () => {
+  it('同じ見出しが続くときは本文をつなぎ、同じ文は並べずに「×2」とまとめる', () => {
     const q = pushNotice(pushNotice([city('CPU：建設', 'A')], city('CPU：建設', 'B')), city('CPU：建設', 'B'));
     expect(q).toHaveLength(1);
-    expect(q[0].kind === 'city' && q[0].body).toBe('A／B');
+    expect(q[0].kind === 'city' && q[0].body).toBe('A／B ×2');
+  });
+
+  it('本文のつなぎ方: 違う文は「／」、同じ文は回数。せりふ付きの文とせりふ無しの同じ文は同じ文として数える', () => {
+    expect(mergeNoticeBody('A', 'B')).toBe('A／B');
+    expect(mergeNoticeBody('A', 'A')).toBe('A ×2');
+    expect(mergeNoticeBody('A ×2', 'A')).toBe('A ×3');
+    expect(mergeNoticeBody('A／B ×2', 'A')).toBe('A ×2／B ×2');
+    // CPU の人物のせりふ（1訪問の最初の工事だけに付く）は、同じ・違いに数えない
+    const line = CPU_LINES.monopoly.build[1];
+    const first = `「${line}」福島に住宅地を建てた`;
+    expect(mergeNoticeBody(first, '福島に住宅地を建てた')).toBe(`${first} ×2`);
+    expect(mergeNoticeBody(first, '福島に商業地を建てた')).toBe(`${first}／福島に商業地を建てた`);
+    // 後から来た方にだけせりふがあれば、それを残す
+    expect(mergeNoticeBody('福島に住宅地を建てた', first)).toBe(`${first} ×2`);
+    // せりふでない「…」（お題の文）は切らないので、別のお題は別の文のまま
+    expect(mergeNoticeBody('「今年、建物を5軒建てる」賞金 ¥4,500', '「今年、魚を3種類釣る」賞金 ¥4,500'))
+      .toBe('「今年、建物を5軒建てる」賞金 ¥4,500／「今年、魚を3種類釣る」賞金 ¥4,500');
+    // 月の決算のように本文の中に「／」がある瓦版も、そのまま後ろにつなぐ
+    expect(mergeNoticeBody('たろう +¥100 ／ お松 +¥200', '追記')).toBe('たろう +¥100 ／ お松 +¥200／追記');
   });
 
   it('溢れたら古い瓦版から捨て、貧乏神と大事な瓦版は残す', () => {
@@ -100,5 +121,23 @@ describe('tempo: 行動選択の自動終了', () => {
     expect(hasActionChoices({ isCity: false, inTown: false, fishingNode: true, fishingLeft: true })).toBe(true);
     expect(hasActionChoices({ isCity: false, inTown: false, fishingNode: true, fishingLeft: false })).toBe(false);
     expect(hasActionChoices({ isCity: false, inTown: false, fishingNode: false, fishingLeft: true })).toBe(false);
+  });
+});
+
+describe('tempo: 瓦版を出すかどうか（静かにする）', () => {
+  it('買い物代の瓦版は ¥500×物価 以上のときだけ', () => {
+    expect(showFeeNotice(FEE_NOTICE_MIN - 10, 1)).toBe(false);
+    expect(showFeeNotice(FEE_NOTICE_MIN, 1)).toBe(true);
+    // 2年目（物価2倍）は ¥1,000 から
+    expect(showFeeNotice(990, 2)).toBe(false);
+    expect(showFeeNotice(1000, 2)).toBe(true);
+    expect(showFeeNotice(2990, 6)).toBe(false);
+  });
+
+  it('視察の瓦版は、その人の初回だけ', () => {
+    expect(showInspectNotice(undefined, 0)).toBe(true);
+    expect(showInspectNotice([], 2)).toBe(true);
+    expect(showInspectNotice([0], 0)).toBe(false);
+    expect(showInspectNotice([0], 1)).toBe(true);
   });
 });

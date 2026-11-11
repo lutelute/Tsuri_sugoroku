@@ -1,4 +1,6 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { useGameStore } from '../../store/useGameStore';
 import type { Fish, PlayerEquipment } from '../../game/types';
 import { buildReelParams, createReelState, stepReel, HEAD_START_PROGRESS } from './reelSim';
 import type { FishMood, ReelResult } from './reelSim';
@@ -7,7 +9,13 @@ import type { FailReason } from './miniGameMeta';
 import { useFinish } from './useFinish';
 import { buzz, HAPTIC } from './haptics';
 import { playReelTick, playSplash, playTension } from '../../utils/sound';
-import { Ripple } from './FishingScene';
+import { Ripple, SplashCrown } from './FishingScene';
+import { StageAnchor } from './scene/FishingStage';
+import { AnglerFigure } from './scene/Angler';
+import FishShadow from './scene/FishShadow';
+import { GaugeLabel, ProgressGauge, ReelWheel, TensionGauge } from './scene/Gauges';
+import { cubicD, nodeD, splitCubic } from './scene/rodPath';
+import type { Cubic } from './scene/rodPath';
 import MiniGameIntro from './MiniGameIntro';
 import FinishFlash from './FinishFlash';
 import FishIllustration from '../shared/FishIllustration';
@@ -74,6 +82,7 @@ export default function ReelingPhase({ fish, equipment, headStart = false, onSuc
   const pointersRef = useRef<Set<number> | null>(null);
   const keyHoldRef = useRef(false);
   const { finished, finish, isDone } = useFinish(onSuccess, onFail);
+  const color = useGameStore(st => st.players[st.currentPlayerIndex]?.color ?? '#e34a33');
 
   const fishW = Math.min(104, SIZE_CLASS_PX[fish.appearance?.size ?? 'medium'] ?? 72);
   const fishEl = useMemo(
@@ -203,16 +212,28 @@ export default function ReelingPhase({ fish, equipment, headStart = false, onSuc
   const progressRatio = Math.min(1, frame.progress / params.target);
   // 魚の深さ: 寄せるほど水面へ
   const fishY = 86 - progressRatio * 60;
-  const lineColor = danger ? '#ef6a52' : ratio >= CAUTION ? '#e6c266' : 'rgba(244,236,216,0.85)';
-  // 竿先: テンションが上がるほど魚の方へしなる
-  const tipX = 72 - ratio * 12 + (frame.fishX - 50) * 0.1;
-  const tipY = 6 + ratio * 18;
-  const mouthX = frame.fishX + frame.facing * -7;
+  const lineColor = danger ? '#ef6a52' : ratio >= CAUTION ? '#e6c266' : 'rgba(244,236,216,0.9)';
+  // 竿: 根元は右下の釣り人の陰。張りが上がるほど、竿先が魚の方へ大きく引きこまれてしなる
+  // 危ないときは糸と竿先が震える
+  const tremble = danger ? Math.sin(frame.elapsed * 95) * 1.1 : 0;
+  const tipX = 69 - ratio * 25 + (frame.fishX - 50) * 0.14 + tremble * 0.7;
+  const tipY = 3 + ratio * 9;
+  const rod: Cubic = [[88, 100], [85, 62], [77 - ratio * 5, 9 - ratio * 5], [tipX, tipY]];
+  // 竹竿は根元が太く先が細い。3本に分けて太さを変える（分け目は 44% と 72%）
+  const [butt, rest] = splitCubic(rod, 0.44);
+  const [mid, tip] = splitCubic(rest, 0.5);
+  const mouthX = frame.fishX + frame.facing * -10;
   const sag = (1 - ratio) * 14;
-  const midX = (tipX + mouthX) / 2;
+  const midX = (tipX + mouthX) / 2 + tremble;
   const midY = (tipY + fishY) / 2 + sag;
+  const lineD = `M ${tipX.toFixed(1)} ${tipY.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${mouthX.toFixed(1)} ${fishY.toFixed(1)}`;
   const moodInfo = MOOD_TEXT[frame.mood];
-  const aura = fish.rarity === 'mythical' ? 'rgba(239,106,82,0.5)' : fish.rarity === 'legendary' ? 'rgba(241,216,147,0.45)' : fish.rarity === 'rare' ? 'rgba(127,169,205,0.4)' : null;
+  const aura = fish.rarity === 'mythical' ? 'rgba(239,106,82,0.6)' : fish.rarity === 'legendary' ? 'rgba(247,225,150,0.58)' : fish.rarity === 'rare' ? 'rgba(150,210,245,0.5)' : null;
+  // めずらしい魚ほど影が大きい
+  const presence = fish.rarity === 'mythical' ? 1.4 : fish.rarity === 'legendary' ? 1.25 : fish.rarity === 'rare' ? 1.1 : 1;
+  const wag = frame.mood === 'surge' ? 'is-fast' : frame.mood === 'tired' ? 'is-slow' : '';
+  // 寄せが 25・50・75% を越えるたびに、水面でしぶきが上がる（見た目だけ）
+  const milestone = Math.min(3, Math.floor(progressRatio * 4));
 
   return (
     <div
@@ -223,90 +244,97 @@ export default function ReelingPhase({ fish, equipment, headStart = false, onSuc
       onContextMenu={e => e.preventDefault()}
     >
       {/* 状況の見出し + 残り時間 */}
-      <div className="w-full max-w-md flex items-center justify-between gap-2 h-12 shrink-0">
-        <p key={frame.mood} className={`fg-pop font-mincho text-xl font-bold drop-shadow-[0_2px_0_rgba(10,26,44,0.9)] ${moodInfo.className}`}>
+      <div className="relative z-[1] w-full max-w-md md:max-w-3xl lg:max-w-5xl flex items-center justify-between gap-2 h-12 shrink-0">
+        <p key={frame.mood} className={`um-ink fg-pop font-mincho text-xl sm:text-2xl font-bold ${moodInfo.className}`}>
           <Ruby>{frame.mood === 'calm' && frame.holding ? '巻いている…' : moodInfo.text}</Ruby>
         </p>
-        <span className={`shrink-0 rounded-full px-3 py-1 text-sm tabular-nums border ${timeLeft <= 5 ? 'bg-shu-600/80 border-shu-400 text-washi fg-blink' : 'bg-ai-950/60 border-kin-500/30 text-washi/85'}`}>
+        <span className={`um-pill ${timeLeft <= 5 ? 'is-urgent fg-blink' : ''}`}>
           <Ruby>残り</Ruby> {Math.ceil(timeLeft)}<Ruby>秒</Ruby>
         </span>
       </div>
 
-      {/* 水中の断面 */}
-      <div key={frame.joltSeq} className={`relative w-full max-w-md flex-1 min-h-[200px] rounded-2xl overflow-hidden border border-kin-500/20 bg-gradient-to-b from-ai-500/60 via-ai-800/80 to-ai-950 ${frame.joltSeq ? 'fg-shake' : ''}`}>
-        {/* 水面 */}
-        <div className="absolute inset-x-0 top-[14%] h-px bg-kin-300/50" />
-        <div className="absolute inset-x-0 top-0 h-[14%] bg-ai-950/50" />
-        <div className="absolute top-[14%] bottom-0 left-0 w-[calc(100%+96px)] fg-waves opacity-40" />
+      {/* 水中の断面（窓の向こうに舞台の絵が見える。水面は上から14%） */}
+      {/* 外を暗くする影は動かない枠に持たせる（揺れる窓に巨大な影を付けると、合成の層が画面より大きくなる） */}
+      <div className="um-window-frame w-full max-w-md md:max-w-3xl lg:max-w-5xl flex-1 min-h-[200px] flex">
+      <div key={frame.joltSeq} className={`um-window is-inner w-full ${frame.joltSeq ? 'fg-shake' : ''}`}>
+        <StageAnchor surface={0.14} />
 
         {/* 竿と糸 */}
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
-          <path d={`M 104 106 Q 96 ${40 + ratio * 10} ${tipX} ${tipY}`} fill="none" stroke="#3b2a1a" strokeWidth="7" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-          <path d={`M 104 106 Q 96 ${40 + ratio * 10} ${tipX} ${tipY}`} fill="none" stroke="#b8862f" strokeWidth="3" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-          <path d={`M ${tipX} ${tipY} Q ${midX} ${midY} ${mouthX} ${fishY}`} fill="none" stroke={lineColor} strokeWidth={danger ? 2.6 : 1.6} vectorEffect="non-scaling-stroke" />
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none" strokeLinecap="round" aria-hidden>
+          {danger && <path d={lineD} stroke="#ef6a52" strokeOpacity="0.4" strokeWidth="7" vectorEffect="non-scaling-stroke" />}
+          <path d={lineD} stroke={lineColor} strokeWidth={danger ? 2.8 : ratio >= CAUTION ? 2.1 : 1.6} vectorEffect="non-scaling-stroke" />
+          <path d={cubicD(tip)} stroke="#24170b" strokeWidth="4.6" vectorEffect="non-scaling-stroke" />
+          <path d={cubicD(mid)} stroke="#24170b" strokeWidth="7.6" vectorEffect="non-scaling-stroke" />
+          <path d={cubicD(butt)} stroke="#24170b" strokeWidth="10.6" vectorEffect="non-scaling-stroke" />
+          <path d={cubicD(tip)} stroke="#c9963c" strokeWidth="2.4" vectorEffect="non-scaling-stroke" />
+          <path d={cubicD(mid)} stroke="#c9963c" strokeWidth="5.2" vectorEffect="non-scaling-stroke" />
+          <path d={cubicD(butt)} stroke="#c9963c" strokeWidth="8.2" vectorEffect="non-scaling-stroke" />
+          <path d={cubicD(butt)} stroke="#f1d893" strokeWidth="1.8" strokeOpacity="0.5" vectorEffect="non-scaling-stroke" />
+          {/* 竹の節 */}
+          <g stroke="#3b2a1a" strokeOpacity="0.7" strokeLinecap="butt">
+            <path d={nodeD(butt, 0.34)} strokeWidth="9.4" vectorEffect="non-scaling-stroke" />
+            <path d={nodeD(butt, 0.68)} strokeWidth="9.4" vectorEffect="non-scaling-stroke" />
+            <path d={nodeD(butt, 0.99)} strokeWidth="9.4" vectorEffect="non-scaling-stroke" />
+            <path d={nodeD(mid, 0.5, 0.012)} strokeWidth="6.4" vectorEffect="non-scaling-stroke" />
+            <path d={nodeD(mid, 0.99, 0.012)} strokeWidth="6.4" vectorEffect="non-scaling-stroke" />
+            <path d={nodeD(tip, 0.5, 0.012)} strokeWidth="3.6" vectorEffect="non-scaling-stroke" />
+          </g>
         </svg>
 
-        {/* 魚 */}
+        {milestone > 0 && !finished && (
+          <div key={milestone} className="absolute w-0 h-0 pointer-events-none" style={{ left: `${frame.fishX}%`, top: '14%' }}>
+            <Ripple size={150} flat />
+            <SplashCrown size={84 + milestone * 14} />
+          </div>
+        )}
+
+        {/* 魚（その魚の形の影絵） */}
         <div
           className="absolute pointer-events-none"
           style={{ left: `${frame.fishX}%`, top: `${fishY}%`, transform: `translate(-50%, -50%) translate(${frame.shakeX}px, ${frame.shakeY}px)` }}
         >
           {aura && (
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-28 rounded-full fg-aura" style={{ background: `radial-gradient(closest-side, ${aura}, transparent)` }} />
+            <div className="um-aura fg-aura" style={{ '--um-k': presence, background: `radial-gradient(closest-side, ${aura}, transparent)` } as CSSProperties} />
           )}
-          <div style={{ transform: `scaleX(${frame.facing}) rotate(${frame.mood === 'tired' ? 16 : frame.mood === 'surge' ? -8 : 0}deg)`, opacity: 0.8 }}>
-            {fishEl}
+          <div style={{ transform: `scaleX(${frame.facing}) rotate(${frame.mood === 'tired' ? 16 : frame.mood === 'surge' ? -8 : 0}deg)` }}>
+            <div className={`um-wag ${wag}`}>
+              <FishShadow k={presence} wake>{fishEl}</FishShadow>
+            </div>
           </div>
           {frame.mood === 'warn' && (
-            <span className="absolute -top-7 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-shu-500 text-washi font-black flex items-center justify-center fg-blink">!</span>
+            <span className="absolute -top-12 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-shu-500 text-washi font-black flex items-center justify-center fg-blink shadow-[0_0_0_2px_rgba(10,26,44,0.6)]">!</span>
           )}
           {frame.mood === 'surge' && (
             <div className="absolute left-1/2 top-1/2 w-0 h-0">
-              <Ripple key={Math.floor(frame.elapsed * 3)} size={90} />
+              <Ripple key={Math.floor(frame.elapsed * 3)} size={120} />
             </div>
           )}
           {frame.mood === 'tired' && (
-            <span className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-kin-500/90 px-2 text-[11px] font-bold text-sumi"><Ruby>弱った</Ruby></span>
+            <span className="absolute -top-11 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-kin-500/95 px-2 text-[11px] font-bold text-sumi shadow-[0_0_0_2px_rgba(10,26,44,0.5)]"><Ruby>弱った</Ruby></span>
           )}
         </div>
+
+        {/* 近景の釣り人（竿の根元を隠す） */}
+        <AnglerFigure color={color} className="um-angler-corner" />
+      </div>
       </div>
 
       {/* ゲージ */}
-      <div className="w-full max-w-md mt-3 space-y-2 shrink-0">
+      <div className="relative z-[1] w-full max-w-md md:max-w-3xl lg:max-w-5xl mt-3 space-y-2 shrink-0">
         <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span className={danger ? 'text-shu-400 font-bold' : 'text-washi/75'}><Ruby>{danger ? '糸が切れそう！' : '糸の張り'}</Ruby></span>
-            <span className="text-washi/50 tabular-nums">{Math.round(ratio * 100)}%</span>
-          </div>
-          <div className="relative h-4 rounded-full overflow-hidden bg-ai-950/70 border border-kin-500/20">
-            <div className="absolute inset-y-0 left-0 w-[60%] bg-emerald-600/20" />
-            <div className="absolute inset-y-0 left-[60%] w-[25%] bg-kin-500/20" />
-            <div className="absolute inset-y-0 left-[85%] right-0 bg-shu-500/30" />
-            <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${ratio * 100}%`, background: lineColor }} />
-          </div>
+          <GaugeLabel left={danger ? '糸が切れそう！' : '糸の張り'} right={`${Math.round(ratio * 100)}%`} alert={danger} />
+          <TensionGauge ratio={ratio} color={lineColor} caution={CAUTION} danger={DANGER} />
         </div>
         <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-washi/75"><Ruby>寄せ</Ruby></span>
-            <span className="text-washi/50 tabular-nums"><Ruby>あと</Ruby> {Math.max(0, Math.ceil(100 - progressRatio * 100))}%</span>
-          </div>
-          <div className="relative h-3 rounded-full overflow-hidden bg-ai-950/70 border border-kin-500/20">
-            <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-ai-300 to-kin-400" style={{ width: `${progressRatio * 100}%` }} />
-          </div>
+          <GaugeLabel left="寄せ" right={<><Ruby>あと</Ruby> {Math.max(0, Math.ceil(100 - progressRatio * 100))}%</>} />
+          <ProgressGauge ratio={progressRatio} />
         </div>
       </div>
 
       {/* リール（押している間だけ回る） */}
-      <div className="mt-3 flex flex-col items-center shrink-0 fg-tall-only">
-        <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-lg transition-transform duration-75 ${frame.holding ? 'scale-95 border-kin-300 bg-ai-500' : 'border-kin-500/50 bg-ai-800'}`}>
-          <svg className={frame.holding ? 'fg-reel-spin' : ''} width="46" height="46" viewBox="0 0 46 46" aria-hidden>
-            <circle cx="23" cy="23" r="15" fill="none" stroke="#f1d893" strokeWidth="3" />
-            <circle cx="23" cy="23" r="4" fill="#f1d893" />
-            <path d="M23 23 L36 10" stroke="#f1d893" strokeWidth="3" strokeLinecap="round" />
-            <circle cx="37" cy="9" r="4" fill="#e34a33" />
-          </svg>
-        </div>
-        <p className="text-xs text-washi/55 mt-1.5"><Ruby>画面を長押しで巻く・離すと休む</Ruby></p>
+      <div className="relative z-[1] mt-3 flex flex-col items-center shrink-0 fg-tall-only">
+        <ReelWheel holding={frame.holding} />
+        <p className="text-xs text-washi/70 mt-1.5"><Ruby>画面を長押しで巻く・離すと休む</Ruby></p>
       </div>
 
       {danger && !finished && <div className="absolute inset-0 fg-danger" />}
@@ -318,7 +346,7 @@ export default function ReelingPhase({ fish, equipment, headStart = false, onSuc
           onDone={() => setStarted(true)}
         />
       )}
-      {finished && <FinishFlash state={finished} />}
+      {finished && <FinishFlash state={finished} fishId={fish.id} rarity={fish.rarity} />}
     </div>
   );
 }

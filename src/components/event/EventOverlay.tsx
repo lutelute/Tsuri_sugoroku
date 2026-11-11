@@ -16,6 +16,8 @@ import ScreenFlash from '../fx/ScreenFlash';
 import MoneyTicker from '../fx/MoneyTicker';
 import { useReducedMotion } from '../fx/useReducedMotion';
 import { playBad, playBite, playCardFlip, playChime, playGood } from '../../utils/sound';
+import EventArt from './EventArt';
+import { eventArtFor } from './eventArtPick';
 
 // 吉=朱の判子と金の光、凶=墨の判子と朱のフラッシュ＋揺れ、籤=藍の判子
 const TYPE_FX = {
@@ -174,7 +176,7 @@ export default function EventOverlay() {
       <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
         {fightWon && <Confetti variant="festive" mode="burst" count={44} seed={currentPlayerIndex + 11} originY="40%" />}
         <ScreenFlash color={fightWon ? '#fff1c4' : '#7fa9cd'} opacity={0.35} />
-        <div className={`fx-card-front animate-bounce-in p-7 max-w-sm w-[90%] text-center ${fightWon ? '' : 'fx-shake'}`}>
+        <div className={`fx-card-front fd-card ${fightWon ? 'is-good' : 'is-bad'} animate-bounce-in p-7 max-w-sm w-[90%] text-center ${fightWon ? '' : 'fx-shake'}`}>
           <div className="flex justify-center mb-3">
             <Stamp tone={fightWon ? 'shu' : 'sumi'} size={72} delay={150}>{fightWon ? '勝' : '逃'}</Stamp>
           </div>
@@ -203,11 +205,19 @@ export default function EventOverlay() {
       {applied && currentEvent.type === 'good' && <Confetti variant="festive" mode="burst" count={40} seed={currentEvent.name.length + currentPlayerIndex} originY="40%" />}
       {applied && <ScreenFlash color={fx.flash} opacity={currentEvent.type === 'bad' ? 0.32 : 0.4} />}
 
-      <div data-guide="event-card" className={`w-[90%] max-w-sm ${applied && currentEvent.type === 'bad' ? 'fx-shake' : ''}`}>
+      <div data-guide="event-card" className={`w-[90%] max-w-sm md:max-w-lg ${applied && currentEvent.type === 'bad' ? 'fx-shake' : ''}`}>
         <div className="fx-flip animate-bounce-in">
           <div className={`fx-flip-inner ${flipped ? 'is-flipped' : ''}`}>
-            {/* 表（めくった面）: 高さはこちらで決まる */}
-            <div className="fx-flip-face fx-flip-front fx-card-front p-6 text-center" inert={!flipped}>
+            {/* 表（めくった面）: 高さはこちらで決まる。上半分は札の中身の絵、発動したら絵の隅に判子 */}
+            <div className={`fx-flip-face fx-flip-front fx-card-front fd-card is-${currentEvent.type} p-4 pb-5 sm:p-5 text-center`} inert={!flipped}>
+              <div className="relative mb-3">
+                <EventArt spec={eventArtFor(currentEvent)} tone={currentEvent.type} />
+                {applied && (
+                  <span className="absolute right-2 bottom-2">
+                    <Stamp tone={fx.tone} size={60} delay={80} tilt={-10}>{fx.glyph}</Stamp>
+                  </span>
+                )}
+              </div>
               <div className="flex items-center justify-center gap-2 mb-2">
                 <span className="h-px w-8" style={{ background: fx.accent, opacity: 0.5 }} />
                 <span className="text-[11px] tracking-[0.35em] font-mincho" style={{ color: fx.accent }}><Ruby>{fx.label}</Ruby></span>
@@ -217,12 +227,6 @@ export default function EventOverlay() {
               <p className="text-[#4a3a28] mb-4 text-sm leading-relaxed">
                 <Ruby>{currentEvent.description}</Ruby>
               </p>
-
-              {applied && (
-                <div className="flex justify-center mb-3">
-                  <Stamp tone={fx.tone} size={66} delay={80} tilt={-10}>{fx.glyph}</Stamp>
-                </div>
-              )}
 
               {moneyEvent && (
                 <p className="text-sm text-[#7a5a2a] mb-3 font-mincho">

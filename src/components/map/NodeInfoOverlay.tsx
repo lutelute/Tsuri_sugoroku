@@ -7,6 +7,9 @@ import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
 import { computeDistanceToGoal } from '../../utils/pathfinding';
 import TownInfoSection from '../city/TownInfoSection';
+import { useGameStore } from '../../store/useGameStore';
+import { RAIL_ECONOMY, railPrice } from '../../game/railways';
+import { RailGlyph } from '../city/RailSection';
 
 const distanceToGoal = computeDistanceToGoal();
 
@@ -56,6 +59,12 @@ interface NodeInfoOverlayProps {
 }
 
 export default function NodeInfoOverlay({ node, onClose }: NodeInfoOverlayProps) {
+  // まちづくり: 中継マスの線路（持ち主と運賃。無ければ敷く値段）
+  const isCity = useGameStore(s => !!s.city);
+  const railOwner = useGameStore(s => {
+    const o = s.city?.rails?.[node.id];
+    return o === undefined ? null : s.players[o] ?? null;
+  });
   const capitalEvent = node.capitalEventId ? getCapitalEvent(node.capitalEventId) : null;
   const dist = distanceToGoal.get(node.id);
 
@@ -128,6 +137,21 @@ export default function NodeInfoOverlay({ node, onClose }: NodeInfoOverlayProps)
             <div className="text-[10px] text-washi/45 mt-2">
               <Ruby>選べる行動:</Ruby> {capitalEvent.choices.length}<Ruby>つ</Ruby>
             </div>
+          </div>
+        )}
+
+        {/* まちづくり: 線路 */}
+        {isCity && node.type === 'route' && (
+          <div className="mt-3 p-2.5 rounded-lg bg-ai-800/30 border border-kin-500/15 text-xs text-washi/75 flex items-center gap-2">
+            <RailGlyph sea={node.routeTheme === 'sea'} laid={!!railOwner} />
+            {railOwner ? (
+              <span>
+                <b style={{ color: railOwner.color }}>{railOwner.name}</b>
+                <Ruby>{`の${node.routeTheme === 'sea' ? '航路' : '線路'}。歩数を使わずに通り抜ける（他の人は運賃¥${RAIL_ECONOMY.fare}）`}</Ruby>
+              </span>
+            ) : (
+              <span><Ruby>{`線路はまだない。隣の町に自分の建物があれば敷ける（¥${railPrice(node.id).toLocaleString()}）`}</Ruby></span>
+            )}
           </div>
         )}
 

@@ -8,6 +8,8 @@ const FURIGANA_KEY = 'tsuri_furigana_enabled';
 const SOUND_KEY = 'tsuri_sound_enabled';
 const VOLUME_KEY = 'tsuri_sound_volume';
 const CPU_SPEED_KEY = 'tsuri_cpu_speed';
+const QUICK_CATCH_KEY = 'tsuri_quick_catch';
+const ADVICE_KEY = 'tsuri_advice_enabled';
 
 /** 効果音の音量の既定値（控えめ） */
 export const DEFAULT_SOUND_VOLUME = 0.3;
@@ -52,6 +54,24 @@ function loadCpuSpeed(): CpuSpeed {
   }
 }
 
+/** 雑魚は手早く（釣り係）。既定は入 */
+function loadQuickCatch(): boolean {
+  try {
+    return localStorage.getItem(QUICK_CATCH_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+/** 行き先のおすすめを出す（損得係）。既定は入 */
+function loadAdvice(): boolean {
+  try {
+    return localStorage.getItem(ADVICE_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
 interface SettingsState {
   furiganaEnabled: boolean;
   setFurigana: (enabled: boolean) => void;
@@ -68,6 +88,14 @@ interface SettingsState {
   setCpuSpeed: (speed: CpuSpeed) => void;
   /** ゆっくり → ふつう → はやい → ゆっくり… */
   cycleCpuSpeed: () => void;
+  /** 雑魚は手早く: 道具が育ったら、小物は合わせに成功したところで釣り上げる（やり取りを省く） */
+  quickCatch: boolean;
+  setQuickCatch: (enabled: boolean) => void;
+  toggleQuickCatch: () => void;
+  /** おすすめを出す: 分かれ道で、行き先の上位3つに金の輪と理由の札を出す */
+  adviceEnabled: boolean;
+  setAdvice: (enabled: boolean) => void;
+  toggleAdvice: () => void;
   /** CPU の手番を早送り中か（保存しない。人の手番になったら戻す） */
   cpuSkipping: boolean;
   setCpuSkipping: (skipping: boolean) => void;
@@ -109,6 +137,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const i = CPU_SPEEDS.indexOf(get().cpuSpeed);
     get().setCpuSpeed(CPU_SPEEDS[(i + 1) % CPU_SPEEDS.length]);
   },
+  quickCatch: loadQuickCatch(),
+  setQuickCatch: (enabled) => {
+    try { localStorage.setItem(QUICK_CATCH_KEY, enabled ? '1' : '0'); } catch { /* ignore */ }
+    set({ quickCatch: enabled });
+  },
+  toggleQuickCatch: () => get().setQuickCatch(!get().quickCatch),
+  adviceEnabled: loadAdvice(),
+  setAdvice: (enabled) => {
+    try { localStorage.setItem(ADVICE_KEY, enabled ? '1' : '0'); } catch { /* ignore */ }
+    set({ adviceEnabled: enabled });
+  },
+  toggleAdvice: () => get().setAdvice(!get().adviceEnabled),
   cpuSkipping: false,
   setCpuSkipping: (skipping) => set({ cpuSkipping: skipping }),
 }));

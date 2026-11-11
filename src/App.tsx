@@ -8,6 +8,10 @@ const GameScreen = lazy(() => import('./components/screens/GameScreen'));
 const ResultScreen = lazy(() => import('./components/screens/ResultScreen'));
 const LoginScreen = lazy(() => import('./components/screens/LoginScreen'));
 const CpuDriver = lazy(() => import('./components/cpu/CpuDriver'));
+// 開発ビルドだけ: 街並みの絵の確かめ用の一覧（URL に ?gallery=town）
+const TownSceneGallery = import.meta.env.DEV && new URLSearchParams(window.location.search).get('gallery') === 'town' ? lazy(() => import('./components/dev/TownSceneGallery')) : null;
+// 開発ビルドだけ: 札・道具・祭り・温泉の絵の確かめ用の一覧（URL に ?gallery=art）
+const ArtGallery = import.meta.env.DEV && new URLSearchParams(window.location.search).get('gallery') === 'art' ? lazy(() => import('./components/dev/ArtGallery')) : null;
 
 export default function App() {
   const screen = useGameStore(s => s.screen);
@@ -43,6 +47,9 @@ export default function App() {
       prevUidRef.current = currentUid;
     }
   }, [initialized, user, syncFromCloud, clearUserData, setScreen]);
+
+  if (TownSceneGallery) return <Suspense fallback={null}><TownSceneGallery /></Suspense>;
+  if (ArtGallery) return <Suspense fallback={null}><ArtGallery /></Suspense>;
 
   // 認証初期化待ち
   if (!initialized) {

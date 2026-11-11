@@ -1,17 +1,27 @@
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { calculateScore } from '../../game/scoring';
 import { saveEncyclopedia } from '../../utils/storage';
 import { saveUserEncyclopedia, saveUserScore } from '../../lib/firestore';
 import { FISH_DATABASE } from '../../data/fishDatabase';
+import { personaOf } from '../../data/cpuPersonas';
 import Button from '../shared/Button';
 import Ruby from '../shared/Ruby';
 import CityResult from '../city/CityResult';
+import ResultBoard from '../result/ResultBoard';
+import type { ResultEntry } from '../result/ResultBoard';
+import { FishingHighlights } from '../result/HighlightCards';
+import { RESULT_TEXT } from '../title/stageText';
 
 export default function ResultScreen() {
-  const { players, encyclopedias, resetGame, city, titleHistory } = useGameStore(
-    useShallow(s => ({ players: s.players, encyclopedias: s.encyclopedias, resetGame: s.resetGame, city: s.city, titleHistory: s.cityTitleHistory })),
+  const { players, encyclopedias, initialEncyclopedias, resetGame, city, titleHistory, turn, fromFinal } = useGameStore(
+    useShallow(s => ({
+      players: s.players, encyclopedias: s.encyclopedias, initialEncyclopedias: s.initialEncyclopedias, resetGame: s.resetGame,
+      city: s.city, titleHistory: s.cityTitleHistory, turn: s.turn,
+      // 最終決算（4位から順に明かす）を見てから来たか。来たなら、ここでの明かし方は手早くする
+      fromFinal: !!s.cityYearEnd?.final,
+    })),
   );
   const savedRef = useRef(false);
 
@@ -61,94 +71,57 @@ export default function ResultScreen() {
     }
   }, [players, encyclopedias, city]);
 
-  const RANK_ICONS = ['🥇', '🥈', '🥉', '4️⃣'];
+  // 順位を下から1人ずつ明かす。全員そろったら「この局の名場面」を出す
+  const [revealed, setRevealed] = useState(false);
+  const onRevealed = useCallback(() => setRevealed(true), []);
+
+  // 釣り旅の番付（得点の内訳を積み上げの棒にする）
+  const entries: ResultEntry[] = useMemo(() => results.map(({ player, score }) => ({
+    playerIndex: player.id,
+    name: player.name,
+    color: player.color,
+    pawnLabel: personaOf(player)?.mark ?? player.id + 1,
+    total: score.total,
+    parts: [
+      { key: 'fish', label: RESULT_TEXT.fishPoints, icon: 'fish', value: score.fishPoints, color: '#2e5e8c' },
+      { key: 'rarity', label: RESULT_TEXT.rarity, icon: 'gem', value: score.rarityBonus, color: '#8b5cf6' },
+      { key: 'region', label: RESULT_TEXT.region, icon: 'map', value: score.regionBonus, color: '#2f9e6e' },
+      { key: 'book', label: RESULT_TEXT.encyclopedia, icon: 'book', value: score.encyclopediaBonus, color: '#14b8a6' },
+      { key: 'giant', label: RESULT_TEXT.giant, icon: 'star', value: score.giantFishBonus, color: '#e34a33' },
+      { key: 'finish', label: RESULT_TEXT.finish, icon: 'flag', value: score.finishBonus, color: '#f59e0b' },
+      { key: 'money', label: RESULT_TEXT.money, icon: 'coin', value: score.moneyBonus, color: '#8a7a64' },
+    ],
+    stats: [
+      { key: 'caught', label: RESULT_TEXT.caught, icon: 'creel', text: `${player.caughtFish.length}匹` },
+      { key: 'cash', label: RESULT_TEXT.cash, icon: 'coin', text: `¥${player.money.toLocaleString()}` },
+      ...(player.finishOrder !== null ? [{ key: 'goal', label: 'ゴール', icon: 'flag' as const, text: `${player.finishOrder + 1}位` }] : []),
+    ],
+  })), [results]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-4 overflow-y-auto py-8">
-      <h1 className="font-brush text-5xl mb-2 kinpaku kinpaku-shimmer animate-ink-rise">
-        <Ruby>{city ? '長者番付' : '釣果番付'}</Ruby>
-      </h1>
-      <p className="text-washi/55 mb-6 font-mincho tracking-widest"><Ruby>お疲れ様でした</Ruby></p>
+    <div className="flex flex-col items-center justify-center-safe h-full px-3 sm:px-4 overflow-y-auto py-6">
+      <div className="hr-result">
+        <header className="text-center mb-5">
+          <h1 className="font-brush text-5xl sm:text-6xl leading-tight kinpaku kinpaku-shimmer animate-ink-rise">
+            <Ruby>{city ? RESULT_TEXT.cityTitle : RESULT_TEXT.fishingTitle}</Ruby>
+          </h1>
+          <p className="text-washi/60 mt-1 font-mincho tracking-widest text-sm"><Ruby>{RESULT_TEXT.thanks}</Ruby></p>
+        </header>
 
-      {city && <CityResult city={city} players={players} titleHistory={titleHistory} />}
+        {city ? (
+          <CityResult city={city} players={players} titleHistory={titleHistory} turn={turn} fromFinal={fromFinal} />
+        ) : (
+          <>
+            <ResultBoard entries={entries} unit="pt" winnerStamp={RESULT_TEXT.winnerFishing} onDone={onRevealed} />
+            {revealed && <FishingHighlights players={players} encyclopedias={encyclopedias} initialEncyclopedias={initialEncyclopedias} />}
+          </>
+        )}
 
-      <div className={`w-full max-w-lg space-y-4 ${city ? 'hidden' : ''}`}>
-        {results.map((result, index) => (
-          <div
-            key={result.player.id}
-            className={`relative rounded-2xl p-5 ${
-              index === 0
-                ? 'panel-ai border-kin-500/50 shadow-kin-700/20'
-                : 'panel-ai'
-            }`}
-          >
-            {index === 0 && (
-              <span className="seal animate-seal-stamp absolute -top-3 -right-2 w-12 h-12 rounded-md font-mincho text-xs font-bold" style={{ animationDelay: '0.3s' }}>
-                <Ruby>優勝</Ruby>
-              </span>
-            )}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{RANK_ICONS[index] || ''}</span>
-                <div
-                  className="w-4 h-4 rounded-full ring-2 ring-white/20"
-                  style={{ backgroundColor: result.player.color }}
-                />
-                <span className="font-bold font-mincho text-lg text-washi">{result.player.name}</span>
-              </div>
-              <span className="text-2xl font-extrabold text-kin-300">
-                {result.score.total.toLocaleString()}pt
-              </span>
-            </div>
-
-            {/* スコア内訳 */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-white/60">
-              <div className="flex justify-between">
-                <span>🐟 <Ruby>魚</Ruby>ポイント</span>
-                <span>{result.score.fishPoints.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>💎 レアリティ</span>
-                <span>{result.score.rarityBonus.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>🗾 <Ruby>地域制覇</Ruby></span>
-                <span>{result.score.regionBonus.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>📖 <Ruby>図鑑</Ruby></span>
-                <span>{result.score.encyclopediaBonus.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>🌟 <Ruby>巨大魚</Ruby></span>
-                <span>{result.score.giantFishBonus.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>🏁 ゴール<Ruby>順位</Ruby></span>
-                <span>{result.score.finishBonus.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>💰 <Ruby>残金</Ruby></span>
-                <span>{result.score.moneyBonus.toLocaleString()}</span>
-              </div>
-            </div>
-
-            {/* 統計 */}
-            <div className="mt-3 pt-3 border-t border-white/10 flex gap-4 text-xs text-white/40">
-              <span><Ruby>釣った魚</Ruby>: {result.player.caughtFish.length}<Ruby>匹</Ruby></span>
-              <span><Ruby>残金</Ruby>: ¥{result.player.money.toLocaleString()}</span>
-              {result.player.finishOrder !== null && (
-                <span>{result.player.finishOrder + 1}<Ruby>位でゴール</Ruby></span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-8">
-        <Button onClick={resetGame} variant="gold" size="lg">
-          <Ruby>タイトルに戻る</Ruby>
-        </Button>
+        <div className="mt-7 flex justify-center">
+          <Button onClick={resetGame} variant="gold" size="lg">
+            <Ruby>{RESULT_TEXT.backToTitle}</Ruby>
+          </Button>
+        </div>
       </div>
     </div>
   );

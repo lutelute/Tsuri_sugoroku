@@ -1,4 +1,5 @@
 import { useState, useEffect, useEffectEvent, useRef } from 'react';
+import { useGameStore } from '../../store/useGameStore';
 import type { Fish, FishRarity, PlayerEquipment } from '../../game/types';
 import { getEffectiveLevel } from '../../game/fishing';
 import type { FailReason } from './miniGameMeta';
@@ -6,7 +7,10 @@ import { HEAD_START_PROGRESS } from './reelSim';
 import { useFinish } from './useFinish';
 import { buzz, HAPTIC } from './haptics';
 import { playBite, playHit, playNibble, playTap } from '../../utils/sound';
-import { Bobber, Ripple, Splash } from './FishingScene';
+import { Bobber, Ripple, Splash, SplashCrown } from './FishingScene';
+import { StageAnchor, StageScope } from './scene/FishingStage';
+import { SurfaceRig } from './scene/Angler';
+import { GaugeLabel, ProgressGauge } from './scene/Gauges';
 import MiniGameIntro from './MiniGameIntro';
 import FinishFlash from './FinishFlash';
 import Ruby from '../shared/Ruby';
@@ -66,7 +70,11 @@ interface ReactionPhaseProps {
 }
 
 /** 早合わせ: 浮きが「沈んだ瞬間」にタップ。ピクッ（フェイント）で押すとお手つき。 */
-export default function ReactionPhase({ fish, equipment, headStart = false, onSuccess, onFail }: ReactionPhaseProps) {
+export default function ReactionPhase(props: ReactionPhaseProps) {
+  return <StageScope><ReactionGame {...props} /></StageScope>;
+}
+
+function ReactionGame({ fish, equipment, headStart = false, onSuccess, onFail }: ReactionPhaseProps) {
   // 装備効果: 竿=評価幅が広い / リール=ラウンド追加 / ルアー=1回の寄せ量アップ
   const rodLevel = getEffectiveLevel(equipment, 'strike');
   const reelLevel = getEffectiveLevel(equipment, 'reeling');
@@ -88,6 +96,7 @@ export default function ReactionPhase({ fish, equipment, headStart = false, onSu
   const [best, setBest] = useState<number | null>(loadBest);
   const [newRecord, setNewRecord] = useState(false);
   const { finished, finish, isDone } = useFinish(onSuccess, onFail);
+  const color = useGameStore(st => st.players[st.currentPlayerIndex]?.color ?? '#e34a33');
 
   const stateRef = useRef<RoundState>('waiting');
   const progressRef = useRef(headStart ? HEAD_START_PROGRESS : 0);
@@ -200,51 +209,50 @@ export default function ReactionPhase({ fish, equipment, headStart = false, onSu
 
   return (
     <div className="relative w-full h-full flex flex-col items-center px-4 pb-4 pt-2 fg-touch cursor-pointer" onPointerDown={handleTap}>
-      <div className="w-full max-w-md flex items-center justify-between h-12 shrink-0">
-        <p className="font-mincho text-xl font-bold text-washi/90"><Ruby>早合わせ</Ruby></p>
-        <span className="rounded-full px-3 py-1 text-sm tabular-nums border bg-ai-950/60 border-kin-500/30 text-washi/85">
+      <div className="relative z-[1] w-full max-w-md md:max-w-3xl lg:max-w-5xl flex items-center justify-between h-12 shrink-0">
+        <p className="um-ink font-mincho text-xl sm:text-2xl font-bold text-washi"><Ruby>早合わせ</Ruby></p>
+        <span className="um-pill">
           {round}/{totalRounds} <Ruby>回</Ruby>
         </span>
       </div>
 
       {/* 寄せ */}
-      <div className="w-full max-w-md shrink-0">
-        <div className="flex justify-between text-xs mb-1">
-          <span className="text-washi/75"><Ruby>寄せ</Ruby></span>
-          <span className="text-washi/50 tabular-nums">{Math.round(progress)}%</span>
-        </div>
-        <div className="relative h-3 rounded-full overflow-hidden bg-ai-950/70 border border-kin-500/20">
-          <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-ai-300 to-kin-400 transition-[width] duration-300" style={{ width: `${progress}%` }} />
-        </div>
+      <div className="relative z-[1] w-full max-w-md md:max-w-3xl lg:max-w-5xl shrink-0">
+        <GaugeLabel left="寄せ" right={`${Math.round(progress)}%`} />
+        <ProgressGauge ratio={progress / 100} smooth />
       </div>
 
-      {/* 水面と浮き */}
-      <div className={`relative w-full max-w-md flex-1 min-h-[220px] mt-3 rounded-2xl overflow-hidden border ${roundState === 'ready' ? 'border-shu-400' : 'border-kin-500/20'} bg-gradient-to-b from-ai-600/70 via-ai-800/85 to-ai-950`}>
-        <div className="absolute inset-0 w-[calc(100%+96px)] fg-waves opacity-40 pointer-events-none" />
+      {/* 水面と浮き（窓のまん中が水面） */}
+      <div className={`um-window um-bob-lg w-full max-w-md md:max-w-3xl lg:max-w-5xl flex-1 min-h-[220px] mt-3 ${roundState === 'ready' ? 'is-ready' : ''}`}>
+        <StageAnchor surface={0.5} offset={6} />
+        <SurfaceRig color={color} state={roundState === 'ready' ? 'bite' : 'idle'} surface={0.5} compact bigBobber />
         {roundState === 'ready' && <div className="absolute inset-0 bg-shu-500/15" />}
         <div className="absolute left-1/2 top-1/2 w-0 h-0">
-          {roundState === 'ready' && (
-            <>
-              <Ripple size={120} />
-              <Ripple size={190} delay={120} />
-              <Splash count={8} distance={50} />
-            </>
-          )}
-          {roundState === 'waiting' && fakeSeq > 0 && <Ripple key={`f${fakeSeq}`} size={60} />}
+          <div className="absolute left-0 top-[6px] w-0 h-0">
+            {roundState === 'ready' && (
+              <>
+                <Ripple size={170} flat />
+                <Ripple size={260} delay={120} flat />
+                <SplashCrown size={110} />
+                <Splash count={8} distance={56} spread={150} />
+              </>
+            )}
+            {roundState === 'waiting' && fakeSeq > 0 && <Ripple key={`f${fakeSeq}`} size={96} flat />}
+          </div>
           <div className="absolute left-0 top-0 -translate-x-1/2 -translate-y-[55%]">
-            <Bobber state={roundState === 'ready' ? 'sink' : 'idle'} nibbleKey={fakeSeq} size={44} />
+            <Bobber state={roundState === 'ready' ? 'sink' : 'idle'} nibbleKey={fakeSeq} />
           </div>
         </div>
         {roundState === 'ready' && (
-          <p className="absolute top-[12%] inset-x-0 text-center fg-pop font-brush text-5xl text-shu-400 drop-shadow-[0_3px_0_rgba(10,26,44,0.9)]"><Ruby>今！</Ruby></p>
+          <p className="um-ink absolute top-[10%] inset-x-0 text-center fg-pop font-brush text-5xl sm:text-6xl text-shu-400"><Ruby>今！</Ruby></p>
         )}
         {roundState === 'waiting' && (
-          <p className="absolute top-[12%] inset-x-0 text-center text-washi/55 text-sm"><Ruby>じっと待って…</Ruby></p>
+          <p className="um-ink absolute top-[10%] inset-x-0 text-center text-washi/90 text-sm sm:text-base"><Ruby>じっと待って…</Ruby></p>
         )}
         {(roundState === 'result' || roundState === 'foul') && grade && last && (
-          <div key={history.length} className="absolute top-[10%] inset-x-0 text-center fg-pop">
-            <p className={`font-mincho text-3xl font-bold drop-shadow-[0_2px_0_rgba(10,26,44,0.9)] ${grade.className}`}><Ruby>{grade.text}</Ruby></p>
-            <p className="text-sm text-washi/75 mt-1 tabular-nums">
+          <div key={history.length} className="um-ink absolute top-[8%] inset-x-0 text-center fg-pop">
+            <p className={`font-mincho text-3xl sm:text-4xl font-bold ${grade.className}`}><Ruby>{grade.text}</Ruby></p>
+            <p className="text-sm text-washi/90 mt-1 tabular-nums">
               {last.ms !== null ? `${last.ms}ms ・ ` : ''}
               {last.grade === 'foul' ? <Ruby>寄せが減った…</Ruby> : `+${last.gained}%`}
             </p>
@@ -253,25 +261,25 @@ export default function ReactionPhase({ fish, equipment, headStart = false, onSu
       </div>
 
       {/* 記録: これまでの反応と自己ベスト（上達が見える） */}
-      <div className="w-full max-w-md mt-3 flex items-center justify-between shrink-0">
+      <div className="relative z-[1] w-full max-w-md md:max-w-3xl lg:max-w-5xl mt-3 flex items-center justify-between shrink-0">
         <div className="flex gap-1.5">
           {history.map((g, i) => (
             <span
               key={i}
-              className={`w-3 h-3 rounded-full ${g === 'great' ? 'bg-kin-300' : g === 'fast' ? 'bg-kin-500' : g === 'ok' ? 'bg-ai-300' : g === 'slow' ? 'bg-ai-500' : 'bg-shu-500'}`}
+              className={`w-3 h-3 rounded-full ring-1 ring-ai-950/60 ${g === 'great' ? 'bg-kin-300' : g === 'fast' ? 'bg-kin-500' : g === 'ok' ? 'bg-ai-200' : g === 'slow' ? 'bg-ai-400' : 'bg-shu-500'}`}
             />
           ))}
         </div>
-        <span className={`text-xs tabular-nums ${newRecord ? 'text-kin-300 font-bold' : 'text-washi/50'}`}>
+        <span className={`text-xs tabular-nums ${newRecord ? 'text-kin-300 font-bold' : 'text-washi/70'}`}>
           {newRecord && <Ruby>新記録！</Ruby>} <Ruby>自己ベスト</Ruby> {best !== null ? `${best}ms` : '—'}
         </span>
       </div>
-      <p className="text-xs text-washi/50 mt-2 shrink-0 fg-tall-only"><Ruby>ピクッではなく、沈んだ瞬間にタップ</Ruby></p>
+      <p className="relative z-[1] text-xs text-washi/70 mt-2 shrink-0 fg-tall-only"><Ruby>ピクッではなく、沈んだ瞬間にタップ</Ruby></p>
 
       {!started && (
         <MiniGameIntro game="reaction" bonusText={headStart ? `会心の合わせ: 寄せ +${HEAD_START_PROGRESS}%` : undefined} onDone={() => setStarted(true)} />
       )}
-      {finished && <FinishFlash state={finished} />}
+      {finished && <FinishFlash state={finished} fishId={fish.id} rarity={fish.rarity} />}
     </div>
   );
 }

@@ -11,12 +11,12 @@ export function HowToButton({ mode }: { mode: HowToMode }) {
     <button
       onClick={() => openHowTo(mode)}
       data-guide="howto"
-      className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-14 h-14 flex flex-col items-center justify-center text-washi transition cursor-pointer leading-none"
+      className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex flex-col items-center justify-center text-washi transition cursor-pointer leading-none"
       title="遊び方"
       aria-label="遊び方を見る"
     >
       <span className="text-lg font-mincho font-bold" aria-hidden="true">？</span>
-      <span className="text-[9px] font-mincho mt-0.5 tracking-tighter">あそびかた</span>
+      <span className="hidden sm:block text-[9px] font-mincho mt-0.5 tracking-tighter">あそびかた</span>
     </button>
   );
 }

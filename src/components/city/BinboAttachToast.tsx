@@ -1,5 +1,8 @@
 // まちづくり: 貧乏神がとりついた・移ったときの短いお知らせ（数秒で自動で消える。押しても消える）。
 import { useEffect, useRef } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { useGameStore } from '../../store/useGameStore';
+import { cpuLine, cpuQuote } from '../../data/cpuPersonas';
 import Ruby from '../shared/Ruby';
 import Stamp from '../fx/Stamp';
 import { playBad, playCardFlip } from '../../utils/sound';
@@ -35,11 +38,23 @@ export default function BinboAttachToast({ playerName, playerColor, great, reaso
     return () => clearTimeout(t);
   }, [reason, durationMs, seq]);
 
+  // CPU の人物のひとこと（損得係）: お知らせは増やさず、本文の頭に足す。
+  // 押し付けたのが CPU なら「権蔵「がっはっは、そっちへ行け。」」、とりつかれたのが CPU なら「うわっ、ついてくるなって。」
+  const { victim, passer } = useGameStore(
+    useShallow(s => {
+      const t = s.cityBinboToast;
+      return { victim: t ? s.players[t.playerIndex] : undefined, passer: t && t.fromIndex !== undefined ? s.players[t.fromIndex] : undefined };
+    }),
+  );
+  const passQuote = reason === 'pass' ? cpuQuote(passer, 'binbo_pass', seq) : '';
+  const comeLine = passQuote ? null : cpuLine(victim, 'binbo_come', seq);
+
   const who = great ? '大貧乏神' : '貧乏神';
   const title = reason === 'destination' ? `${who}がとりついた！` : `${who}が移った！`;
-  const body = reason === 'destination'
+  const plain = reason === 'destination'
     ? '目的地からいちばん遠かったので、ねらわれてしまった'
-    : fromName ? `${fromName}がすれ違いざまに押し付けた` : 'すれ違いざまに移ってきた';
+    : passQuote ? 'すれ違いざまに押し付けた' : fromName ? `${fromName}がすれ違いざまに押し付けた` : 'すれ違いざまに移ってきた';
+  const body = `${passQuote}${comeLine ? `「${comeLine}」` : ''}${plain}`;
 
   return (
     <button

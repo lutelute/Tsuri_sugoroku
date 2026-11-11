@@ -7,8 +7,15 @@ import { lookupUserByUsername, loadUserEquipment, loadUserMoney, loadUserEncyclo
 import { verifyAuth } from '../../lib/firebase';
 import type { PlayerEquipment, GameMode } from '../../game/types';
 import { CITY_DEFAULT_MONTHS, CITY_INITIAL_MONEY } from '../../game/city';
+import { CPU_STYLES, CPU_STYLE_LABEL } from '../../game/cpuAI';
+import { cpuPersonaFor } from '../../data/cpuPersonas';
+import type { CpuPersona } from '../../data/cpuPersonas';
 import Button from '../shared/Button';
 import Ruby from '../shared/Ruby';
+import Icon from '../shared/Icon';
+import Pawn from '../shared/Pawn';
+import ModeCard from '../title/ModeCard';
+import { CPU_TRAIT, SETUP_TEXT } from '../title/stageText';
 
 interface LinkedUser {
   uid: string;
@@ -32,6 +39,9 @@ export default function SetupScreen() {
   const [searching, setSearching] = useState<boolean[]>([false, false, false, false]);
 
   const [starting, setStarting] = useState(false);
+  // 席ごとの「アカウントをつなぐ」の欄（押したときだけ開く）
+  const [accountOpen, setAccountOpen] = useState<boolean[]>([false, false, false, false]);
+  const toggleAccount = (i: number) => setAccountOpen(prev => prev.map((v, k) => (k === i ? !v : v)));
   const [carryOver, setCarryOver] = useState(true); // 引き継ぎモード
   // 各席が人か CPU か（1人目は常に人）
   const [kinds, setKinds] = useState<('human' | 'cpu')[]>(['human', 'human', 'human', 'human']);
@@ -76,6 +86,21 @@ export default function SetupScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
+
+  // CPU の席の人物。性格の割り当ては対局開始時（initialState.createInitialPlayers）と同じ数え方
+  const seatPersonas: (CpuPersona | null)[] = (() => {
+    let cpuCount = 0;
+    const nthOf: Record<string, number> = {};
+    return kinds.slice(0, playerCount).map(k => {
+      if (k !== 'cpu') return null;
+      const style = CPU_STYLES[cpuCount++ % CPU_STYLES.length];
+      const nth = nthOf[style] ?? 0;
+      nthOf[style] = nth + 1;
+      return cpuPersonaFor(style, nth);
+    });
+  })();
+  // 対局に渡す名前（CPU の席は人物の名前）
+  const gameNames = () => names.slice(0, playerCount).map((n, i) => seatPersonas[i]?.name ?? n);
 
   // 紐付けユーザーが1人でもいるか
   const hasLinkedUser = linkedUsers.slice(0, playerCount).some(u => u !== null);
@@ -123,7 +148,7 @@ export default function SetupScreen() {
         startGame(
           {
             playerCount,
-            playerNames: names.slice(0, playerCount),
+            playerNames: gameNames(),
             playerUids: uids.map(u => u?.uid ?? null),
             maxTurns,
             carryOver: true,
@@ -139,7 +164,7 @@ export default function SetupScreen() {
         startGame(
           {
             playerCount,
-            playerNames: names.slice(0, playerCount),
+            playerNames: gameNames(),
             playerUids: uids.map(u => u?.uid ?? null),
             maxTurns,
             carryOver: false,
@@ -155,7 +180,7 @@ export default function SetupScreen() {
       // 失敗してもデフォルト値で開始
       startGame({
         playerCount,
-        playerNames: names.slice(0, playerCount),
+        playerNames: gameNames(),
         playerUids: linkedUsers.slice(0, playerCount).map(u => u?.uid ?? null),
         maxTurns,
         carryOver: false,
@@ -254,230 +279,251 @@ export default function SetupScreen() {
     setNames(newNames);
   };
 
+  const cityMode = mode === 'city';
+  const turnOptions = cityMode ? [12, 24, 36, 48] : [50, 80, 120, 0];
+
   return (
-    <div className="flex flex-col items-center justify-center h-full px-4 overflow-y-auto py-6">
-      <div className="panel-ai rounded-2xl p-6 sm:p-8 w-full max-w-md">
-        <h2 className="font-mincho text-2xl font-bold text-center mb-7 text-kin-300 ink-underline"><Ruby>ゲーム設定</Ruby></h2>
+    <div className="flex flex-col items-center justify-center-safe h-full px-3 sm:px-4 overflow-y-auto py-5">
+      <div className="hr-setup panel-ai rounded-2xl w-full">
+        <h2 className="hr-setup-title font-mincho"><span className="ink-underline"><Ruby>ゲーム設定</Ruby></span></h2>
 
-        {/* ゲームモード */}
-        <div className="mb-6">
-          <label className="block text-sm text-white/60 mb-2"><Ruby>あそびかた</Ruby></label>
-          <div className="grid grid-cols-2 gap-2">
-            {([
-              { m: 'fishing' as GameMode, icon: '🎣', title: '釣り旅', desc: '日本を巡って魚を集め、ゴールを目指す' },
-              { m: 'city' as GameMode, icon: '🏙', title: 'まちづくり', desc: `町に建物を建てて育て、総資産を競う（初期資金¥${CITY_INITIAL_MONEY.toLocaleString()}）` },
-            ]).map(o => (
-              <button
-                key={o.m}
-                onClick={() => setMode(o.m)}
-                className={`text-left rounded-xl border p-3 transition cursor-pointer ${
-                  mode === o.m ? 'bg-ai-600/70 border-kin-400/70 shadow-lg ring-1 ring-kin-300/40' : 'bg-white/5 border-white/10 hover:bg-white/10'
-                }`}
-              >
-                <div className="text-2xl leading-none mb-1">{o.icon}</div>
-                <div className="font-mincho font-bold text-washi"><Ruby>{o.title}</Ruby></div>
-                <div className="text-[11px] text-white/55 leading-snug mt-0.5"><Ruby>{o.desc}</Ruby></div>
-              </button>
-            ))}
-          </div>
-          {mode === 'city' && (
-            <p className="text-[11px] text-kin-300/80 mt-2 leading-relaxed">
-              <Ruby>止まった町に住宅・商業・工業・発電所などを建てよう。電力・公害・幸福度のバランスで町は毎月ひとりでに発展する。目的地に一番乗りで賞金、地震や台風にも注意！</Ruby>
-            </p>
-          )}
-        </div>
+        <div className="hr-setup-grid">
+          {/* あそびかた（タイトルと同じ絵の札） */}
+          <section className="hr-setup-mode">
+            <h3 className="hr-label"><Ruby>あそびかた</Ruby></h3>
+            <div className="grid grid-cols-2 gap-2.5">
+              <ModeCard
+                mode="fishing"
+                title="釣り旅"
+                desc={SETUP_TEXT.fishingDesc}
+                ariaLabel="釣り旅をえらぶ"
+                onClick={() => setMode('fishing')}
+                selected={mode === 'fishing'}
+                compact
+              />
+              <ModeCard
+                mode="city"
+                title="まちづくり"
+                desc={SETUP_TEXT.cityDesc(CITY_INITIAL_MONEY.toLocaleString())}
+                ariaLabel="まちづくりをえらぶ"
+                onClick={() => setMode('city')}
+                selected={mode === 'city'}
+                compact
+              />
+            </div>
+            {cityMode && (
+              <p className="text-[11px] text-kin-300/85 mt-2.5 leading-relaxed">
+                <Ruby>止まった町に住宅・商業・工業・発電所などを建てよう。電力・公害・幸福度のバランスで町は毎月ひとりでに発展する。目的地に一番乗りで賞金、地震や台風にも注意！</Ruby>
+              </p>
+            )}
+          </section>
 
-        {/* プレイヤー人数 */}
-        <div className="mb-6">
-          <label className="block text-sm text-white/60 mb-2"><Ruby>プレイヤー人数</Ruby></label>
-          <div className="flex gap-2">
-            {[1, 2, 3, 4].map(n => (
-              <button
-                key={n}
-                onClick={() => setPlayerCount(n)}
-                className={`flex-1 py-2 rounded-lg text-lg font-bold transition-all cursor-pointer
-                  ${playerCount === n
-                    ? 'bg-ai-500 text-washi shadow-lg'
-                    : 'bg-white/10 text-white/60 hover:bg-white/20'
-                  }`}
-              >
-                {n}<Ruby>人</Ruby>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* プレイヤー設定 */}
-        <div className="mb-6 space-y-4">
-          {Array.from({ length: playerCount }, (_, i) => (
-            <div key={i} className="bg-white/5 rounded-xl p-3 border border-white/10">
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className="w-4 h-4 rounded-full shrink-0"
-                  style={{ backgroundColor: PLAYER_COLORS[i] }}
-                />
-                {i > 0 && (
-                  <button
-                    onClick={() => toggleKind(i)}
-                    className={`shrink-0 text-xs font-bold px-2.5 py-1.5 rounded-lg border transition cursor-pointer ${
-                      kinds[i] === 'cpu' ? 'bg-kin-500/30 border-kin-400/60 text-kin-200' : 'bg-white/10 border-white/20 text-white/70'
-                    }`}
-                    title="人とCPUを切り替え"
-                  >
-                    {kinds[i] === 'cpu' ? 'CPU' : <Ruby>人</Ruby>}
-                  </button>
-                )}
-                <input
-                  type="text"
-                  value={names[i]}
-                  onChange={(e) => updateName(i, e.target.value)}
-                  placeholder={kinds[i] === 'cpu' ? '（自動で名付け）' : PLAYER_DEFAULT_NAMES[i]}
-                  maxLength={10}
-                  disabled={!!linkedUsers[i] || kinds[i] === 'cpu'}
-                  className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder-white/30 outline-none focus:border-blue-400 transition disabled:opacity-60"
-                />
-              </div>
-
-              {/* ユーザー紐付け（CPU の席では出さない） */}
-              {kinds[i] === 'cpu' ? (
-                <p className="text-[11px] text-kin-300/70 mt-1"><Ruby>CPUが自動で遊びます（性格は堅実・独占・目的地の順）</Ruby></p>
-              ) : linkedUsers[i] ? (
-                <div className="flex items-center justify-between text-xs mt-1">
-                  <span className="text-cyan-300">
-                    🔗 {linkedUsers[i]!.displayName}（<Ruby>登録ユーザー</Ruby>）
+          {/* 人数と席 */}
+          <section className="hr-setup-seats">
+            <h3 className="hr-label"><Ruby>プレイヤー人数</Ruby></h3>
+            <div className="flex gap-2 mb-3">
+              {[1, 2, 3, 4].map(n => (
+                <button
+                  key={n}
+                  onClick={() => setPlayerCount(n)}
+                  aria-pressed={playerCount === n}
+                  className={`hr-seg flex-1 text-lg font-bold ${playerCount === n ? 'is-on' : ''}`}
+                >
+                  <span className="flex justify-center gap-[3px] mb-0.5" aria-hidden="true">
+                    {Array.from({ length: n }, (_, k) => (
+                      <span key={k} className="w-2 h-2 rounded-full" style={{ backgroundColor: PLAYER_COLORS[k], boxShadow: '0 0 0 1px rgba(244,236,216,0.55)' }} />
+                    ))}
                   </span>
-                  <button
-                    onClick={() => unlinkUser(i)}
-                    className="text-white/40 hover:text-red-400 transition cursor-pointer"
-                  >
-                    <Ruby>解除</Ruby>
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={searchInputs[i]}
-                      onChange={(e) => {
-                        const newInputs = [...searchInputs];
-                        newInputs[i] = e.target.value;
-                        setSearchInputs(newInputs);
-                        const newErrors = [...searchErrors];
-                        newErrors[i] = null;
-                        setSearchErrors(newErrors);
-                      }}
-                      placeholder="ユーザー名"
-                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white placeholder-white/20 outline-none focus:border-cyan-400 transition"
-                    />
-                    <input
-                      type="password"
-                      value={passwordInputs[i]}
-                      onChange={(e) => {
-                        const newPw = [...passwordInputs];
-                        newPw[i] = e.target.value;
-                        setPasswordInputs(newPw);
-                        const newErrors = [...searchErrors];
-                        newErrors[i] = null;
-                        setSearchErrors(newErrors);
-                      }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(i); }}
-                      placeholder="パスワード"
-                      className="w-24 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white placeholder-white/20 outline-none focus:border-cyan-400 transition"
-                    />
-                    <button
-                      onClick={() => handleSearch(i)}
-                      disabled={searching[i] || !searchInputs[i].trim() || !passwordInputs[i]}
-                      className="text-xs bg-cyan-600/50 hover:bg-cyan-600/80 disabled:opacity-30 px-3 py-1.5 rounded-lg transition cursor-pointer disabled:cursor-default"
-                    >
-                      {searching[i] ? '...' : <Ruby>紐付</Ruby>}
-                    </button>
+                  <span>{n}<Ruby>人</Ruby></span>
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-2.5">
+              {Array.from({ length: playerCount }, (_, i) => {
+                const persona = seatPersonas[i];
+                const isCpu = kinds[i] === 'cpu';
+                const linked = linkedUsers[i];
+                const open = !isCpu && !linked && (accountOpen[i] || !!searchErrors[i]);
+                return (
+                  <div key={i} className="hr-seat" style={{ '--pc': PLAYER_COLORS[i] } as React.CSSProperties}>
+                    <div className="flex items-center gap-2">
+                      {/* 駒（地図で動く駒と同じ色と形） */}
+                      <Pawn color={PLAYER_COLORS[i]} label={persona ? persona.mark : i + 1} size={44} />
+
+                      {isCpu && persona ? (
+                        /* CPU の人物の札 */
+                        <div className="flex-1 min-w-0 leading-tight">
+                          <div className="flex items-baseline gap-2 min-w-0">
+                            <span className="font-brush text-xl text-washi shrink-0"><Ruby>{persona.name}</Ruby></span>
+                            <span className="text-[11px] text-kin-300/90 truncate"><Ruby>{persona.role}</Ruby></span>
+                          </div>
+                          <div className="text-[11px] text-washi/65 mt-0.5">
+                            <span className="inline-block rounded-sm border border-kin-500/45 bg-kin-500/15 text-kin-300 px-1 mr-1 font-mincho"><Ruby>{CPU_STYLE_LABEL[persona.style]}</Ruby></span>
+                            <Ruby>{CPU_TRAIT[persona.style]}</Ruby>
+                          </div>
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          value={names[i]}
+                          onChange={(e) => updateName(i, e.target.value)}
+                          placeholder={PLAYER_DEFAULT_NAMES[i]}
+                          maxLength={10}
+                          disabled={!!linked}
+                          aria-label={`プレイヤー${i + 1}の名前`}
+                          className="hr-input flex-1 min-w-0"
+                        />
+                      )}
+
+                      {/* アカウントをつなぐ（人の席だけ。押したときだけ欄が開く） */}
+                      {!isCpu && (
+                        <button
+                          onClick={() => (linked ? unlinkUser(i) : toggleAccount(i))}
+                          aria-label={linked ? 'アカウントの紐付けを解除' : 'アカウントをつなぐ'}
+                          aria-expanded={linked ? undefined : open}
+                          title={linked ? '紐付けを解除' : 'アカウントをつなぐ（登録ユーザーの図鑑・装備を使う）'}
+                          className={`hr-seat-btn ${linked ? 'is-linked' : open ? 'is-open' : ''}`}
+                        >
+                          <Icon name={linked ? 'check' : 'link'} size={18} />
+                          <span className="text-[9px] leading-none mt-0.5">{linked ? <Ruby>解除</Ruby> : 'つなぐ'}</span>
+                        </button>
+                      )}
+
+                      {i > 0 && (
+                        <button
+                          onClick={() => toggleKind(i)}
+                          className={`hr-seat-btn is-kind ${isCpu ? 'is-cpu' : ''}`}
+                          title="人とCPUを切り替え"
+                        >
+                          <span className="text-sm font-bold">{isCpu ? 'CPU' : <Ruby>人</Ruby>}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* 紐付け済み */}
+                    {!isCpu && linked && (
+                      <p className="flex items-center gap-1.5 text-xs text-kin-300 mt-1.5 pl-1">
+                        <Icon name="link" size={14} className="shrink-0" />
+                        <span className="truncate">{linked.displayName}（<Ruby>登録ユーザー</Ruby>）</span>
+                      </p>
+                    )}
+
+                    {/* アカウントをつなぐ欄 */}
+                    {open && (
+                      <div className="hr-account fx-rise">
+                        <p className="text-[11px] text-washi/65 mb-1.5"><Ruby>{SETUP_TEXT.accountHelp}</Ruby></p>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            value={searchInputs[i]}
+                            onChange={(e) => {
+                              const newInputs = [...searchInputs];
+                              newInputs[i] = e.target.value;
+                              setSearchInputs(newInputs);
+                              const newErrors = [...searchErrors];
+                              newErrors[i] = null;
+                              setSearchErrors(newErrors);
+                            }}
+                            placeholder="ユーザー名"
+                            autoComplete="off"
+                            className="hr-input is-small flex-1 min-w-0"
+                          />
+                          <input
+                            type="password"
+                            value={passwordInputs[i]}
+                            onChange={(e) => {
+                              const newPw = [...passwordInputs];
+                              newPw[i] = e.target.value;
+                              setPasswordInputs(newPw);
+                              const newErrors = [...searchErrors];
+                              newErrors[i] = null;
+                              setSearchErrors(newErrors);
+                            }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(i); }}
+                            placeholder="パスワード"
+                            autoComplete="off"
+                            className="hr-input is-small flex-1 min-w-0"
+                          />
+                          <button
+                            onClick={() => handleSearch(i)}
+                            disabled={searching[i] || !searchInputs[i].trim() || !passwordInputs[i]}
+                            className="shrink-0 min-h-11 px-3 rounded-lg text-sm font-bold text-[#3a2a0e] bg-gradient-to-b from-kin-300 to-kin-600 disabled:opacity-35 transition cursor-pointer disabled:cursor-default"
+                          >
+                            {searching[i] ? '...' : 'つなぐ'}
+                          </button>
+                        </div>
+                        {currentUser && !isGuest && !linkedUsers.some(u => u?.uid === currentUser.uid) && (
+                          <button
+                            onClick={() => linkCurrentUser(i)}
+                            className="hr-pill text-xs text-kin-300/80 hover:text-kin-300 mt-2 transition cursor-pointer"
+                          >
+                            <Ruby>自分のアカウントを紐付け</Ruby>
+                          </button>
+                        )}
+                        {searchErrors[i] && (
+                          <p className="text-xs text-shu-400 mt-1.5"><Ruby>{searchErrors[i]}</Ruby></p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {currentUser && !isGuest && !linkedUsers.some(u => u?.uid === currentUser.uid) && (
-                    <button
-                      onClick={() => linkCurrentUser(i)}
-                      className="text-xs text-cyan-300/60 hover:text-cyan-300 mt-1.5 transition cursor-pointer"
-                    >
-                      <Ruby>自分のアカウントを紐付け</Ruby>
-                    </button>
-                  )}
-                  {searchErrors[i] && (
-                    <p className="text-xs text-red-400 mt-1"><Ruby>{searchErrors[i]}</Ruby></p>
-                  )}
-                </div>
-              )}
+                );
+              })}
             </div>
-          ))}
-        </div>
+          </section>
 
-        {/* 引き継ぎモード */}
-        {hasLinkedUser && mode !== 'city' && (
-          <div className="mb-6">
-            <label className="block text-sm text-white/60 mb-2"><Ruby>装備・お金の引き継ぎ</Ruby></label>
+          {/* 引き継ぎモード */}
+          {hasLinkedUser && !cityMode && (
+            <section className="hr-setup-carry">
+              <h3 className="hr-label"><Ruby>装備・お金の引き継ぎ</Ruby></h3>
+              <div className="flex gap-2">
+                <button onClick={() => setCarryOver(true)} aria-pressed={carryOver} className={`hr-seg flex-1 text-sm font-medium ${carryOver ? 'is-on' : ''}`}>
+                  <Ruby>引き継ぐ</Ruby>
+                </button>
+                <button onClick={() => setCarryOver(false)} aria-pressed={!carryOver} className={`hr-seg flex-1 text-sm font-medium ${!carryOver ? 'is-on' : ''}`}>
+                  <Ruby>引き継がない</Ruby>
+                </button>
+              </div>
+              <p className="text-xs text-washi/50 mt-1.5">
+                <Ruby>{carryOver
+                  ? '前回の装備・所持金を引き継いでスタート'
+                  : '全員初期装備・初期所持金で公平にスタート'
+                }</Ruby>
+              </p>
+            </section>
+          )}
+
+          {/* ターン数設定 */}
+          <section className="hr-setup-turns">
+            <h3 className="hr-label"><Ruby>{cityMode ? 'あそぶ期間' : '最大ターン数'}</Ruby></h3>
             <div className="flex gap-2">
-              <button
-                onClick={() => setCarryOver(true)}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer
-                  ${carryOver
-                    ? 'bg-emerald-600 text-white shadow-lg'
-                    : 'bg-white/10 text-white/60 hover:bg-white/20'
-                  }`}
-              >
-                <Ruby>引き継ぐ</Ruby>
-              </button>
-              <button
-                onClick={() => setCarryOver(false)}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer
-                  ${!carryOver
-                    ? 'bg-orange-600 text-white shadow-lg'
-                    : 'bg-white/10 text-white/60 hover:bg-white/20'
-                  }`}
-              >
-                <Ruby>引き継がない</Ruby>
-              </button>
+              {turnOptions.map(n => (
+                <button
+                  key={n}
+                  onClick={() => setMaxTurns(n)}
+                  aria-pressed={maxTurns === n}
+                  className={`hr-seg flex-1 text-sm font-medium ${maxTurns === n ? 'is-on' : ''}`}
+                >
+                  {n === 0 ? <Ruby>無制限</Ruby> : cityMode ? <span>{n / 12}<Ruby>年</Ruby></span> : `${n}T`}
+                </button>
+              ))}
             </div>
-            <p className="text-xs text-white/40 mt-1.5">
-              <Ruby>{carryOver
-                ? '前回の装備・所持金を引き継いでスタート'
-                : '全員初期装備・初期所持金で公平にスタート'
-              }</Ruby>
-            </p>
-          </div>
-        )}
-
-        {/* ターン数設定 */}
-        <div className="mb-6">
-          <label className="block text-sm text-white/60 mb-2"><Ruby>{mode === 'city' ? 'あそぶ期間' : '最大ターン数'}</Ruby></label>
-          <div className="flex gap-2">
-            {(mode === 'city' ? [12, 24, 36, 48] : [50, 80, 120, 0]).map(n => (
-              <button
-                key={n}
-                onClick={() => setMaxTurns(n)}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer
-                  ${maxTurns === n
-                    ? 'bg-ai-500 text-washi shadow-lg'
-                    : 'bg-white/10 text-white/60 hover:bg-white/20'
-                  }`}
-              >
-                {n === 0 ? <Ruby>無制限</Ruby> : mode === 'city' ? <>{n / 12}<Ruby>年</Ruby></> : `${n}T`}
-              </button>
-            ))}
-          </div>
+          </section>
         </div>
 
         {/* ボタン */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 mt-5">
           <Button
             onClick={() => setScreen('title')}
             variant="secondary"
-            className="flex-1"
+            className="flex-1 min-h-12"
           >
             <Ruby>戻る</Ruby>
           </Button>
           <Button
             onClick={handleStart}
             variant="gold"
-            className="flex-1"
+            className="flex-[2] min-h-12 font-mincho tracking-widest text-lg"
             disabled={starting}
           >
             <Ruby>{starting ? '読込中...' : 'はじめる'}</Ruby>

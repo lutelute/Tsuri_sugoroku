@@ -1,12 +1,14 @@
 import { useState, useEffect, useEffectEvent, useMemo, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import type { Fish } from '../../game/types';
 import { getStrikeGreenZone } from '../../game/fishing';
 import { STRIKE_PERFECT_FRACTION, STRIKE_RING_PERIOD_MS } from './strike';
 import { SIZE_CLASS_PX } from './miniGameMeta';
-import { Bobber, Ripple, Splash } from './FishingScene';
+import { Bobber, Ripple, Splash, SplashCrown } from './FishingScene';
 import { buzz, HAPTIC } from './haptics';
 import { playBite, playNibble, playTap } from '../../utils/sound';
 import FishIllustration from '../shared/FishIllustration';
+import FishShadow from './scene/FishShadow';
 import Ruby from '../shared/Ruby';
 
 /** 輪が消えてから「見逃し」にするまでの猶予（正規化時間） */
@@ -115,44 +117,45 @@ export default function WaitingPhase({ hasBite, fish, strikeLevel, onStrike, onE
   return (
     <div className="absolute inset-0 fg-touch cursor-pointer" onPointerDown={handlePointerDown}>
       {/* 上部の案内 */}
-      <div className="absolute top-[8%] inset-x-0 text-center px-4 pointer-events-none">
+      <div className="um-ink absolute top-[8%] inset-x-0 text-center px-4 pointer-events-none">
         {!hasBite ? (
           <>
-            <p className="font-mincho text-xl text-washi/80"><Ruby>当たりを待とう…</Ruby></p>
-            <p className="text-xs text-washi/50 mt-1"><Ruby>浮きが沈んだら、輪をよく見てタップ</Ruby></p>
+            <p className="font-mincho text-xl sm:text-2xl text-washi"><Ruby>当たりを待とう…</Ruby></p>
+            <p className="text-xs sm:text-sm text-washi/80 mt-1"><Ruby>浮きが沈んだら、輪をよく見てタップ</Ruby></p>
             {isBig && <p className="text-sm text-kin-300 mt-2 fg-blink" style={{ animationDuration: '1.2s' }}><Ruby>水面がざわついている…</Ruby></p>}
           </>
         ) : (
           <>
-            <p className="fg-pop font-brush text-5xl text-shu-400 drop-shadow-[0_3px_0_rgba(10,26,44,0.9)]"><Ruby>当たり！</Ruby></p>
-            <p className="text-sm text-washi/85 mt-2"><Ruby>輪が光ったらタップ！</Ruby></p>
+            <p className="fg-pop font-brush text-5xl sm:text-6xl text-shu-400"><Ruby>当たり！</Ruby></p>
+            <p className="text-sm sm:text-base text-washi mt-2"><Ruby>輪が光ったらタップ！</Ruby></p>
           </>
         )}
       </div>
 
       {/* 浮きの位置（CastPhase と同じ座標） */}
       <div className="absolute left-1/2 top-[56%] w-0 h-0">
-        {/* 魚影 */}
-        <div className="absolute left-0 top-[46px] -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+        {/* 魚影: その魚の形の影絵が、浮きの下をうろつく */}
+        <div className="um-shadow-pos absolute left-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
           {isBig && (
             <div
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-24 rounded-full fg-aura"
-              style={{ background: fish.rarity === 'mythical' ? 'radial-gradient(closest-side, rgba(239,106,82,0.55), transparent)' : 'radial-gradient(closest-side, rgba(241,216,147,0.5), transparent)' }}
+              className="um-aura fg-aura"
+              style={{ '--um-k': 1.25, background: fish.rarity === 'mythical' ? 'radial-gradient(closest-side, rgba(239,106,82,0.62), transparent)' : 'radial-gradient(closest-side, rgba(247,225,150,0.6), transparent)' } as CSSProperties}
             />
           )}
-          <div className={hasBite ? 'fg-dart-in' : 'fg-patrol'} style={{ opacity: hasBite ? undefined : 0.35 }}>
-            {shadow}
+          <div className={hasBite ? 'fg-dart-in' : 'um-patrol'} style={{ opacity: hasBite ? undefined : 0.6 }}>
+            <FishShadow k={isBig ? 1.25 : 1} wake={!hasBite}>{shadow}</FishShadow>
           </div>
         </div>
 
-        {/* 波紋（前アタリ・本アタリ） */}
+        {/* 波紋と水しぶき（前アタリ・本アタリ） */}
         <div className="absolute left-0 top-[6px] w-0 h-0">
-          {nibble > 0 && !hasBite && <Ripple key={`r${nibble}`} size={56} />}
+          {nibble > 0 && !hasBite && <Ripple key={`r${nibble}`} size={84} flat />}
           {hasBite && (
             <>
-              <Ripple size={110} />
-              <Ripple size={170} delay={140} />
-              <Splash count={8} distance={46} />
+              <Ripple size={150} flat />
+              <Ripple size={230} delay={140} flat />
+              <SplashCrown size={isBig ? 130 : 96} />
+              <Splash count={8} distance={52} spread={150} />
             </>
           )}
         </div>
@@ -165,20 +168,22 @@ export default function WaitingPhase({ hasBite, fish, strikeLevel, onStrike, onE
         {/* 合わせの輪 */}
         {hasBite && (
           <svg
-            className="absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none overflow-visible"
-            width={280} height={280} viewBox="-140 -140 280 280" aria-hidden
+            className="um-ring absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none overflow-visible"
+            viewBox="-140 -140 280 280" aria-hidden
           >
+            {/* 輪の下地（明るい空や波の上でも帯が読めるように） */}
+            <circle r={RING_R0 * 0.5} fill="none" stroke="#0a1a2c" strokeOpacity="0.3" strokeWidth={RING_R0 * greenZone + 5} />
             {/* 金の帯（竿が良いほど太い） */}
-            <circle r={RING_R0 * 0.5} fill="none" stroke="#d4a843" strokeOpacity={inBand ? 0.6 : 0.32} strokeWidth={RING_R0 * greenZone} />
+            <circle r={RING_R0 * 0.5} fill="none" stroke="#e6c266" strokeOpacity={inBand ? 0.78 : 0.46} strokeWidth={RING_R0 * greenZone} />
             {/* 会心の芯 */}
-            <circle r={RING_R0 * 0.5} fill="none" stroke="#f1d893" strokeOpacity="0.55" strokeWidth={RING_R0 * greenZone * STRIKE_PERFECT_FRACTION * 2} />
+            <circle r={RING_R0 * 0.5} fill="none" stroke="#fff3c4" strokeOpacity="0.6" strokeWidth={RING_R0 * greenZone * STRIKE_PERFECT_FRACTION * 2} />
             {/* 縮む輪 */}
+            <circle r={ringR} fill="none" stroke="#0a1a2c" strokeOpacity="0.5" strokeWidth={inBand ? 10 : 7} />
             <circle
               r={ringR}
               fill="none"
-              stroke={inBand ? '#f7e7b8' : '#ef6a52'}
+              stroke={inBand ? '#fff3c4' : '#ef6a52'}
               strokeWidth={inBand ? 7 : 4}
-              style={inBand ? { filter: 'drop-shadow(0 0 6px rgba(241,216,147,0.9))' } : undefined}
             />
           </svg>
         )}
@@ -186,9 +191,9 @@ export default function WaitingPhase({ hasBite, fish, strikeLevel, onStrike, onE
 
       {/* 早合わせのフィードバック */}
       {early && (
-        <div key={early.id} className="absolute left-1/2 top-[40%] -translate-x-1/2 text-center pointer-events-none">
-          <p className="fg-pop font-mincho text-2xl font-bold text-shu-400 drop-shadow-[0_2px_0_rgba(10,26,44,0.9)]"><Ruby>まだ早い！</Ruby></p>
-          {early.penalized && <p className="text-xs text-washi/70 mt-1"><Ruby>魚が警戒した…</Ruby></p>}
+        <div key={early.id} className="um-ink absolute left-1/2 top-[30%] -translate-x-1/2 text-center pointer-events-none">
+          <p className="fg-pop font-mincho text-2xl font-bold text-shu-400 whitespace-nowrap"><Ruby>まだ早い！</Ruby></p>
+          {early.penalized && <p className="text-xs text-washi/85 mt-1 whitespace-nowrap"><Ruby>魚が警戒した…</Ruby></p>}
         </div>
       )}
     </div>

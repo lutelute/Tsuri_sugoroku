@@ -1,5 +1,6 @@
 // テンポ（待ち時間・お知らせの順番待ち・CPU の速さ）。React に依存しない純粋な定義と関数。
 // 画面（GameScreen / CpuDriver / PlayerToken）とテストの両方から使い、時間の数字をここに集める。
+import { splitCpuLine } from '../data/cpuPersonas';
 
 /** CPU の速さ（設定で選ぶ） */
 export type CpuSpeed = 'slow' | 'normal' | 'fast';
@@ -77,16 +78,43 @@ export type Notice =
   | { kind: 'city'; title: string; body: string; /** 溢れても捨てない */ important?: boolean }
   | { kind: 'binbo'; reason: 'destination' | 'pass'; playerIndex: number; fromIndex?: number; great: boolean };
 
+/** 同じ見出しの瓦版の本文をつなぐ区切り */
+const BODY_SEP = '／';
+
+/** つないだ本文の1つぶん: 頭のせりふ（あれば）・文・同じ文の回数（「 ×2」） */
+function parseBodyPart(part: string): { head: string; text: string; count: number } {
+  const m = part.match(/^(.*) ×(\d+)$/);
+  const { head, text } = splitCpuLine(m ? m[1] : part);
+  return { head, text, count: m ? Number(m[2]) : 1 };
+}
+
+/**
+ * 同じ見出しの瓦版の本文をつなぐ。違う文は「／」でつなぎ、同じ文は並べずに「 ×2」と数える
+ * （CPU が同じ町で同じ物を続けて建てたとき、同じ文が2つ並ばないように）。
+ * 頭のせりふ（CPU の人物のひとこと）は文の同じ・違いに数えず、先に付いていた方を残す。
+ */
+export function mergeNoticeBody(body: string, add: string): string {
+  const parts = body.split(BODY_SEP).map(parseBodyPart);
+  const a = parseBodyPart(add);
+  const same = parts.find(p => p.text === a.text);
+  if (same) {
+    same.count += a.count;
+    if (!same.head) same.head = a.head;
+  } else {
+    parts.push(a);
+  }
+  return parts.map(p => `${p.head}${p.text}${p.count > 1 ? ` ×${p.count}` : ''}`).join(BODY_SEP);
+}
+
 /**
  * お知らせを順番待ちの最後に積む。
- * - 同じ見出しの瓦版が続くとき（CPU が同じ町で2軒建てた等）は本文をつないで1件にする。まったく同じものは重ねない。
+ * - 同じ見出しの瓦版が続くとき（CPU が同じ町で2軒建てた等）は本文をつないで1件にする。同じ文は「 ×2」とまとめる（mergeNoticeBody）。
  * - 溢れたら、古い順に「捨ててよい瓦版」から捨てる（貧乏神と important は捨てない）。
  */
 export function pushNotice(queue: readonly Notice[], n: Notice, max = NOTICE_QUEUE_MAX): Notice[] {
   const last = queue[queue.length - 1];
   if (n.kind === 'city' && last?.kind === 'city' && last.title === n.title) {
-    if (last.body.split('／').includes(n.body)) return [...queue];
-    return [...queue.slice(0, -1), { ...last, body: `${last.body}／${n.body}`, important: last.important || n.important }];
+    return [...queue.slice(0, -1), { ...last, body: mergeNoticeBody(last.body, n.body), important: last.important || n.important }];
   }
   let q = [...queue, n];
   while (q.length > max) {
@@ -101,6 +129,24 @@ export function pushNotice(queue: readonly Notice[], n: Notice, max = NOTICE_QUE
 export function noticeDurationMs(kind: Notice['kind'], waiting: number, scale: number): number {
   const base = kind === 'binbo' ? (waiting > 0 ? TOAST_BUSY_MS : BINBO_TOAST_MS) : waiting > 0 ? TOAST_BUSY_MS : TOAST_MS;
   return Math.max(TOAST_MIN_MS, Math.round(base * scale));
+}
+
+// ===== 瓦版を出すかどうか（静かにする） =====
+
+/** 買い物代の瓦版を出す下限（物価を掛ける前の額）。これより小さな買い物は瓦版にしない（お金は今までどおり動く） */
+export const FEE_NOTICE_MIN = 500;
+
+/** 買い物代の瓦版を出すか: 払った額が ¥500×物価（city.priceScale）以上のときだけ */
+export function showFeeNotice(total: number, priceScale: number): boolean {
+  return total >= FEE_NOTICE_MIN * priceScale;
+}
+
+/**
+ * 視察の瓦版を出すか: その対局で、その人が初めて視察したときだけ（noticed は瓦版を見た人の席）。
+ * 2回目からは瓦版を出さず、町の画面の「視察済み」の札だけにする。
+ */
+export function showInspectNotice(noticed: readonly number[] | undefined, playerIndex: number): boolean {
+  return !(noticed ?? []).includes(playerIndex);
 }
 
 // ===== 月末の割り込み =====

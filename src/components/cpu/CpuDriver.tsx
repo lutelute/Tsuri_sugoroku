@@ -1,7 +1,7 @@
 // CPU の手番を自動で進める制御部品。現在のプレイヤーが CPU のとき、ターンの段階ごとに1手ずつ実行する（1手の中身は cpuStep.ts）。
 // 何をしたかは通常の画面（地図・オーバーレイ・お知らせ）にそのまま映る。人が誤って操作しないよう薄い覆いを掛ける。
 // 覆いをタップすると、その CPU の手番（と続く CPU の手番）を早送りする。人の手番になったら元の速さに戻る。
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, MAX_FISHING_PER_TURN } from '../../store/useGameStore';
 import { useSettingsStore, useTempoScale } from '../../store/useSettingsStore';
@@ -9,7 +9,9 @@ import { NODE_MAP } from '../../data/boardNodes';
 import { getEquippedItem } from '../../game/equipment';
 import Ruby from '../shared/Ruby';
 import MiniDie from '../fx/MiniDie';
-import { runCpuStep } from './cpuStep';
+import { runCpuStep, planCpuPath } from './cpuStep';
+import { aimKey, useCpuAim } from './cpuAim';
+import { personaOf } from '../../data/cpuPersonas';
 import { AUTO_END_MS, CPU_SPEED_LABEL, CPU_STEP_DELAY, hasActionChoices, scaled } from '../../game/tempo';
 
 export default function CpuDriver() {
@@ -36,6 +38,36 @@ export default function CpuDriver() {
   const setSkipping = useSettingsStore(st => st.setCpuSkipping);
   const speed = useSettingsStore(st => st.cpuSpeed);
   const cycleSpeed = useSettingsStore(st => st.cycleCpuSpeed);
+  // CPU の人物と狙い（損得係）: 分かれ道で考えはじめたら、進む道と狙いを先に決めて思案中の札に出す
+  const turn = useGameStore(s => s.turn);
+  const playerIndex = useGameStore(s => s.currentPlayerIndex);
+  const reachable = useGameStore(s => s.reachableNodes);
+  const aim = useCpuAim(s => s.aim);
+  const persona = personaOf(player);
+  useEffect(() => {
+    if (isCpu && turnPhase === 'path_selection') planCpuPath();
+  }, [isCpu, turnPhase, reachable]);
+  // 札の置き場所: 上の帯（まちづくりは2段）のすぐ下。瓦版が出ている間は瓦版の下へずらす（狙いが隠れないように）。
+  // 帯の高さは場面で変わるので、地図と瓦版の位置を測って決める（状態にはせず、札の top を直接書く）
+  const chipRef = useRef<HTMLDivElement>(null);
+  const toast = useGameStore(s => s.cityToast);
+  useLayoutEffect(() => {
+    const place = () => {
+      const chip = chipRef.current;
+      if (!chip) return;
+      const map = document.querySelector('svg.map-svg');
+      const mapTop = map ? map.getBoundingClientRect().top : 40;
+      // 瓦版は上から滑り込む動きがあるので、動きに左右されない offsetTop / offsetHeight で下端を測る
+      const card = document.querySelector<HTMLElement>('button.washi-card[role="status"]');
+      const cardBottom = card ? card.offsetTop + card.offsetHeight : 0;
+      chip.style.top = `${Math.round(Math.max(mapTop + 8, cardBottom + 6))}px`;
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [toast, turnPhase, isCpu, binboShown]);
+  // 狙いは、道を選んでから駒が着くまで出す（着いたら「思案中…」に戻る）
+  const aimText = aim && aim.key === aimKey(turn, playerIndex) && (turnPhase === 'path_selection' || turnPhase === 'node_action') ? aim.text : null;
 
   // 早送りは CPU の手番の間だけ。人の手番になったら戻す
   useEffect(() => {
@@ -68,9 +100,18 @@ export default function CpuDriver() {
       onClick={() => setSkipping(true)}
       title="タップで早送り"
     >
-      <div className="absolute top-12 left-1/2 -translate-x-1/2 pl-3 pr-1 py-1 rounded-full bg-ai-900/85 border border-kin-500/40 text-washi text-xs font-mincho shadow-lg flex flex-wrap items-center justify-center gap-x-2 gap-y-1 max-w-[calc(100vw-1rem)]">
-        <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: player?.color }} />
-        <span>{player?.name} <Ruby>思案中</Ruby>…</span>
+      {/* 幅は左右の丸いボタン（家・地図の操作）に掛からないところまで。狭い画面では2行に折り返す */}
+      <div ref={chipRef} className="absolute top-12 left-1/2 -translate-x-1/2 pl-1.5 pr-1.5 py-1 rounded-[1.25rem] bg-ai-900/90 border border-kin-500/40 text-washi text-xs font-mincho shadow-lg flex flex-wrap items-center justify-center gap-x-2 gap-y-1 w-max max-w-[calc(100vw-9.5rem)]">
+        {persona ? (
+          <span className="ad-seal font-mincho" style={{ backgroundColor: player?.color }} aria-hidden="true">{persona.mark}</span>
+        ) : (
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: player?.color }} />
+        )}
+        {aimText ? (
+          <span data-guide="cpu-aim"><Ruby>{player?.name ?? ''}</Ruby>：<Ruby>{aimText}</Ruby></span>
+        ) : (
+          <span><Ruby>{player?.name ?? ''}</Ruby> <Ruby>思案中</Ruby>…</span>
+        )}
         {dice !== null && (dice >= 1 && dice <= 6 ? <MiniDie value={dice} size={18} /> : <span className="font-bold text-kin-300 tabular-nums">{dice}</span>)}
         <span className={`rounded-full px-2 py-0.5 border ${skipping ? 'bg-kin-500/30 border-kin-400/70 text-kin-200' : 'border-kin-500/35 text-washi/75'}`}>
           ▶▶ <Ruby>{skipping ? '早送り中' : '早送り'}</Ruby>

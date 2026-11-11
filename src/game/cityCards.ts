@@ -8,7 +8,7 @@
 //  - サイコロ: diceCap（牛歩）と effect.count を RouletteOverlay に渡す。出目は rollDiceFaces。
 //  - ターン終わり: tickSlow。災害: protectInsured（保険）。買収: consumeLandGrab + landGrabPrice。
 import type { BuildingKind, CityActionResult, CityDisasterReport, CityState, Plot, TownClass } from './city';
-import { TOWN_IDS, build, canBuild, getTownInfo } from './city';
+import { TOWN_IDS, build, canBuild, getTownInfo, priceScale } from './city';
 import { ROULETTE_MAX, ROULETTE_MIN } from './constants';
 import { random, randomInt } from '../utils/random';
 
@@ -169,9 +169,18 @@ export function removeCard(cs: CardState, playerIndex: number, index: number): C
   return withHand(cs, playerIndex, hand.filter((_, i) => i !== index));
 }
 
-/** 売り場で買う。手札がいっぱいのときは買えない（大事な札をうっかり捨てないため） */
-export function buyCard(cs: CardState, playerIndex: number, card: CityCardId, money: number): { cs: CardState; cost: number } | { error: string } {
-  const price = CARD_INFO[card].price;
+/** カードの値段に掛ける物価の上限（札は建物より安い買い物のままにする。3年目の物価4倍でも3倍まで） */
+export const CARD_PRICE_MAX_SCALE = 3;
+
+/** その巡の売り値（CARD_INFO の値段 × 物価、上限 CARD_PRICE_MAX_SCALE 倍）。売っていない札は null */
+export function cardPrice(card: CityCardId, turn = 1): number | null {
+  const base = CARD_INFO[card].price;
+  return base === null ? null : base * Math.min(CARD_PRICE_MAX_SCALE, priceScale(turn));
+}
+
+/** 売り場で買う。手札がいっぱいのときは買えない（大事な札をうっかり捨てないため）。turn を渡すと値段に物価が掛かる */
+export function buyCard(cs: CardState, playerIndex: number, card: CityCardId, money: number, turn = 1): { cs: CardState; cost: number } | { error: string } {
+  const price = cardPrice(card, turn);
   if (price === null) return { error: `${CARD_INFO[card].name}は売っていない` };
   const hand = cs.hands[playerIndex];
   if (!hand) return { error: 'プレイヤーがいない' };

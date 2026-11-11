@@ -4,7 +4,9 @@
 export type IconName =
   | 'home' | 'tacklebox' | 'creel' | 'book' | 'trophy' | 'users'
   | 'dice' | 'boat' | 'coin' | 'fish' | 'rod' | 'reel' | 'lure'
-  | 'close' | 'info' | 'repair' | 'merge' | 'cart' | 'login';
+  | 'close' | 'info' | 'repair' | 'merge' | 'cart' | 'login'
+  // 晴れ舞台係（結果発表・設定・番付で絵文字の代わりに使う）
+  | 'gem' | 'map' | 'star' | 'flag' | 'building' | 'crown' | 'link' | 'check' | 'chevron';
 
 interface IconProps {
   name: IconName;
@@ -141,6 +143,60 @@ const PATHS: Record<IconName, (sw: number) => React.ReactNode> = {
       <path d="M11 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H11" fill="none" stroke={S} strokeWidth="1.7" strokeLinecap="round" />
       <path d="M14 8.5 17.5 12 14 15.5M9 12h8.5" fill="none" stroke={S} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </>
+  ),
+  // ----- 晴れ舞台係 -----
+  // 宝石（レアリティ）
+  gem: () => (
+    <>
+      <path d="M7.5 4.5h9L20.5 9.5 12 20 3.5 9.5Z" fill="none" stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M3.5 9.5h17M9.5 9.5 12 20l2.5-10.5M7.5 4.5l2 5 2.5-5 2.5 5 2-5" fill="none" stroke={S} strokeWidth="1.2" strokeLinejoin="round" opacity="0.8" />
+    </>
+  ),
+  // 地図（地域制覇）
+  map: () => (
+    <>
+      <path d="M3.5 6.5 9 4.5l6 2 5.5-2v13L15 19.5l-6-2-5.5 2Z" fill="none" stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M9 4.5v13M15 6.5v13" fill="none" stroke={S} strokeWidth="1.3" opacity="0.8" />
+    </>
+  ),
+  // 星（巨大魚）
+  star: () => (
+    <path d="m12 3.8 2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8l-5.1 2.7 1-5.7-4.1-4 5.7-.8Z" fill="none" stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
+  ),
+  // 旗（ゴール）
+  flag: () => (
+    <>
+      <path d="M6 20.5V4" fill="none" stroke={S} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M6 5h11.5l-2.6 3.8 2.6 3.7H6" fill="none" stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
+    </>
+  ),
+  // 蔵・建物（建物の価値）
+  building: () => (
+    <>
+      <path d="M3.5 10 12 4.5 20.5 10" fill="none" stroke={S} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5.5 10v9.5h13V10" fill="none" stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M10 19.5v-4.5h4v4.5M8.5 12.5h2M13.5 12.5h2" fill="none" stroke={S} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </>
+  ),
+  // 冠（独占・一番）
+  crown: () => (
+    <>
+      <path d="M4 8.5 7.5 13 12 6l4.5 7L20 8.5 18.5 18h-13Z" fill="none" stroke={S} strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M6.5 15.5h11" fill="none" stroke={S} strokeWidth="1.2" opacity="0.8" />
+    </>
+  ),
+  // 鎖（アカウントをつなぐ）
+  link: () => (
+    <>
+      <path d="M10.5 13.5a3.6 3.6 0 0 0 5.1 0l2.9-2.9a3.6 3.6 0 0 0-5.1-5.1l-1.2 1.2" fill="none" stroke={S} strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M13.5 10.5a3.6 3.6 0 0 0-5.1 0l-2.9 2.9a3.6 3.6 0 0 0 5.1 5.1l1.2-1.2" fill="none" stroke={S} strokeWidth="1.7" strokeLinecap="round" />
+    </>
+  ),
+  check: () => (
+    <path d="M5 12.5 10 17.5 19.5 7" fill="none" stroke={S} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  ),
+  chevron: () => (
+    <path d="M7 9.5 12 14.5 17 9.5" fill="none" stroke={S} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
   ),
 };
 

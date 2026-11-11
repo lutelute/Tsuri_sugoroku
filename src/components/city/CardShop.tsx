@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { CARD_CATEGORY_INFO, CARD_INFO, CARD_TIMING_LABEL, MAX_HAND, SHOP_CARDS } from '../../game/cityCards';
+import { CARD_CATEGORY_INFO, CARD_INFO, CARD_TIMING_LABEL, MAX_HAND, SHOP_CARDS, cardPrice } from '../../game/cityCards';
 import type { CityCardId } from '../../game/cityCards';
 import { CardFace } from './CardHand';
 import Button from '../shared/Button';
 import Ruby from '../shared/Ruby';
 import Stamp from '../fx/Stamp';
 import { playCoinLoss } from '../../utils/sound';
+import { useGameStore } from '../../store/useGameStore';
 
 interface CardShopProps {
   money: number;
@@ -20,6 +21,8 @@ interface CardShopProps {
 
 export default function CardShop({ money, handSize, onBuy, onClose }: CardShopProps) {
   const full = handSize >= MAX_HAND;
+  // 値段は物価で年ごとに上がる（ストアの buyCityCard と同じ計算）
+  const turn = useGameStore(s => s.turn);
   // 買えたとき（手札が増えたとき）だけ「毎度」の判子
   const [prevHand, setPrevHand] = useState(handSize);
   const [thanks, setThanks] = useState(0);
@@ -70,7 +73,7 @@ export default function CardShop({ money, handSize, onBuy, onClose }: CardShopPr
         <ul className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-3 space-y-2">
           {SHOP_CARDS.map((id, i) => {
             const info = CARD_INFO[id];
-            const price = info.price ?? 0;
+            const price = cardPrice(id, turn) ?? 0;
             const short = money < price;
             const reason = full ? '手札がいっぱい' : short ? 'お金が足りない' : null;
             return (

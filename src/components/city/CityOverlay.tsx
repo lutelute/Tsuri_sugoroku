@@ -4,16 +4,26 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { NODE_MAP } from '../../data/boardNodes';
 import {
-  getTownInfo, computeAllStats, plotIncome, poweredTownsWithBuildings, buildCost, upgradeCost, acquireCost, renovateCost,
-  isUpgradable, canBuild, monopolyOwner, effectiveLandValue, BUILDING_INFO, TOWN_CLASS_INFO, MAX_BUILDING_LEVEL,
-  CITY_ACTIONS_PER_VISIT, CITY_ECONOMY, TIER_LABEL, calendarLabel,
+  getTownInfo, computeAllStats, plotIncome, poweredTownsWithBuildings, upgradeCost, acquireCost, renovateCost,
+  isUpgradable, monopolyOwner, effectiveLandValue, BUILDING_INFO, TOWN_CLASS_INFO, MAX_BUILDING_LEVEL,
+  CITY_ACTIONS_PER_VISIT, CITY_ECONOMY, TIER_LABEL, calendarLabel, recoveryMonthsLeft, RECOVERY,
 } from '../../game/city';
 import type { BuildingKind, TownStats } from '../../game/city';
+import { previewUpgrade, previewAcquire } from '../../game/cityAdvice';
+import { cpuLine } from '../../data/cpuPersonas';
+import { BuildOptions, PlotActionPreview, TownNeedsLine, EarnedChip } from './BuildPreview';
+import type { EarnedNote } from './BuildPreview';
 import BuildingGlyph from './BuildingGlyph';
+import RecoveryIcon from './RecoveryMark';
 import CardPlayBar from './CardPlayBar';
 import { CardIcon } from './CardHand';
 import CardShop from './CardShop';
 import SpecialtyCard from './SpecialtyCard';
+import TownTraitBadges from './TownTraitBadges';
+import TownScene from './TownScene';
+import TownFishBand from './TownFishBand';
+import MayorSection from './MayorSection';
+import RailSection from './RailSection';
 import { hasCardShop } from '../../game/cityCards';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
@@ -80,11 +90,23 @@ export default function CityOverlay() {
   const [showShop, setShowShop] = useState(false);
   const buyCityCard = useGameStore(s => s.buyCityCard);
   const cityBuySpecialty = useGameStore(s => s.cityBuySpecialty);
+  const cityEnact = useGameStore(s => s.cityEnact);
+  const cityLayRail = useGameStore(s => s.cityLayRail);
   const turn = useGameStore(s => s.turn);
   const handSize = useGameStore(s => s.cityCards?.hands[s.currentPlayerIndex]?.length ?? 0);
   const [error, setError] = useState<string | null>(null);
   const reduced = useReducedMotion();
   const actionRef = useRef<HTMLDivElement>(null);
+  // 見込み札（損得係）: 残りの月数と、建てた直後に数秒だけ出す「来月から 月に +¥…」の札
+  const maxTurns = useGameStore(s => s.settings.maxTurns);
+  const monthsLeft = maxTurns > 0 ? Math.max(1, maxTurns - turn + 1) : 24;
+  const [earned, setEarned] = useState<EarnedNote | null>(null);
+  useEffect(() => {
+    if (!earned) return;
+    const t = window.setTimeout(() => setEarned(null), 4500);
+    return () => clearTimeout(t);
+  }, [earned]);
+  const noteEarned = (gain: number, kind: BuildingKind | null, quote?: EarnedNote['quote']) => setEarned({ gain, kind, quote, seq: Date.now() });
 
   // 区画を選んだら、建てる/再開発の操作が見える位置まで寄せる（スマホでは区画の下が画面外になりやすい）
   useEffect(() => {
@@ -108,6 +130,9 @@ export default function CityOverlay() {
   const tier = town.tier ?? 0;
   const land = effectiveLandValue(nodeId, town);
   const inspected = (city.inspections ?? []).some(x => x.nodeId === nodeId && x.playerIndex === currentPlayerIndex);
+  // 復興特需（災害の後の6か月）: 建設・再開発・空き家の修理が割引き
+  const recoveryLeft = recoveryMonthsLeft(town);
+  const recoveryOff = Math.round((1 - RECOVERY.costMul) * 10);
 
   const act = (fn: () => string | null, onDone?: () => void) => {
     const err = fn();
@@ -124,7 +149,6 @@ export default function CityOverlay() {
     return plotIncome(p, nodeId, st, p.kind === 'power' ? poweredTownsWithBuildings(city, nodeId) : 0);
   };
 
-  const isFishing = node.type === 'fishing' || node.type === 'fishing_special';
   const hasShop = node.type === 'shop' || !!node.shopTier;
   const isCapital = node.type === 'capital' && !!node.capitalEventId;
   const isRest = node.type === 'rest';
@@ -132,7 +156,7 @@ export default function CityOverlay() {
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/55 backdrop-blur-[2px]">
       {/* 本文だけをスクロールし、「町を出る」は下に固定（スマホの縦・横どちらでも常に押せる） */}
-      <div className="panel-ai fx-rise rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[94dvh] sm:max-h-[90dvh] flex flex-col overflow-hidden relative">
+      <div className="panel-ai fx-rise rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg md:max-w-2xl lg:max-w-5xl max-h-[94dvh] sm:max-h-[90dvh] flex flex-col overflow-hidden relative">
         <button
           onClick={() => setTurnPhase('action_choice')}
           aria-label="閉じる"
@@ -170,27 +194,138 @@ export default function CityOverlay() {
                 <Ruby>視察済み</Ruby>
               </span>
             )}
+            {recoveryLeft > 0 && (
+              <span
+                data-guide="recovery"
+                className="text-[11px] px-2 py-0.5 rounded-full bg-kin-500/25 border border-kin-400/55 text-kin-100 font-mincho inline-flex items-center gap-1"
+                title={`建設・再開発・空き家の修理が${recoveryOff}割引き。住宅・商業の需要も上がる`}
+              >
+                <RecoveryIcon size={14} />
+                <Ruby>復興特需</Ruby> <Ruby>あと</Ruby><span className="tabular-nums">{recoveryLeft}</span><Ruby>か月</Ruby>（{recoveryOff}<Ruby>割引き</Ruby>）
+              </span>
+            )}
           </div>
           <p className="text-[11px] text-washi/50 mt-0.5"><Ruby>{node.description ?? ''}</Ruby></p>
+          {/* 町の特色（古都・港湾都市など。data/cityTraits.ts） */}
+          <TownTraitBadges nodeId={nodeId} />
         </div>
 
-        {/* 名産（県庁と、名物で知られる町だけ。名産のないマスでは何も出ない） */}
-        <SpecialtyCard
+        {/* 並べ方: スマホと iPad 縦は1列（絵 → 選んだ区画の操作 → 町の状態 → 区画の台帳 → 名産 → そのほか）。
+            幅 1024px 以上（iPad 横・PC）は2列で、左に絵と操作と町の状態、右に台帳と名産とそのほか */}
+        <div className="grid gap-3 lg:grid-cols-2 lg:gap-5 lg:items-start">
+        <div className="space-y-3 min-w-0">
+
+        {/* 街並みの絵（町の絵係）。建物と空き地を押すと区画を選べる。案内（plots / plot-empty）はこの絵を指す */}
+        <TownScene
+          city={city}
           nodeId={nodeId}
-          owners={city.specialties ?? {}}
           players={players}
-          currentPlayerIndex={currentPlayerIndex}
-          money={player.money}
-          month={calendarLabel(turn).month}
-          onBuy={() => act(() => cityBuySpecialty())}
-          disabled={actionsLeft <= 0}
+          turn={turn}
+          stats={st}
+          selected={selected}
+          onSelect={i => { setSelected(selected === i ? null : i); setError(null); }}
+          guide
         />
+
+        {/* 選択中の区画の操作 */}
+        {selected !== null && sel === null && (
+          <div ref={actionRef} data-guide="build-options" className="fx-rise space-y-1.5 scroll-mb-3">
+            <p className="text-xs text-washi/60"><Ruby>何を建てる？</Ruby>（<Ruby>所持金</Ruby> ¥{player.money.toLocaleString()}）</p>
+            {/* 見込み札（損得係）: 月にいくら入り、何か月で元が取れるか。いちばん良い物に「おすすめ」 */}
+            <BuildOptions
+              city={city}
+              nodeId={nodeId}
+              plotIndex={selected}
+              playerIndex={currentPlayerIndex}
+              money={player.money}
+              turn={turn}
+              monthsLeft={monthsLeft}
+              canAct={actionsLeft > 0}
+              discountTenths={recoveryLeft > 0 ? recoveryOff : 0}
+              onBuild={(k, gain) => act(() => cityBuild(selected, k), () => { playBuild(); noteEarned(gain, k); })}
+            />
+          </div>
+        )}
+
+        {selected !== null && sel && (
+          <div ref={actionRef} className="fx-rise rounded-lg border border-kin-500/25 bg-ai-900/50 p-2.5 space-y-1.5 scroll-mb-3">
+            <div className="flex items-center gap-2">
+              <BuildingGlyph kind={sel.kind} level={sel.level} size={32} />
+              <div className="min-w-0">
+                <p className="text-sm font-bold font-mincho text-washi">
+                  <Ruby>{BUILDING_INFO[sel.kind].name}</Ruby>
+                  {isUpgradable(sel.kind) && <span className="text-kin-300 text-xs ml-1"><Ruby>等級</Ruby>{sel.level}</span>}
+                  <span className="text-xs ml-2" style={{ color: players[sel.owner]?.color }}>{players[sel.owner]?.name}</span>
+                </p>
+                <p className="text-[11px] text-washi/55"><Ruby>{BUILDING_INFO[sel.kind].desc}</Ruby></p>
+                <p className="text-[11px] text-washi/70"><Ruby>今月の見込み</Ruby>: <span className="tabular-nums">{incomeOf(selected) >= 0 ? '+' : ''}¥{incomeOf(selected).toLocaleString()}</span></p>
+              </div>
+            </div>
+            {sel.owner === currentPlayerIndex && sel.vacant ? (
+              <Button
+                onClick={() => act(() => cityRenovate(selected), playBuild)}
+                variant="gold"
+                size="sm"
+                className="w-full min-h-11"
+                disabled={actionsLeft <= 0 || player.money < renovateCost(sel, nodeId, town)}
+              >
+                <Ruby>空き家を直して入居者を呼び戻す</Ruby> ¥{renovateCost(sel, nodeId, town).toLocaleString()}
+              </Button>
+            ) : sel.owner === currentPlayerIndex ? (
+              isUpgradable(sel.kind) && sel.level < MAX_BUILDING_LEVEL ? (
+                <>
+                  <PlotActionPreview city={city} nodeId={nodeId} plotIndex={selected} playerIndex={currentPlayerIndex} mode="upgrade" monthsLeft={monthsLeft} />
+                  <Button
+                    onClick={() => {
+                      const pv = previewUpgrade(city, nodeId, selected, currentPlayerIndex);
+                      act(() => cityUpgrade(selected), () => { playBuild(); if (pv) noteEarned(pv.gain, null); });
+                    }}
+                    variant="primary"
+                    size="sm"
+                    className="w-full min-h-11"
+                    disabled={actionsLeft <= 0 || player.money < upgradeCost(sel, nodeId, town)}
+                  >
+                    <Ruby>再開発して等級を上げる</Ruby> ¥{upgradeCost(sel, nodeId, town).toLocaleString()}
+                  </Button>
+                </>
+              ) : (
+                <p className="text-[11px] text-washi/45 text-center">
+                  <Ruby>{isUpgradable(sel.kind) ? '最高等級です' : 'この建物は再開発できません'}</Ruby>
+                </p>
+              )
+            ) : (
+              <>
+                <PlotActionPreview city={city} nodeId={nodeId} plotIndex={selected} playerIndex={currentPlayerIndex} mode="acquire" monthsLeft={monthsLeft} />
+                <Button
+                  onClick={() => {
+                    const pv = previewAcquire(city, nodeId, selected, currentPlayerIndex);
+                    // 買収された CPU のひとこと（お知らせは増やさず、この札に添える）
+                    const victim = players[sel.owner];
+                    const line = cpuLine(victim, 'acquired', turn + selected);
+                    const quote = victim && line ? { name: victim.name, color: victim.color, line } : undefined;
+                    act(() => cityAcquire(selected), () => { playStamp(); if (pv) noteEarned(pv.gain, null, quote); });
+                  }}
+                  variant="danger"
+                  size="sm"
+                  className="w-full min-h-11"
+                  disabled={actionsLeft <= 0 || player.money < acquireCost(sel, nodeId, town)}
+                >
+                  <Ruby>買収する</Ruby> ¥{acquireCost(sel, nodeId, town).toLocaleString()}（<Ruby>代金は持ち主へ</Ruby>）
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+
+        {error && <p className="fx-rise text-xs text-shu-200 text-center bg-shu-700/25 border border-shu-500/40 rounded-lg px-3 py-1.5" role="alert"><Ruby>{error}</Ruby></p>}
+        {/* 見込み札（損得係）: 建てた直後の「来月から 月に +¥…」 */}
+        {earned && !error && <EarnedChip key={earned.seq} note={earned} />}
 
         {/* 町の状態 */}
         <div className="flex gap-2 items-stretch">
           <div className="grid grid-cols-2 min-[420px]:grid-cols-4 gap-1.5 flex-1">
             <Stat label="人口" value={`${st.population.toLocaleString()}人`} />
-            <Stat label="幸福度" value={st.happiness.toFixed(1)} tone={st.happiness >= 6 ? 'text-emerald-300' : st.happiness >= 3 ? 'text-washi' : 'text-shu-400'} />
+            <Stat label="幸福度" value={Math.max(0, st.happiness).toFixed(1)} tone={st.happiness >= 6 ? 'text-emerald-300' : st.happiness >= 3 ? 'text-washi' : 'text-shu-400'} />
             <Stat label="公害" value={st.pollution.toFixed(1)} tone={st.pollution >= 4 ? 'text-shu-400' : 'text-washi'} />
             <Stat label="電力" value={st.powered ? '送電中' : 'なし'} tone={st.powered ? 'text-kin-300' : 'text-shu-400'} />
           </div>
@@ -200,6 +335,14 @@ export default function CityOverlay() {
             <DemandBar label="工" value={st.demand.i} />
           </div>
         </div>
+        {/* 見込み札（損得係）: この町に足りないもの */}
+        <TownNeedsLine city={city} nodeId={nodeId} />
+
+        {/* 魚市場の帯（釣り係。釣り場の町だけ）。釣りへの入口はここ */}
+        <TownFishBand nodeId={nodeId} onFish={() => setTurnPhase('fishing_choice')} />
+
+        </div>
+        <div className="space-y-3 min-w-0">
 
         {/* 区画 */}
         <div>
@@ -209,14 +352,13 @@ export default function CityOverlay() {
               <Ruby>工事</Ruby> <span className="tabular-nums">{actionsLeft}</span>/<span className="tabular-nums">{actionsMax}</span> <Ruby>回</Ruby>
             </span>
           </div>
-          <div className="grid grid-cols-4 gap-1.5" data-guide="plots">
+          <div className="grid grid-cols-4 gap-1.5">
             {town.plots.map((p, i) => {
               const owner = p ? players[p.owner] : null;
               const isSel = selected === i;
               return (
                 <button
                   key={i}
-                  data-guide={p ? undefined : 'plot-empty'}
                   onClick={() => { setSelected(isSel ? null : i); setError(null); }}
                   className={`relative h-[74px] rounded-lg border transition cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                     isSel ? 'ring-2 ring-kin-300 bg-ai-600/60' : 'bg-ai-900/50 hover:bg-ai-700/60'
@@ -258,90 +400,40 @@ export default function CityOverlay() {
           </div>
         </div>
 
-        {/* 選択中の区画の操作 */}
-        {selected !== null && sel === null && (
-          <div ref={actionRef} data-guide="build-options" className="fx-rise space-y-1.5 scroll-mb-3">
-            <p className="text-xs text-washi/60"><Ruby>何を建てる？</Ruby>（<Ruby>所持金</Ruby> ¥{player.money.toLocaleString()}）</p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {info.allowed.map((k: BuildingKind) => {
-                const cost = buildCost(k, nodeId, town);
-                const why = canBuild(city, nodeId, k, selected, player.money);
-                const disabled = !!why || actionsLeft <= 0;
-                return (
-                  <button
-                    key={k}
-                    disabled={disabled}
-                    onClick={() => act(() => cityBuild(selected, k), playBuild)}
-                    title={why ?? BUILDING_INFO[k].desc}
-                    className="min-h-11 flex items-center gap-2 text-left rounded-lg border border-kin-500/25 bg-ai-800/60 hover:bg-ai-700/70 px-2 py-1.5 transition cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
-                  >
-                    <BuildingGlyph kind={k} size={26} className="shrink-0" />
-                    <span className="min-w-0">
-                      <span className="block text-xs font-bold text-washi font-mincho"><Ruby>{BUILDING_INFO[k].name}</Ruby> <span className="text-kin-300 tabular-nums">¥{cost.toLocaleString()}</span></span>
-                      <span className="block text-[10px] text-washi/55 leading-snug"><Ruby>{BUILDING_INFO[k].desc}</Ruby></span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* 名産（県庁と、名物で知られる町だけ。名産のないマスでは何も出ない） */}
+        <SpecialtyCard
+          nodeId={nodeId}
+          owners={city.specialties ?? {}}
+          players={players}
+          currentPlayerIndex={currentPlayerIndex}
+          money={player.money}
+          month={calendarLabel(turn).month}
+          onBuy={() => act(() => cityBuySpecialty())}
+          disabled={actionsLeft <= 0}
+        />
 
-        {selected !== null && sel && (
-          <div ref={actionRef} className="fx-rise rounded-lg border border-kin-500/25 bg-ai-900/50 p-2.5 space-y-1.5 scroll-mb-3">
-            <div className="flex items-center gap-2">
-              <BuildingGlyph kind={sel.kind} level={sel.level} size={32} />
-              <div className="min-w-0">
-                <p className="text-sm font-bold font-mincho text-washi">
-                  <Ruby>{BUILDING_INFO[sel.kind].name}</Ruby>
-                  {isUpgradable(sel.kind) && <span className="text-kin-300 text-xs ml-1"><Ruby>等級</Ruby>{sel.level}</span>}
-                  <span className="text-xs ml-2" style={{ color: players[sel.owner]?.color }}>{players[sel.owner]?.name}</span>
-                </p>
-                <p className="text-[11px] text-washi/55"><Ruby>{BUILDING_INFO[sel.kind].desc}</Ruby></p>
-                <p className="text-[11px] text-washi/70"><Ruby>今月の見込み</Ruby>: <span className="tabular-nums">{incomeOf(selected) >= 0 ? '+' : ''}¥{incomeOf(selected).toLocaleString()}</span></p>
-              </div>
-            </div>
-            {sel.owner === currentPlayerIndex && sel.vacant ? (
-              <Button
-                onClick={() => act(() => cityRenovate(selected), playBuild)}
-                variant="gold"
-                size="sm"
-                className="w-full min-h-11"
-                disabled={actionsLeft <= 0 || player.money < renovateCost(sel, nodeId, town)}
-              >
-                <Ruby>空き家を直して入居者を呼び戻す</Ruby> ¥{renovateCost(sel, nodeId, town).toLocaleString()}
-              </Button>
-            ) : sel.owner === currentPlayerIndex ? (
-              isUpgradable(sel.kind) && sel.level < MAX_BUILDING_LEVEL ? (
-                <Button
-                  onClick={() => act(() => cityUpgrade(selected), playBuild)}
-                  variant="primary"
-                  size="sm"
-                  className="w-full min-h-11"
-                  disabled={actionsLeft <= 0 || player.money < upgradeCost(sel, nodeId, town)}
-                >
-                  <Ruby>再開発して等級を上げる</Ruby> ¥{upgradeCost(sel, nodeId, town).toLocaleString()}
-                </Button>
-              ) : (
-                <p className="text-[11px] text-washi/45 text-center">
-                  <Ruby>{isUpgradable(sel.kind) ? '最高等級です' : 'この建物は再開発できません'}</Ruby>
-                </p>
-              )
-            ) : (
-              <Button
-                onClick={() => act(() => cityAcquire(selected), playStamp)}
-                variant="danger"
-                size="sm"
-                className="w-full min-h-11"
-                disabled={actionsLeft <= 0 || player.money < acquireCost(sel, nodeId, town)}
-              >
-                <Ruby>買収する</Ruby> ¥{acquireCost(sel, nodeId, town).toLocaleString()}（<Ruby>代金は持ち主へ</Ruby>）
-              </Button>
-            )}
-          </div>
-        )}
+        {/* 町長と条例（建物のある町だけ） */}
+        <MayorSection
+          city={city}
+          nodeId={nodeId}
+          players={players}
+          currentPlayerIndex={currentPlayerIndex}
+          money={player.money}
+          turn={turn}
+          onEnact={kind => act(() => cityEnact(kind), playStamp)}
+        />
 
-        {error && <p className="fx-rise text-xs text-shu-200 text-center bg-shu-700/25 border border-shu-500/40 rounded-lg px-3 py-1.5" role="alert"><Ruby>{error}</Ruby></p>}
+        {/* 鉄道: 隣の中継マスに線路を敷く */}
+        <RailSection
+          key={nodeId}
+          city={city}
+          townId={nodeId}
+          playerIndex={currentPlayerIndex}
+          money={player.money}
+          actionsLeft={actionsLeft}
+          players={players}
+          onLay={routeId => act(() => cityLayRail(routeId), playBuild)}
+        />
 
         {/* カード: 町で使える札（工事券・誘致・地上げ）と売り場 */}
         <CardPlayBar timing="in_town" compact />
@@ -360,13 +452,8 @@ export default function CityOverlay() {
         )}
 
         {/* 寄り道 */}
-        {(isFishing || hasShop || isCapital || isRest) && (
+        {(hasShop || isCapital || isRest) && (
           <div className="grid grid-cols-2 gap-1.5 pt-1">
-            {isFishing && (
-              <Button onClick={() => setTurnPhase('fishing_choice')} variant="secondary" size="sm" className="min-h-11">
-                <span className="inline-flex items-center gap-1.5"><Icon name="rod" size={15} /><Ruby>釣りをする</Ruby></span>
-              </Button>
-            )}
             {hasShop && (
               <Button onClick={() => setTurnPhase('shop')} variant="secondary" size="sm" className="min-h-11">
                 <span className="inline-flex items-center gap-1.5"><Icon name="cart" size={15} /><Ruby>釣具店</Ruby></span>
@@ -384,6 +471,9 @@ export default function CityOverlay() {
             )}
           </div>
         )}
+
+        </div>
+        </div>
 
         </div>
 

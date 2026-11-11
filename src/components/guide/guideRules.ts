@@ -3,10 +3,16 @@
 // 画面側（GuideLayer）は data-guide 属性で指し示す要素を探し、見つかったときだけ案内を出す。
 import type { GameMode, GameState, NodeType, TurnPhase } from '../../game/types';
 import { NODE_MAP } from '../../data/boardNodes';
-import { CITY_ACTIONS_PER_VISIT, CITY_ECONOMY, isTown, monopolyOwner } from '../../game/city';
+import { CITY_ACTIONS_PER_VISIT, CITY_ECONOMY, isTown, monopolyOwner, recoveryMonthsLeft, RECOVERY } from '../../game/city';
 import { getSpecialty, SPECIALTY_ECONOMY } from '../../game/citySpecialties';
 import { GOAL_CLOSE_ROUNDS } from '../../game/constants';
 import { MIN_CLOSE_TURN } from '../../game/deadline';
+import { mayorOf } from '../../game/mayor';
+import { traitIdsOf } from '../../game/cityTraits';
+import { FISH_MARKET, isDerbyTurn, isFishingSpot } from '../../game/fishMarket';
+import { railOptions } from '../../game/railways';
+import { QUEST_GROUPS } from '../../game/cityQuests';
+import { townNeeds } from '../../game/cityAdvice';
 
 /** 地図の上に重ねる案内（GuideMapLayer が描く） */
 export type GuideMapCue =
@@ -55,6 +61,26 @@ export interface GuideContext {
   myPlotsHere: number;
   monopolyHere: number | null;
   hasSpecialtyHere: boolean;
+  /** いる町が復興特需（災害の後） */
+  recoveringHere?: boolean;
+  /** いる町の町長（mayor.ts） */
+  mayorHere?: number | null;
+  /** いる町に特色がある（古都・港湾都市など。cityTraits.ts） */
+  traitsHere?: boolean;
+  /** いる町で、いま線路を敷ける（自分の建物があり、隣に空いた中継マスがある。railways.ts） */
+  railHere?: boolean;
+  /** まちづくりで、いる町が釣り場（魚市場の帯が出る。fishMarket.ts） */
+  fishTownHere?: boolean;
+  /** まちづくりの釣り大会の月（7月） */
+  derbyNow?: boolean;
+  /** 釣果の画面に、魚市場の売値の内訳が出ている（まちづくり。釣りの最中は false） */
+  fishSaleShown?: boolean;
+  /** いる町に「足りないもの」がある（電気・公園・住宅など。cityAdvice.ts の townNeeds） */
+  needsHere?: boolean;
+  /** お題と今年の舞台がある（cityQuests.ts。古いセーブには無い） */
+  hasQuests?: boolean;
+  /** 出ている大決算が最終決算（対局の最後の月） */
+  finalYearEnd?: boolean;
 }
 
 export interface GuideText {
@@ -100,7 +126,15 @@ export const GUIDES: GuideDef[] = [
   {
     id: 'city-yearend', mode: 'city', anyTurn: true, target: 'city-yearend', delayMs: 1800,
     when: c => c.phase === 'city_yearend',
-    text: () => ({ title: '年度末の大決算', body: '3月は総資産の番付と称号の発表。称号には賞金がつくものもあるよ。' }),
+    text: c => (c.finalYearEnd
+      ? { title: '最終決算', body: '最後の決算だよ。総資産の番付と称号を見たら、結果発表へ進もう。' }
+      : { title: '年度末の大決算', body: '3月は総資産の番付と称号の発表。称号には賞金がつくものもあるよ。' }),
+  },
+  {
+    // 大決算のいちばん下（最終決算には出ないので、指す先が無ければ出ない）
+    id: 'city-quest-next', mode: 'city', anyTurn: true, target: 'quest-next', delayMs: 500, chain: true,
+    when: c => c.phase === 'city_yearend' && !c.finalYearEnd,
+    text: () => ({ title: '来年度のお題と舞台', body: `来年はこの${QUEST_GROUPS.length}つがお題。目的地は、来年度の舞台の地方に出やすいよ。` }),
   },
   {
     id: 'city-report', mode: 'city', anyTurn: true, target: 'city-report', delayMs: 1600,
@@ -136,13 +170,35 @@ export const GUIDES: GuideDef[] = [
   {
     id: 'fish-choice', mode: 'both', target: 'fish-normal', delayMs: 800,
     when: c => c.phase === 'fishing_choice',
-    text: () => ({ title: '釣り方を選ぼう', body: '岸からの釣りは無料。船釣りはお金がかかるけど、めずらしい魚が出やすい。' }),
+    text: () => ({ title: '仕掛けを選ぼう', body: 'まずは「ふつう」。数ねらいは小物がたくさん、大物ねらいはめずらしい魚。船釣りはお金がかかる。' }),
+  },
+  {
+    id: 'fish-spot', mode: 'both', target: 'fish-spot', delayMs: 800,
+    when: c => c.phase === 'fishing_choice',
+    text: () => ({ title: '釣り場の札', body: 'この釣り場で釣れる魚の数だよ。影絵は、まだ見ていない魚と、道具を育てると会える魚。' }),
+  },
+  {
+    id: 'fish-quick', mode: 'both', target: 'fish-quick', delayMs: 800,
+    when: c => c.phase === 'fishing_choice',
+    text: () => ({ title: '雑魚は手早く', body: '道具が育つと、小物は合わせただけで釣り上げる。ここで切り替えられるよ。' }),
+  },
+  {
+    // 釣果の画面（釣りの最中は時間を競うので出さない。釣り上げた後だけ）
+    id: 'fish-sale', mode: 'city', target: 'fish-sale', delayMs: 1200,
+    when: c => c.phase === 'fishing' && !!c.fishSaleShown,
+    text: () => ({ title: '魚市場の売値', body: '売値は、町の賑わいと漁場と物価で決まる。内訳はここに出るよ。' }),
   },
   // ===== 分かれ道 =====
   {
     id: 'path', mode: 'both', target: 'path-list', delayMs: 600, map: ['path'],
     when: c => c.phase === 'path_selection',
-    text: () => ({ title: '行き先を選ぼう', body: '光っているマスをタップしよう。下の一覧からも選べるよ。' }),
+    text: () => ({ title: '行き先を選ぼう', body: '金の輪がおすすめ。光っているマスならどこへでも行けるよ。' }),
+  },
+  {
+    // 分かれ道の続き: 下の金のボタン（おすすめを切っているときは無いので出ない）
+    id: 'path-best', mode: 'both', target: 'path-best', delayMs: 400, chain: true,
+    when: c => c.phase === 'path_selection',
+    text: () => ({ title: '金のボタン', body: '金のボタンを押すと、おすすめの行き先へ1回で進めるよ。' }),
   },
   // ===== まちづくり: 町の画面 =====
   {
@@ -155,17 +211,56 @@ export const GUIDES: GuideDef[] = [
   {
     id: 'city-build', mode: 'city', target: 'build-options', delayMs: 300, chain: true,
     when: c => c.phase === 'city',
-    text: () => ({ title: '何を建てる？', body: '町の需要（住・商・工）の緑が伸びている物ほど育ちやすい。建物は月末にお金を生むよ。' }),
+    text: () => ({ title: '何を建てる？', body: '◎は早く元が取れる。月にいくらお金が入るかを見て決めよう。' }),
+  },
+  {
+    // 建物のある区画を選ぶと出る、再開発・買収の見込みの行
+    id: 'city-preview', mode: 'city', target: 'action-preview', delayMs: 300, chain: true,
+    when: c => c.phase === 'city',
+    text: () => ({ title: '再開発と買収の見込み', body: '再開発や買収でも、月にいくら増えるかと、何か月で元が取れるかが出るよ。' }),
   },
   {
     id: 'city-town', mode: 'city', target: 'plot-empty', delayMs: 700,
     when: c => c.phase === 'city',
-    text: () => ({ title: '空き地に建てよう', body: `「空き地」をタップして、建てる物を選ぶ。1回の訪問で工事は${CITY_ACTIONS_PER_VISIT}回まで。` }),
+    text: () => ({ title: '空き地に建てよう', body: `絵の中の空き地をタップして、建てる物を選ぼう。1回の訪問で工事は${CITY_ACTIONS_PER_VISIT}回まで。` }),
+  },
+  {
+    id: 'city-needs', mode: 'city', target: 'town-needs', delayMs: 700,
+    when: c => c.phase === 'city' && !!c.needsHere,
+    text: () => ({ title: 'この町に足りないもの', body: '電気や公園が足りないと、建物が育ちにくい。足りない物を建てると町が育つよ。' }),
+  },
+  {
+    id: 'city-recovery', mode: 'city', target: 'recovery', delayMs: 700,
+    when: c => c.phase === 'city' && !!c.recoveringHere,
+    text: () => ({
+      title: '復興特需だ！',
+      body: `被害のあった町は${RECOVERY.months}か月のあいだ、建設・再開発・空き家の修理が${Math.round((1 - RECOVERY.costMul) * 10)}割引き。住宅と商業も育ちやすい。`,
+    }),
   },
   {
     id: 'city-specialty', mode: 'city', target: 'specialty', delayMs: 700,
     when: c => c.phase === 'city' && c.hasSpecialtyHere,
     text: () => ({ title: '名産を買おう', body: `この町には名産がある。持っていると毎月収入が入る。地方の名産をぜんぶ集めると収入${SPECIALTY_ECONOMY.monopolyMul}倍！` }),
+  },
+  {
+    id: 'city-mayor', mode: 'city', target: 'enact-open', delayMs: 700,
+    when: c => c.phase === 'city' && c.mayorHere === c.playerIndex,
+    text: () => ({ title: '町長になった！', body: '町長は1か月に1回、条例を決められる。町税や観光振興は、この町のすべての建物に効く。' }),
+  },
+  {
+    id: 'city-fish', mode: 'city', target: 'town-fish', delayMs: 700,
+    when: c => c.phase === 'city' && !!c.fishTownHere,
+    text: () => ({ title: '魚市場で売ろう', body: '釣った魚はこの町で売れる。商業地と漁港があると高く売れ、工場の公害で漁場が荒れる。' }),
+  },
+  {
+    id: 'city-traits', mode: 'city', target: 'town-traits', delayMs: 700,
+    when: c => c.phase === 'city' && !!c.traitsHere,
+    text: () => ({ title: '町の特色', body: 'この町ならではの決まり。建てられる物や、収入の増える建物が町ごとに違うよ。' }),
+  },
+  {
+    id: 'city-rail', mode: 'city', target: 'rail-build', delayMs: 700,
+    when: c => c.phase === 'city' && !!c.railHere,
+    text: () => ({ title: '線路を敷ける', body: '自分の建物がある町の隣に線路を敷ける。歩数を使わずに通り抜け、ほかの人からは運賃が入る。' }),
   },
   {
     id: 'city-monopoly', mode: 'city', target: 'plots', delayMs: 700,
@@ -196,6 +291,16 @@ export const GUIDES: GuideDef[] = [
     id: 'city-destination', mode: 'city', target: 'destination', delayMs: IDLE_DELAY, map: ['destination'],
     when: c => c.phase === 'idle' && c.hasDestination,
     text: () => ({ title: '目的地をめざそう', body: '旗の立った町が目的地。一番乗りで賞金がもらえる。矢印の方へ進もう。' }),
+  },
+  {
+    id: 'city-quest', mode: 'city', target: 'quest', delayMs: IDLE_DELAY,
+    when: c => c.phase === 'idle' && !!c.hasQuests,
+    text: () => ({ title: 'お題に挑戦', body: `今年のお題は${QUEST_GROUPS.length}つ。達成すると賞金。札を押すと、みんなの進み具合が見えるよ。` }),
+  },
+  {
+    id: 'city-derby', mode: 'city', target: 'fish-derby', delayMs: IDLE_DELAY,
+    when: c => c.phase === 'idle' && !!c.derbyNow,
+    text: () => ({ title: `${FISH_MARKET.derbyMonth}月は釣り大会`, body: '今月、釣った魚の売値の合計が1位の人に賞金が出る。釣り場の町で釣ろう。' }),
   },
   {
     id: 'city-monthend', mode: 'city', target: 'players-bar', delayMs: IDLE_DELAY, skipIfSeen: ['city-report'],
@@ -288,7 +393,8 @@ export function stillValid(g: GuideDef, ctx: GuideContext): boolean {
 export function buildGuideContext(
   s: Pick<GameState,
     'screen' | 'settings' | 'turnPhase' | 'players' | 'currentPlayerIndex' | 'turn' | 'nodeActionsThisTurn'
-    | 'cityCards' | 'city' | 'cityToast' | 'cityBinboEvent' | 'lastCapitalResult' | 'firstFinishTurn' | 'cityReport'>,
+    | 'cityCards' | 'city' | 'cityToast' | 'cityBinboEvent' | 'lastCapitalResult' | 'firstFinishTurn' | 'cityReport'
+    | 'fishingState' | 'cityYearEnd'>,
   maxFishingPerTurn: number,
 ): GuideContext {
   const pi = s.currentPlayerIndex;
@@ -325,5 +431,18 @@ export function buildGuideContext(
     myPlotsHere: town ? town.plots.filter(p => p && p.owner === pi).length : 0,
     monopolyHere: town ? monopolyOwner(town) : null,
     hasSpecialtyHere: !!node && !!getSpecialty(node.id),
+    recoveringHere: recoveryMonthsLeft(town) > 0,
+    mayorHere: mayorOf(town),
+    traitsHere: mode === 'city' && !!node && traitIdsOf(node.id).length > 0,
+    // 線路の候補は町の画面にいるときだけ調べる（釣りの最中などに毎回数えない）
+    railHere: s.turnPhase === 'city' && !!s.city && !!node && !!player
+      && railOptions(s.city, node.id, pi, player.money).some(o => o.owner === null && !o.reason),
+    // 足りないものは町の状態を数えるので、町の画面にいるときだけ調べる
+    needsHere: s.turnPhase === 'city' && !!s.city && !!node && townNeeds(s.city, node.id).length > 0,
+    fishTownHere: mode === 'city' && !!node && isFishingSpot(node.id),
+    derbyNow: mode === 'city' && !!s.city && isDerbyTurn(s.turn),
+    fishSaleShown: mode === 'city' && s.fishingState?.phase === 'result' && !!s.fishingState.sale,
+    hasQuests: !!s.city?.quests,
+    finalYearEnd: !!s.cityYearEnd?.final,
   };
 }

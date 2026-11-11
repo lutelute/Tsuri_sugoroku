@@ -13,6 +13,9 @@ import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
 import MoneyTicker from '../fx/MoneyTicker';
 import Stamp from '../fx/Stamp';
+import { GearTile } from './GearArt';
+import { GEAR_TEXT } from './gearStatCalc';
+import { getEquippedItem } from '../../game/equipment';
 
 /** 店先の暖簾（入店時に一度だけはためく） */
 function Noren() {
@@ -37,6 +40,8 @@ function Noren() {
     </div>
   );
 }
+
+const TYPE_HEADINGS: Record<EquipmentType, string> = { rod: 'ロッド', reel: 'リール', lure: 'ルアー' };
 
 export default function ShopOverlay() {
   const { player, buyEquipment, skipShop } = useGameStore(
@@ -63,7 +68,7 @@ export default function ShopOverlay() {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm overflow-y-auto">
-      <div data-guide="shop" className="panel-ai fx-rise relative rounded-2xl p-6 max-w-lg w-[90%] my-4 max-h-[90vh] overflow-y-auto">
+      <div data-guide="shop" className="panel-ai fx-rise relative rounded-2xl p-4 sm:p-6 max-w-lg md:max-w-4xl w-[92%] my-4 max-h-[90vh] overflow-y-auto">
         {thanks > 0 && (
           <span key={thanks} className="absolute right-4 top-4 z-10 pointer-events-none">
             <Stamp tone="shu" size={60} vertical tilt={12}>毎度あり</Stamp>
@@ -77,10 +82,26 @@ export default function ShopOverlay() {
             <Icon name="coin" size={16} className="text-kin-400" />
             <Ruby>所持金</Ruby>: <MoneyTicker value={player.money} className="font-bold" popClassName="text-base" />
           </p>
+          {/* いまつけている道具（買う前に見くらべる） */}
+          <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-kin-500/25 bg-ai-900/35 px-3 py-2">
+            <span className="text-[11px] text-washi/60 whitespace-nowrap"><Ruby>{GEAR_TEXT.nowGear}</Ruby></span>
+            {types.map(t => {
+              const item = getEquippedItem(player.equipment, t);
+              return item
+                ? <GearTile key={t} type={t} level={item.level} size={44} />
+                : <span key={t} className="w-11 h-11 rounded-[0.6rem] border-2 border-dashed border-washi/25" aria-hidden="true" />;
+            })}
+          </div>
         </div>
 
+        <div className="md:grid md:grid-cols-3 md:gap-3 md:items-start">
         {types.map(type => (
-          <div key={type} className="mb-4">
+          <div key={type} className="mb-4 md:mb-0">
+            <h3 className="flex items-center gap-1.5 mb-2 font-mincho text-sm text-kin-300">
+              <GearTile type={type} level={2} size={30} />
+              {TYPE_HEADINGS[type]}
+              <span className="flex-1 h-px bg-kin-500/25" />
+            </h3>
             <div className="space-y-2">
               {EQUIPMENT_DATA
                 .filter(e => e.type === type && e.level <= maxLevel)
@@ -98,14 +119,16 @@ export default function ShopOverlay() {
                       canAfford={canAfford}
                       canBuy={canBuy}
                       onBuy={() => buyEquipment(type, eq.level, eq.cost)}
+                      current={player.equipment}
                     />
                   );
                 })}
             </div>
           </div>
         ))}
+        </div>
 
-        <Button onClick={skipShop} variant="secondary" className="w-full mt-2">
+        <Button onClick={skipShop} variant="secondary" className="w-full mt-2 md:mt-4 min-h-[44px]">
           <Ruby>ショップを出る</Ruby>
         </Button>
       </div>

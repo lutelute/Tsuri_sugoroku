@@ -322,3 +322,30 @@ idle → roulette → path_selection(分岐あり) or node_action →
 - 釣果の記録: `CaughtFish.via`（大漁/イベント/お祭り＝県庁の祭りの特別な釣り）。魚籠（`CreelOverlay`）の「みんな」は全員の `caughtFish` を巡ごとに新しい順で並べる。イベントの魚は `applyEventCard(fishId)` で画面の魚をそのまま渡す。
 - iPad の見え方は Playwright の WebKit + `devices['iPad Pro 11']` でおおむね再現できる。盤や地図がおかしいときは、まず端末の localStorage を疑う。
 
+
+## v5.0.0 見た目とゲーム性の全面的な作り込み（2026-11-11）
+
+撮影係（全画面の撮影と美術監査）と企画係の報告をもとに、係（損得・釣り・お題・難易度調整・海の絵・町の絵・晴れ舞台・札の絵・案内役）が分担し、リーダーが統合した。詳細は `CHANGELOG.md`。係の報告の写しは `.claude/handover/v6-wip/`（git には入らない）。
+
+### ストア（`src/store/game/*`）
+- `useGameStore.ts` は組み立てるだけ。部品: `sessionSlice`（新しい対局・再開）・`turnSlice`（サイコロ・移動・次の人・月末の呼び出し）・`moveHooks`（移動の直後: 運賃・貧乏神）・`cityArrival`（まちづくりの到着）・`monthEnd`（月末: 収入 → 保険 → 復興 → 貧乏神 → お題 → 釣り大会 → 年度末。純粋関数）・`citySlice`（町での操作・条例・線路）・`fishingSlice`（釣果は `landCatch` に集める）・`eventSlice`・`questHooks`・`notices`・`devSlice`。
+- 状態やアクションを足したら `gameStore.shape.test.ts` の一覧にも足す。保存の互換も同じテストで見ている。
+- 開発ビルドでは `window.__tsuri` にストアが出る（`src/main.tsx`）。
+
+### まちづくりの新しい仕組み（どれも `src/game/` の純粋関数）
+- 鉄道 `railways.ts`（`RAIL_ECONOMY`）: 線路のマスは `getReachableNodes(…, passThrough)` で歩数0・止まれない。歩数の表示は `countedSteps(path, rails)`（`path.length - 1` を使わない）。経路探索には手数の上限 `SEARCH_BUDGET` がある。
+- 町長と条例 `mayor.ts`・`mayorAI.ts`: 条例は **工事の回数を使わない**・1か月に1回（`TownState.lastEnact`）。CPU は町に入ったら工事の前に `chooseOrdinance`。
+- 復興 `recovery.ts`、町の特色 `cityTraits.ts`・`data/cityTraits.ts`、お題 `cityQuests.ts`（`CityState.quests`）、魚市場 `fishMarket.ts`（`FISH_MARKET`）、見込み札 `cityAdvice.ts`、行き先のおすすめ `pathAdvice.ts`、CPU の人物 `data/cpuPersonas.ts`。
+- 物価 `priceScale(turn)`（`CITY_ECONOMY.yearScale`）: 賞金・罰・カードの値段・買い物代・魚の売値に掛ける。建設費と建物の収入には掛けない。
+- 観光名所の育ちは `tourismGrowthDemand(幸福度)` が唯一の式（上限 `tourismGrowthDemandMax`。city・cityAdvice・mayorAI が共通で使う）。
+- 数値を変えたら `balance.city.sim.test.ts`（26項目）と `balance.fishing.sim.test.ts` を必ず通す。機能ごとに切る掃引は `BALANCE_SWEEP='[{"off":["ordinances"]}]'`。
+
+### 見た目
+- 町の絵 `components/city/TownScene.tsx`・`townArt/`（確かめ用の一覧は開発ビルドで `?gallery=town`）。地図の町の姿は `map/townMarks.tsx`・置き場所 `townPlacement.ts`。
+- 釣りの舞台 `components/fishing/scene/`（釣り場の景色は `sceneSpec.ts` がマスから選ぶ）。
+- タイトル `components/title/`、結果発表 `components/result/`、札・祭り・店・温泉の絵 `event/EventArt*`・`capital/FestivalArt`・`shop/GearArt`・`rest/OnsenScene`（一覧は `?gallery=art`）。
+- CSS は `index.css` の末尾に係ごとのブロック（接頭辞 `ad-` 損得・`tk-` 釣り・`qs-` お題・`um-` 海の絵・`tw-` 町の絵・`hr-` 晴れ舞台・`fd-` 札の絵）。色のトークンは `@theme` に定義したものだけを使う（未定義のクラスは黙って効かない）。
+- **大文字小文字だけが違うファイル名を作らない**（macOS では同じファイルになり、CI の Linux で壊れる）。
+
+### 確かめ方
+- 撮影: `NODE_ENV=development npx vite build --mode development --outDir <tmp>/dist` → `NODE_ENV=development npx vite preview --outDir <tmp>/dist --port 5340 --strictPort`（**preview にも NODE_ENV が要る**）→ `node scripts/shots.mjs --url http://localhost:5340 --out <tmp>/shots --size phone,ipad,ipad-land [--browser webkit] [--only 場面]`。ユーザーは iPad の Safari で遊ぶので、見た目を変えたら WebKit の iPad でも撮る。

@@ -1,10 +1,17 @@
+import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../../store/useGameStore';
 import { NODE_MAP } from '../../data/boardNodes';
 import { computeDistanceToGoal } from '../../utils/pathfinding';
 import { calendarLabel, seasonOf } from '../../game/city';
 import { fishingLastTurn } from '../../game/deadline';
+import { derbySeasonLabel } from '../../game/fishMarket';
 import Ruby from '../shared/Ruby';
+import QuestChip from '../city/QuestChip';
+import QuestSheet from '../city/QuestSheet';
+import QuestBurst from '../city/QuestBurst';
+import { useShortScreen } from '../city/useShortScreen';
+import DerbyLine from '../city/DerbyLine';
 
 const distanceToGoal = computeDistanceToGoal();
 
@@ -28,8 +35,9 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 export default function TurnIndicator() {
-  const { turn, player, turnPhase, maxTurns, destination, destinationReward, isCity, firstFinishTurn } = useGameStore(
+  const { turn, player, turnPhase, maxTurns, destination, destinationReward, isCity, firstFinishTurn, hasQuests } = useGameStore(
     useShallow(s => ({
+      hasQuests: !!s.city?.quests,
       firstFinishTurn: s.firstFinishTurn,
       turn: s.turn,
       player: s.players[s.currentPlayerIndex],
@@ -44,18 +52,25 @@ export default function TurnIndicator() {
   const remainingDist = player ? distanceToGoal.get(player.currentNode) : undefined;
   const cal = calendarLabel(turn);
   const season = seasonOf(turn);
+  // 7月は釣り大会（釣り係の fishMarket.ts）: 季節の札に名前を並べ、帯の下に途中経過の1行を出す
+  const derby = isCity ? derbySeasonLabel(turn) : null;
   const destName = destination ? NODE_MAP.get(destination)?.name : null;
   const monthsLeft = maxTurns > 0 ? Math.max(0, maxTurns - turn + 1) : null;
+  // お題の札: ふつうは帯の2段目いっぱいに出す。背の低い画面（スマホの横持ち）では地図が狭くなるので、1段目に小さく入れる
+  const [questOpen, setQuestOpen] = useState(false);
+  const shortScreen = useShortScreen();
+  const showQuest = isCity && hasQuests;
 
   // スマホ（360〜390px）でも1行に収まるよう、狭いときは「年目」「残り」「目的地」の文字を省き、名前と目的地の町名を省略表示にする
   return (
     <div
-      className="backdrop-blur-sm px-2.5 sm:px-4 py-1.5 flex items-center justify-between gap-2 text-sm transition-colors duration-500"
+      className="backdrop-blur-sm transition-colors duration-500"
       style={{
         backgroundColor: player?.color ? `${player.color}18` : 'rgba(0,0,0,0.3)',
         borderBottom: `2px solid ${player?.color || 'transparent'}`,
       }}
     >
+    <div className={`px-2.5 sm:px-4 ${showQuest && shortScreen ? 'py-0' : 'py-1.5'} flex items-center justify-between gap-2 text-sm`}>
       <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
         {isCity ? (
           <>
@@ -67,10 +82,18 @@ export default function TurnIndicator() {
               key={`${cal.year}-${cal.month}`}
               data-guide="season"
               className="fx-season-in relative overflow-hidden shrink-0 whitespace-nowrap rounded-full border border-kin-500/40 bg-kin-500/15 px-1.5 py-px text-[11px] leading-tight text-kin-200 font-mincho"
-              title={season.desc}
+              title={derby ? `${season.desc}／${derby.name}: ${derby.desc}` : season.desc}
             >
               <span className="fx-sheen" aria-hidden="true" />
-              <Ruby>{season.name}</Ruby>
+              {derby ? (
+                // 狭い画面では、することのある「釣り大会」だけにする
+                <>
+                  <span className="hidden min-[420px]:inline"><Ruby>{season.name}</Ruby>・</span>
+                  <Ruby>{derby.name}</Ruby>
+                </>
+              ) : (
+                <Ruby>{season.name}</Ruby>
+              )}
             </span>
             {monthsLeft !== null && (
               <span className="hidden sm:inline text-washi/40 text-xs whitespace-nowrap">(<Ruby>残り</Ruby>{monthsLeft})</span>
@@ -91,6 +114,7 @@ export default function TurnIndicator() {
       </div>
 
       <div className="flex items-center justify-end gap-1.5 sm:gap-3 text-washi/70 min-w-0 shrink text-xs sm:text-sm">
+        {showQuest && shortScreen && <QuestChip variant="inline" onOpen={() => setQuestOpen(true)} />}
         {isCity && destName && (
           <span
             key={destination ?? ''}
@@ -120,6 +144,18 @@ export default function TurnIndicator() {
         )}
         <span key={turnPhase} className="fx-fade-in hidden lg:inline whitespace-nowrap"><Ruby>{PHASE_LABELS[turnPhase] || ''}</Ruby></span>
       </div>
+    </div>
+    {/* お題の段: 今年のお題3つの進み具合と今年の舞台。押すと一覧が下から出る */}
+    {showQuest && !shortScreen && <QuestChip variant="row" onOpen={() => setQuestOpen(true)} />}
+    {/* 7月だけ: 釣り大会の途中経過（背の低い画面では季節の札の名前だけにする） */}
+    {derby && !shortScreen && (
+      <div className="px-2.5 sm:px-4 py-1 border-t border-kin-500/15 bg-ai-950/35">
+        <DerbyLine compact />
+      </div>
+    )}
+    {showQuest && questOpen && <QuestSheet onClose={() => setQuestOpen(false)} />}
+    {/* お題を達成した瞬間の判子と賞金の数え上げ（一度きり） */}
+    {showQuest && <QuestBurst />}
     </div>
   );
 }

@@ -10,6 +10,8 @@ import Confetti from '../fx/Confetti';
 import ScreenFlash from '../fx/ScreenFlash';
 import { useCountUp } from '../fx/useCountUp';
 import { playBad, playCardFlip, playChime, playGood } from '../../utils/sound';
+import EventArt from '../event/EventArt';
+import { cityEventArtFor } from '../event/eventArtPick';
 
 /** 札がめくれてから吉凶の音を鳴らすまでの間 */
 const OUTCOME_SOUND_DELAY_MS = 380;
@@ -63,11 +65,12 @@ export default function CityEventOverlay() {
       {flipped && !bad && <Confetti variant="festive" mode="burst" count={40} seed={card.name.length + 5} originY="40%" />}
       {flipped && <ScreenFlash color={style.flash} opacity={disaster ? 0.45 : 0.35} />}
 
-      <div data-guide="city-event" className={`w-[90%] max-w-sm ${flipped && (bad || disaster) ? 'fx-shake' : ''}`}>
+      <div data-guide="city-event" className={`w-[90%] max-w-sm md:max-w-lg ${flipped && (bad || disaster) ? 'fx-shake' : ''}`}>
         <div className="fx-flip animate-bounce-in">
           <div className={`fx-flip-inner ${flipped ? 'is-flipped' : ''}`}>
-            {/* 表（めくった面） */}
-            <div className="fx-flip-face fx-flip-front fx-card-front p-5 sm:p-6 text-center max-h-[88dvh] overflow-y-auto overscroll-contain" inert={!flipped}>
+            {/* 表（めくった面）。上半分は出来事の絵 */}
+            <div className={`fx-flip-face fx-flip-front fx-card-front fd-card is-${card.type} p-4 pb-5 sm:p-5 text-center max-h-[88dvh] overflow-y-auto overscroll-contain`} inert={!flipped}>
+              <EventArt spec={cityEventArtFor(card)} tone={card.type} className="mb-3" />
               <div className="flex items-center justify-center gap-2 mb-2">
                 <span className="h-px w-8" style={{ background: style.accent, opacity: 0.5 }} />
                 <span className="text-[11px] tracking-[0.35em] font-mincho" style={{ color: style.accent }}><Ruby>まちの出来事</Ruby>・<Ruby>{style.label}</Ruby></span>

@@ -26,7 +26,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-4 select-none">
+    <div className="flex flex-col items-center justify-center-safe h-full px-4 overflow-y-auto py-6 select-none">
       <div className="panel-ai w-full max-w-sm p-6">
         <div className="flex flex-col items-center mb-2">
           <span className="seal mb-3 flex items-center justify-center w-12 h-12 rounded-full">
