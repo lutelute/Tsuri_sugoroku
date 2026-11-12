@@ -3,6 +3,7 @@
 // 足したら `npx vitest run src/data/fishExtra src/components/shared/fishArt` を通す。
 import type { Fish } from '../../game/types';
 import { PACK as P01 } from './p01Freshwater';
+import { PACK as P02 } from './p02Rocky';
 import type { FishFormEntry, LegacyEntry } from '../../components/shared/fishArt/types';
 
 export interface FishPack {
@@ -13,6 +14,7 @@ export interface FishPack {
 
 const PACKS: FishPack[] = [
   P01,
+  P02,
 ];
 
 export const EXTRA_FISH: Fish[] = PACKS.flatMap(p => p.fish);

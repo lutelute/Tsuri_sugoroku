@@ -154,6 +154,14 @@ const weighOver = (pool: readonly Fish[], w: (f: Fish) => number): number[] => {
   const share = speciesShare(pool);
   return pool.map(f => w(f) * share(f));
 };
+/**
+ * 抽選の前に、めずらしさの順に並べる（同じめずらしさの中は図鑑の順）。重みの合計がめずらしさごとに
+ * 変わらないので、種を足しても同じ乱数は同じめずらしさに当たる（シミュレーションが種の数で揺れない）。
+ */
+function drawFrom(pool: readonly Fish[], w: (f: Fish) => number): Fish {
+  const sorted = [...pool].sort((a, b) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity]);
+  return weightedRandom(sorted, weighOver(sorted, w));
+}
 
 export function fishOdds(
   nodeId: string,
@@ -210,16 +218,16 @@ export function selectFish(
       f => f.rarity === 'rare' || f.rarity === 'legendary' || f.rarity === 'mythical',
     );
     if (rareOrAbove.length > 0) {
-      return weightedRandom(rareOrAbove, weighOver(rareOrAbove, computeWeight));
+      return drawFrom(rareOrAbove, computeWeight);
     }
     // レア以上がいない場合はuncommon以上
     const uncommonOrAbove = available.filter(f => f.rarity !== 'common');
     if (uncommonOrAbove.length > 0) {
-      return weightedRandom(uncommonOrAbove, weighOver(uncommonOrAbove, computeWeight));
+      return drawFrom(uncommonOrAbove, computeWeight);
     }
   }
 
-  return weightedRandom(available, weighOver(available, computeWeight));
+  return drawFrom(available, computeWeight);
 }
 
 export function generateFishSize(equipment?: PlayerEquipment): number {
