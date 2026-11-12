@@ -12,6 +12,8 @@ const CpuDriver = lazy(() => import('./components/cpu/CpuDriver'));
 const TownSceneGallery = import.meta.env.DEV && new URLSearchParams(window.location.search).get('gallery') === 'town' ? lazy(() => import('./components/dev/TownSceneGallery')) : null;
 // 開発ビルドだけ: 札・道具・祭り・温泉の絵の確かめ用の一覧（URL に ?gallery=art）
 const ArtGallery = import.meta.env.DEV && new URLSearchParams(window.location.search).get('gallery') === 'art' ? lazy(() => import('./components/dev/ArtGallery')) : null;
+// 開発ビルドだけ: 図鑑の魚 300 種の確かめ用の一覧（URL に ?gallery=fish）
+const FishGallery = import.meta.env.DEV && new URLSearchParams(window.location.search).get('gallery') === 'fish' ? lazy(() => import('./components/dev/FishGallery')) : null;
 
 export default function App() {
   const screen = useGameStore(s => s.screen);
@@ -50,6 +52,7 @@ export default function App() {
 
   if (TownSceneGallery) return <Suspense fallback={null}><TownSceneGallery /></Suspense>;
   if (ArtGallery) return <Suspense fallback={null}><ArtGallery /></Suspense>;
+  if (FishGallery) return <Suspense fallback={null}><FishGallery /></Suspense>;
 
   // 認証初期化待ち
   if (!initialized) {

@@ -1,6 +1,12 @@
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 import { FISH_DATABASE } from '../../data/fishDatabase';
 import type { Fish, FishAppearance, FishBodyShape, FishFinStyle } from '../../game/types';
+import { useSettingsStore } from '../../store/useSettingsStore';
+import { renderFishSvg } from './fishArt/render';
+import type { RenderOpts } from './fishArt/render';
+import { resolveFishForm } from './fishArt/styles';
+import type { FishArtPref } from './fishArt/styles';
+import type { FishFormEntry } from './fishArt/types';
 
 const FISH_MAP = new Map(FISH_DATABASE.map(f => [f.id, f]));
 
@@ -10,6 +16,10 @@ interface FishIllustrationProps {
   height?: number;
   silhouette?: boolean;
   className?: string;
+  /** 図鑑の台紙に載せる大きな絵（木版では空のぼかし、レジェンダリー以上は金の砂子） */
+  framed?: boolean;
+  /** 設定によらず描き方を決める（確かめ用の一覧） */
+  artStyle?: FishArtPref;
 }
 
 // ===== 色ユーティリティ =====
@@ -925,7 +935,51 @@ function PatternDefs({ id, appearance }: { id: string; appearance: FishAppearanc
 const SCALE_SHAPES: FishBodyShape[] = ['standard', 'elongated', 'round', 'flat'];
 const AURA: Partial<Record<Fish['rarity'], string>> = { legendary: '#e6c266', mythical: '#ef6a52' };
 
-export default function FishIllustration({ fishId, width = 120, height = 80, silhouette = false, className = '' }: FishIllustrationProps) {
+/**
+ * 魚の絵。描き方は設定（useSettingsStore.fishArt）で切り替わる。
+ * 木版・描き分け・魚拓は fishArt/ の型で描き、型に合わない物（イカ・タコ・カニ・貝・サメなど）と
+ * 「もとの絵」は下の ClassicFish で描く。
+ */
+export default function FishIllustration(props: FishIllustrationProps) {
+  const { fishId, width = 120, height = 80, silhouette = false, className = '', framed = false } = props;
+  const pref = useSettingsStore(s => s.fishArt);
+  const style = props.artStyle ?? pref;
+  const fish = FISH_MAP.get(fishId);
+  const uid = useId().replace(/:/g, '');
+  const resolved = fish?.appearance ? resolveFishForm(fish) : null;
+  const small = width <= 110;
+  const inner = useMemo(() => {
+    if (!fish || !resolved || 'legacy' in resolved || style === 'classic') return null;
+    return cachedFishSvg(fish, resolved.entry, { style, small, framed, silhouette });
+  }, [fish, resolved, style, small, framed, silhouette]);
+
+  if (!fish || !fish.appearance) {
+    return <span className={className} style={{ width, height, display: 'inline-block' }} />;
+  }
+  if (inner == null) {
+    const legacy = resolved && 'legacy' in resolved ? resolved.legacy : undefined;
+    // 魚拓では、型の無い物は墨の影で刷る
+    return <ClassicFish {...props} shape={legacy} silhouette={silhouette || (style === 'gyotaku' && legacy != null)} />;
+  }
+  return (
+    <svg
+      viewBox="0 0 240 160" width={width} height={height} className={className} role="img" aria-label={fish.name}
+      xmlns="http://www.w3.org/2000/svg"
+      dangerouslySetInnerHTML={{ __html: inner.replaceAll('__K__', `fa${uid}`) }}
+    />
+  );
+}
+
+const svgCache = new Map<string, string>();
+function cachedFishSvg(fish: Fish, entry: FishFormEntry, o: RenderOpts): string {
+  const key = `${fish.id}|${o.style}|${o.small ? 1 : 0}|${o.framed ? 1 : 0}|${o.silhouette ? 1 : 0}`;
+  let s = svgCache.get(key);
+  if (s == null) { s = renderFishSvg(fish, entry, o); svgCache.set(key, s); }
+  return s;
+}
+
+/** もとの絵（v2 の魚）。shape で形を差し替えられる */
+function ClassicFish({ fishId, width = 120, height = 80, silhouette = false, className = '', shape: shapeOverride }: FishIllustrationProps & { shape?: FishBodyShape }) {
   const fish = FISH_MAP.get(fishId);
   const uid = useId().replace(/:/g, '');
 
@@ -934,7 +988,7 @@ export default function FishIllustration({ fishId, width = 120, height = 80, sil
   }
 
   const a = fish.appearance;
-  const shape = a.bodyShape;
+  const shape = shapeOverride ?? a.bodyShape;
   const bodyColor = silhouette ? '#2a2a2a' : a.bodyColor;
   const accent = silhouette ? '#3a3a3a' : a.accentColor;
   const stroke = silhouette ? '#161616' : darken(a.bodyColor, 0.55);

@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { setSoundConfig } from '../utils/sound';
 import { CPU_SPEEDS, tempoScale } from '../game/tempo';
 import type { CpuSpeed } from '../game/tempo';
+import { DEFAULT_FISH_ART, FISH_ART_PREFS } from '../components/shared/fishArt/styles';
+import type { FishArtPref } from '../components/shared/fishArt/styles';
 
 // 子供向けの「ふりがな（ルビ）」表示や効果音など、ゲーム外の設定。localStorage に永続化する。
 const FURIGANA_KEY = 'tsuri_furigana_enabled';
@@ -10,6 +12,17 @@ const VOLUME_KEY = 'tsuri_sound_volume';
 const CPU_SPEED_KEY = 'tsuri_cpu_speed';
 const QUICK_CATCH_KEY = 'tsuri_quick_catch';
 const ADVICE_KEY = 'tsuri_advice_enabled';
+const FISH_ART_KEY = 'tsuri_fish_art';
+
+/** 魚の絵の描き方。既定は木版 */
+function loadFishArt(): FishArtPref {
+  try {
+    const v = localStorage.getItem(FISH_ART_KEY);
+    return FISH_ART_PREFS.includes(v as FishArtPref) ? (v as FishArtPref) : DEFAULT_FISH_ART;
+  } catch {
+    return DEFAULT_FISH_ART;
+  }
+}
 
 /** 効果音の音量の既定値（控えめ） */
 export const DEFAULT_SOUND_VOLUME = 0.3;
@@ -96,6 +109,11 @@ interface SettingsState {
   adviceEnabled: boolean;
   setAdvice: (enabled: boolean) => void;
   toggleAdvice: () => void;
+  /** 魚の絵の描き方（木版／描き分け／魚拓／もとの絵） */
+  fishArt: FishArtPref;
+  setFishArt: (pref: FishArtPref) => void;
+  /** 木版 → 描き分け → 魚拓 → もとの絵 → 木版… */
+  cycleFishArt: () => void;
   /** CPU の手番を早送り中か（保存しない。人の手番になったら戻す） */
   cpuSkipping: boolean;
   setCpuSkipping: (skipping: boolean) => void;
@@ -149,6 +167,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ adviceEnabled: enabled });
   },
   toggleAdvice: () => get().setAdvice(!get().adviceEnabled),
+  fishArt: loadFishArt(),
+  setFishArt: (pref) => {
+    try { localStorage.setItem(FISH_ART_KEY, pref); } catch { /* ignore */ }
+    set({ fishArt: pref });
+  },
+  cycleFishArt: () => {
+    const i = FISH_ART_PREFS.indexOf(get().fishArt);
+    get().setFishArt(FISH_ART_PREFS[(i + 1) % FISH_ART_PREFS.length]);
+  },
   cpuSkipping: false,
   setCpuSkipping: (skipping) => set({ cpuSkipping: skipping }),
 }));

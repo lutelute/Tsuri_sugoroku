@@ -11,6 +11,8 @@ import Ruby from '../shared/Ruby';
 import Stamp from '../fx/Stamp';
 import { FILTER_TEXT, HABITAT_GROUPS, NO_FILTER, RARITY_NAMES, RARITY_ORDER, REGION_LABELS, REGION_ORDER, filterFish, rarityProgress } from './encyclopediaFilter';
 import type { FishFilter } from './encyclopediaFilter';
+import { useSettingsStore } from '../../store/useSettingsStore';
+import { FISH_ART_LABELS, FISH_ART_PREFS } from '../shared/fishArt/styles';
 
 // レア度色（セマンティクスを保ちつつ和モダンに調和）
 const RARITY_COLORS: Record<FishRarity, string> = {
@@ -74,6 +76,8 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetInput, setResetInput] = useState('');
   const [resetting, setResetting] = useState(false);
+  const fishArt = useSettingsStore(s => s.fishArt);
+  const setFishArt = useSettingsStore(s => s.setFishArt);
 
   const isStandalone = standaloneEncyclopedia != null;
   const encyclopedia = useMemo(
@@ -236,6 +240,12 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
             <span className="shrink-0 w-px self-stretch my-2 bg-washi/15" aria-hidden="true" />
             <Chip on={filter.found === 'found'} onClick={() => setFilter(f => ({ ...f, found: f.found === 'found' ? 'all' : 'found' }))}><Ruby>{FILTER_TEXT.found}</Ruby></Chip>
             <Chip on={filter.found === 'yet'} onClick={() => setFilter(f => ({ ...f, found: f.found === 'yet' ? 'all' : 'yet' }))}><Ruby>{FILTER_TEXT.yet}</Ruby></Chip>
+          </ChipRow>
+          {/* 魚の絵の描き方（設定と同じ。ゲーム中の絵もすべて変わる） */}
+          <ChipRow label="魚の絵">
+            {FISH_ART_PREFS.map(p => (
+              <Chip key={p} on={fishArt === p} onClick={() => setFishArt(p)}><Ruby>{FISH_ART_LABELS[p]}</Ruby></Chip>
+            ))}
           </ChipRow>
         </div>
 

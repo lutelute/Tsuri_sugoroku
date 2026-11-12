@@ -343,9 +343,11 @@ idle → roulette → path_selection(分岐あり) or node_action →
 ### 見た目
 - 町の絵 `components/city/TownScene.tsx`・`townArt/`（確かめ用の一覧は開発ビルドで `?gallery=town`）。地図の町の姿は `map/townMarks.tsx`・置き場所 `townPlacement.ts`。
 - 釣りの舞台 `components/fishing/scene/`（釣り場の景色は `sceneSpec.ts` がマスから選ぶ）。
+- 魚の絵 `components/shared/fishArt/`: 体形の型 `forms.ts`（約60）× 魚ごとの指定 `src/data/fishForms.ts`（型・模様・色）を、描き方 `render.ts` で塗る。描き方は設定 `useSettingsStore.fishArt`（木版＝既定・描き分け・魚拓・もとの絵）で、タイトルと図鑑の上で切り替える。イカ・タコ・カニ・貝・サメ・エイ・ウナギなどは型を作らず、もとの絵（`FishIllustration.tsx` の `ClassicFish`）で描く。確かめ用の一覧は開発ビルドで `?gallery=fish&style=hanga&from=0&to=100`。魚を足したら `fishForms.ts` にも足す（`fishArt.test.ts` が見ている）。
 - タイトル `components/title/`、結果発表 `components/result/`、札・祭り・店・温泉の絵 `event/EventArt*`・`capital/FestivalArt`・`shop/GearArt`・`rest/OnsenScene`（一覧は `?gallery=art`）。
 - CSS は `index.css` の末尾に係ごとのブロック（接頭辞 `ad-` 損得・`tk-` 釣り・`qs-` お題・`um-` 海の絵・`tw-` 町の絵・`hr-` 晴れ舞台・`fd-` 札の絵）。色のトークンは `@theme` に定義したものだけを使う（未定義のクラスは黙って効かない）。
 - **大文字小文字だけが違うファイル名を作らない**（macOS では同じファイルになり、CI の Linux で壊れる）。
 
 ### 確かめ方
+- **見た目を作る・直すときは、まずスキル `tsuri-art`（`.claude/skills/tsuri-art/SKILL.md`）を読む**。描き直さずに使う部品・浮世絵の描き方の型・少ない撮影で確かめる手順・よくある崩れがある。
 - 撮影: `NODE_ENV=development npx vite build --mode development --outDir <tmp>/dist` → `NODE_ENV=development npx vite preview --outDir <tmp>/dist --port 5340 --strictPort`（**preview にも NODE_ENV が要る**）→ `node scripts/shots.mjs --url http://localhost:5340 --out <tmp>/shots --size phone,ipad,ipad-land [--browser webkit] [--only 場面]`。ユーザーは iPad の Safari で遊ぶので、見た目を変えたら WebKit の iPad でも撮る。

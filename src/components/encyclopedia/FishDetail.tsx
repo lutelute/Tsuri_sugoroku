@@ -46,7 +46,7 @@ export default function FishDetail({ fish, caught, onClose }: FishDetailProps) {
             <Ruby>{name}</Ruby>
           </div>
           <div className="fd-gyotaku-fish">
-            <FishIllustration fishId={fish.id} width={240} height={160} silhouette={!caught} className="fd-gyotaku-art" />
+            <FishIllustration fishId={fish.id} width={240} height={160} silhouette={!caught} framed className="fd-gyotaku-art" />
           </div>
           <span className="fd-gyotaku-seal seal font-mincho">{caught ? 'つれた' : 'まだ'}</span>
         </div>

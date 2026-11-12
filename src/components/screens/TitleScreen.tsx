@@ -5,6 +5,7 @@ import { loadUserEncyclopedia, resetUserEncyclopedia } from '../../lib/firestore
 import { loadEncyclopedia, saveEncyclopedia } from '../../utils/storage';
 import { APP_VERSION, MODE_STORAGE_KEY } from '../../game/constants';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { FISH_ART_LABELS } from '../shared/fishArt/styles';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
@@ -72,6 +73,8 @@ export default function TitleScreen() {
   // 行き先のおすすめ（分かれ道の金の輪と理由の札）
   const adviceEnabled = useSettingsStore(s => s.adviceEnabled);
   const toggleAdvice = useSettingsStore(s => s.toggleAdvice);
+  const fishArt = useSettingsStore(s => s.fishArt);
+  const cycleFishArt = useSettingsStore(s => s.cycleFishArt);
 
   // 音を入れたら・音量を変えたら、りんを一打して聞かせる（押した操作で音が解禁される）
   const toggleSound = () => {
@@ -168,6 +171,13 @@ export default function TitleScreen() {
                 aria-pressed={adviceEnabled}
               >
                 おすすめ {adviceEnabled ? 'ON' : 'OFF'}
+              </button>
+              <button
+                onClick={cycleFishArt}
+                className={pill}
+                title="魚の絵の描き方を切り替え（木版・描き分け・魚拓・もとの絵）"
+              >
+                <Ruby>{`魚の絵 ${FISH_ART_LABELS[fishArt]}`}</Ruby>
               </button>
             </div>
 
