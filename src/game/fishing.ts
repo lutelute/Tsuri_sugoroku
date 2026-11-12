@@ -1,5 +1,5 @@
 import type { Fish, FishRarity, FishingRig, PlayerEquipment, Region, CaughtFish } from './types';
-import { FISH_DATABASE } from '../data/fishDatabase';
+import { BASE_FISH_IDS, FISH_DATABASE } from '../data/fishDatabase';
 import { NODE_MAP } from '../data/boardNodes';
 import {
   LURE_RARE_BONUS, LURE_BITE_SPEED_BONUS, EQUIPMENT_WEIGHTS,
@@ -137,6 +137,24 @@ function capByRarity(available: Fish[], opts?: FishSelectOpts): Fish[] {
  * 抽選に入る魚と重み（selectFish と同じ候補・同じ重み。乱数は使わない）。
  * 釣り場の札や「1匹 約¥◯」の見込みに使う。竿が無い・候補が無いときは空。
  */
+/**
+ * 種が増えても、めずらしさごとの出やすさを変えない（1000 種図鑑）。
+ * 魚の重みは「めずらしさの重み × 種の数」で効くので、足した魚は、その場所にいる もとの 300 種と
+ * 同じめずらしさの重みを分け合う（もとの種が1匹もいないめずらしさは、そのまま）。
+ */
+function speciesShare(pool: readonly Fish[]): (fish: Fish) => number {
+  const all: Partial<Record<string, number>> = {}, base: Partial<Record<string, number>> = {};
+  for (const f of pool) {
+    all[f.rarity] = (all[f.rarity] ?? 0) + 1;
+    if (BASE_FISH_IDS.has(f.id)) base[f.rarity] = (base[f.rarity] ?? 0) + 1;
+  }
+  return f => { const b = base[f.rarity]; return b ? b / (all[f.rarity] ?? b) : 1; };
+}
+const weighOver = (pool: readonly Fish[], w: (f: Fish) => number): number[] => {
+  const share = speciesShare(pool);
+  return pool.map(f => w(f) * share(f));
+};
+
 export function fishOdds(
   nodeId: string,
   region: Region,
@@ -157,7 +175,8 @@ export function fishOdds(
     const uncommonOrAbove = available.filter(f => f.rarity !== 'common');
     pool = rareOrAbove.length > 0 ? rareOrAbove : uncommonOrAbove.length > 0 ? uncommonOrAbove : available;
   }
-  return pool.map(fish => ({ fish, weight: computeWeight(fish) }));
+  const weights = weighOver(pool, computeWeight);
+  return pool.map((fish, i) => ({ fish, weight: weights[i] }));
 }
 
 export function selectFish(
@@ -191,16 +210,16 @@ export function selectFish(
       f => f.rarity === 'rare' || f.rarity === 'legendary' || f.rarity === 'mythical',
     );
     if (rareOrAbove.length > 0) {
-      return weightedRandom(rareOrAbove, rareOrAbove.map(computeWeight));
+      return weightedRandom(rareOrAbove, weighOver(rareOrAbove, computeWeight));
     }
     // レア以上がいない場合はuncommon以上
     const uncommonOrAbove = available.filter(f => f.rarity !== 'common');
     if (uncommonOrAbove.length > 0) {
-      return weightedRandom(uncommonOrAbove, uncommonOrAbove.map(computeWeight));
+      return weightedRandom(uncommonOrAbove, weighOver(uncommonOrAbove, computeWeight));
     }
   }
 
-  return weightedRandom(available, available.map(computeWeight));
+  return weightedRandom(available, weighOver(available, computeWeight));
 }
 
 export function generateFishSize(equipment?: PlayerEquipment): number {

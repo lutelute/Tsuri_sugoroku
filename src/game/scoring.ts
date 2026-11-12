@@ -5,7 +5,7 @@ import {
   RARITY_BONUS,
   REGION_COMPLETE_SPECIES,
   REGION_COMPLETE_BONUS,
-  ENCYCLOPEDIA_COMPLETION_BONUS_PER_PERCENT,
+  ENCYCLOPEDIA_BONUS_PER_SPECIES,
   GIANT_FISH_THRESHOLD,
   GIANT_FISH_BONUS,
   FINISH_BONUS,
@@ -52,10 +52,9 @@ export function calculateScore(player: Player, encyclopedia: Record<string, bool
   }
 
   // 図鑑完成度ボーナス
-  const totalFish = FISH_DATABASE.length;
-  const caughtCount = Object.keys(encyclopedia).filter(k => encyclopedia[k]).length;
-  const completionPercent = Math.floor((caughtCount / totalFish) * 100);
-  const encyclopediaBonus = completionPercent * ENCYCLOPEDIA_COMPLETION_BONUS_PER_PERCENT;
+  // 図鑑ボーナス: 図鑑に載った魚 1 種ごとに加点（図鑑にある魚だけ数える）
+  const caughtCount = Object.keys(encyclopedia).filter(k => encyclopedia[k] && fishMap.has(k)).length;
+  const encyclopediaBonus = caughtCount * ENCYCLOPEDIA_BONUS_PER_SPECIES;
 
   // 巨大魚ボーナス
   let giantFishBonus = 0;

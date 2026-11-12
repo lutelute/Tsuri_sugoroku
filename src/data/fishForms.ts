@@ -2,6 +2,7 @@
 // ここに無い魚は、図鑑の bodyShape から決める（standard→鱸 / elongated→魳 / flat→鰈 / round→河豚、
 // イカ・タコ・カニ・貝・サメ・エイ・ウナギなどは今の絵）。
 import type { FishFormEntry, LegacyEntry, Mark } from '../components/shared/fishArt/types';
+import { EXTRA_FORMS } from './fishExtra';
 
 type E = FishFormEntry | LegacyEntry;
 
@@ -33,7 +34,7 @@ const bands = (n: number, col: string, w = 8, op = 0.6): Mark => ({ k: 'bands', 
 const stripes = (rels: number[], col: string, w = 2.4, op = 0.7): Mark[] => rels.map(rel => ({ k: 'stripe', rel, col, w, op }));
 const spots = (n: number, col: string, r: [number, number] = [1.2, 2.4], y0 = 0.08, y1 = 0.9): Mark => ({ k: 'spots', n, col, r, y0, y1 });
 
-export const FISH_FORMS: Record<string, E> = {
+const BASE_FORMS: Record<string, E> = {
   // ---- 川
   iwana: { form: 'sake', col: { back: '#4a5a3c', mid: '#8f9a74', belly: '#e9c98a' }, marks: iwanaSpots },
   oo_iwana: { form: 'sake', col: { back: '#34452c', mid: '#7f8a64', belly: '#e6c27c' }, marks: iwanaSpots, stretch: 1.05 },
@@ -284,3 +285,6 @@ export const FISH_FORMS: Record<string, E> = {
   tengu_same: { legacy: 'shark' },
   shinkai_ryu: { legacy: 'oarfish' },
 };
+
+/** 魚ごとの絵の指定（300 種＋群ごとに足した魚） */
+export const FISH_FORMS: Record<string, E> = { ...BASE_FORMS, ...EXTRA_FORMS };

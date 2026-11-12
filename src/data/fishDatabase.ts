@@ -1,6 +1,8 @@
 import type { Fish } from '../game/types';
+import { EXTRA_FISH } from './fishExtra';
 
-export const FISH_DATABASE: Fish[] = [
+/** v5.1 までの 300 種 */
+const BASE_FISH: Fish[] = [
   // ===== Common (12種, 80-150pt) =====
   {
     id: 'iwana', name: 'イワナ', rarity: 'common', points: 100,
@@ -2699,3 +2701,9 @@ export const FISH_DATABASE: Fish[] = [
     wikiUrl: 'https://ja.wikipedia.org/wiki/アカカマス',
   },
 ];
+
+/** 図鑑の魚すべて（300 種＋群ごとに足した魚 src/data/fishExtra/） */
+export const FISH_DATABASE: Fish[] = [...BASE_FISH, ...EXTRA_FISH];
+
+/** もとの 300 種の id（種が増えても出やすさを変えないための基準。fishing.ts の speciesShare） */
+export const BASE_FISH_IDS: ReadonlySet<string> = new Set(BASE_FISH.map(f => f.id));

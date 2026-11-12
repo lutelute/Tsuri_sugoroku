@@ -1,4 +1,4 @@
-export const APP_VERSION = '5.1.1';
+export const APP_VERSION = '5.2.0';
 
 export const ROULETTE_MIN = 1;
 export const ROULETTE_MAX = 6;
@@ -99,7 +99,8 @@ export const RARITY_BONUS: Record<string, number> = {
 // 旧仕様（その地方に棲む魚の50%）は関東162種中81種などが必要で、ほぼ達成不能だった。
 export const REGION_COMPLETE_SPECIES = 8;
 export const REGION_COMPLETE_BONUS = 1500;
-export const ENCYCLOPEDIA_COMPLETION_BONUS_PER_PERCENT = 50;
+/** 図鑑ボーナス: 図鑑に載った魚 1 種あたりの点（v5.2 で割合×50点から変更。1000 種図鑑でもこれまでの点が保てる） */
+export const ENCYCLOPEDIA_BONUS_PER_SPECIES = 15;
 export const GIANT_FISH_THRESHOLD = 1.5;
 export const GIANT_FISH_BONUS = 300;
 

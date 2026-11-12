@@ -6,6 +6,7 @@ import { loadEncyclopedia, saveEncyclopedia } from '../../utils/storage';
 import { APP_VERSION, MODE_STORAGE_KEY } from '../../game/constants';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { FISH_ART_LABELS } from '../shared/fishArt/styles';
+import { FISH_DATABASE } from '../../data/fishDatabase';
 import Button from '../shared/Button';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
@@ -225,7 +226,7 @@ export default function TitleScreen() {
             <ModeCard
               mode="fishing"
               title="釣り旅"
-              desc="魚300種を釣りながら、ゴールの那覇をめざす"
+              desc={`魚${FISH_DATABASE.length}種を釣りながら、ゴールの那覇をめざす`}
               ariaLabel="釣り旅であそぶ"
               onClick={() => startWith('fishing')}
               cta
