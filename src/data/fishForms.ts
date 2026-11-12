@@ -73,7 +73,7 @@ export const FISH_FORMS: Record<string, E> = {
   yoshinobori: { form: 'haze', col: { back: '#6a5a3a', mid: '#a49270', belly: '#e2d8c2' }, marks: [spots(20, '#3a2e1c', [1, 2])] },
   chichikawa: { form: 'haze', col: { back: '#3e3e30', mid: '#6e6c5a', belly: '#b6b2a0' }, marks: [spots(14, '#1e1e16', [1, 2])] },
   kawaanago: { form: 'haze', col: { back: '#34342a', mid: '#646252', belly: '#a8a594' }, stretch: 0.92 },
-  sanshoku: { form: 'sanshouo', col: { back: '#3e3a2c', mid: '#5e5844', belly: '#7e765c', edge: '#14120c' }, marks: [mottle('#1e1c14', 18)] },
+  sanshoku: { form: 'sanshouo', col: { back: '#75664b', mid: '#998361', belly: '#bca57d', edge: '#3b3022' }, marks: [{ k: 'mottle', n: 22, col: '#403a2a', op: 0.7, size: 0.7, x0: 0.05, x1: 0.92 }, spots(18, '#d2bc93', [0.8, 1.4])], iris: '#9b855e' },
   kamitsuki: { form: 'kame', col: { back: '#4a5a3a', mid: '#6e7c58', belly: '#9aa080', edge: '#1a2010' } },
   gigi: { legacy: 'catfish' },
 
@@ -265,13 +265,13 @@ export const FISH_FORMS: Record<string, E> = {
   higedara: { form: 'tara', col: { back: '#6a6060', mid: '#9a9090', belly: '#d4cece' } },
 
   // ---- 魚でない物
-  kurumaebi: { form: 'ebi', col: { back: '#c09060', mid: '#d8b088', belly: '#f0dcc4', fin: '#4a6a9a', edge: '#5a3a20' }, marks: [{ k: 'bands', n: 9, col: '#3a2a20', w: 3, op: 0.6, x0: 0.3, x1: 0.85 }] },
+  kurumaebi: { form: 'ebi', col: { back: '#c09060', mid: '#d8b088', belly: '#f0dcc4', fin: '#4a6a9a', edge: '#5a3a20' }, marks: [{ k: 'bands', n: 2, col: '#5a3a26', w: 4, op: 0.65, x0: 0.14, x1: 0.28 }, { k: 'bands', n: 6, col: '#3a2a20', w: 4, op: 0.65, x0: 0.43, x1: 0.9 }] },
   kuruma_ebi2: { form: 'ebi', col: { back: '#a8987e', mid: '#ccc0a8', belly: '#efe8dc', edge: '#4a3e2a' }, stretch: 0.92 },
   sakuraebi: { form: 'ebi', col: { back: '#e08a8a', mid: '#f0b8b4', belly: '#fae4e0', fin: '#e89a96', edge: '#8a3a3a' }, stretch: 0.9 },
-  botan_ebi: { form: 'ebi', col: { back: '#c43a34', mid: '#e0726a', belly: '#f6ccc4', edge: '#5a1410' }, marks: [spots(20, '#f8e8e0', [1, 2])] },
+  botan_ebi: { form: 'ebi', col: { back: '#c43a34', mid: '#e0726a', belly: '#f6ccc4', fin: '#d96d67', edge: '#5a1410' }, marks: [spots(20, '#f8e8e0', [1, 2])] },
   amaebi: { form: 'ebi', col: { back: '#e0602e', mid: '#f09a74', belly: '#fadccc', edge: '#6a2a10' } },
   suji_ebi: { form: 'ebi', col: { back: '#c4ccd2', mid: '#dfe4e8', belly: '#f2f4f6', edge: '#5a6470' }, marks: [{ k: 'bands', n: 8, col: '#4a5460', w: 1.6, op: 0.6, x0: 0.3, x1: 0.85 }], stretch: 0.9 },
-  tenagaebi: { form: 'tenaga', col: { back: '#5e7a52', mid: '#9cb08e', belly: '#e0e8d8', edge: '#24301c' } },
+  tenagaebi: { form: 'tenaga', col: { back: '#5e7a52', mid: '#9cb08e', belly: '#d5dfc4', fin: '#8b9e73', edge: '#24301c' } },
   ise_ebi: { form: 'iseebi', col: { back: '#a8341e', mid: '#d0684a', belly: '#f0c8b0', fin: '#c8583c', edge: '#4a1206' }, marks: [spots(20, '#f6dcc8', [0.8, 1.4])] },
   uchiwa_ebi: { form: 'iseebi', col: { back: '#a87848', mid: '#cca07a', belly: '#eedcc4', edge: '#4a2c10' }, stretch: 0.85 },
   shako: { form: 'ebi', col: { back: '#7a7656', mid: '#aaa688', belly: '#e2e0d0', edge: '#2e2c1c' }, stretch: 0.8 },
