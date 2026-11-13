@@ -44,7 +44,8 @@ describe('魚の絵の型', () => {
         for (const silhouette of [false, true]) {
           const svg = renderFishSvg(fish, r.entry, { style, small: false, framed: style !== 'flat', silhouette });
           expect(svg, `${fish.id} ${style}`).not.toMatch(/NaN|undefined|Infinity/);
-          expect(svg.length).toBeGreaterThan(200);
+          // 貝の影絵は短いSVGでも成立する。文字数ではなく塗られた閉じた輪郭を確認する。
+          expect(svg, `${fish.id} ${style} silhouette=${silhouette}`).toMatch(/<path d="M[^"]+ Z"(?: fill="(?!none)[^"]+")?\/>/);
         }
       }
     }

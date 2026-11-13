@@ -4,6 +4,12 @@
 import type { Fish } from '../../game/types';
 import { PACK as P01 } from './p01Freshwater';
 import { PACK as P02 } from './p02Rocky';
+import { PACK as P03 } from './p03Shore';
+import { PACK as P04 } from './p04Offshore';
+import { PACK as P05 } from './p05Deep';
+import { PACK as P06 } from './p06South';
+import { PACK as P07 } from './p07Shellfish';
+import { PACK as P08 } from './p08Legend';
 import type { FishFormEntry, LegacyEntry } from '../../components/shared/fishArt/types';
 
 export interface FishPack {
@@ -15,6 +21,12 @@ export interface FishPack {
 const PACKS: FishPack[] = [
   P01,
   P02,
+  P03,
+  P04,
+  P05,
+  P06,
+  P07,
+  P08,
 ];
 
 export const EXTRA_FISH: Fish[] = PACKS.flatMap(p => p.fish);

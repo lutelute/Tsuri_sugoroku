@@ -1,6 +1,6 @@
 // 魚ごとの絵の指定（形の型・模様・色）。型は src/components/shared/fishArt/forms.ts。
 // ここに無い魚は、図鑑の bodyShape から決める（standard→鱸 / elongated→魳 / flat→鰈 / round→河豚、
-// イカ・タコ・カニ・貝・サメ・エイ・ウナギなどは今の絵）。
+// ウナギ・イカ・カニ・二枚貝・巻貝にも既定の型があり、タコ・サメ・エイなどはもとの絵）。
 import type { FishFormEntry, LegacyEntry, Mark } from '../components/shared/fishArt/types';
 import { EXTRA_FORMS } from './fishExtra';
 
@@ -281,6 +281,16 @@ const BASE_FORMS: Record<string, E> = {
   hotate_oo: { form: 'awabi', col: { back: '#3e5a48', mid: '#6e8a74', belly: '#9cb09e', edge: '#10200e' }, stretch: 1.05 },
 
   // ---- 今の絵のまま描く物（型に合わない）
+  // 既定の長魚・イカ・カニ・貝とは輪郭が異なる種類。
+  dojou: { form: 'dojou', col: SAND, marks: [spots(24, '#4a3820', [0.7, 1.5])] },
+  godzilla: { form: 'utsubo', marks: [mottle('#b4af6c', 30)] },
+  sumiika: { form: 'kouika', marks: [spots(36, '#4e3b2a', [1, 2])] },
+  mongouika: { form: 'kouika', marks: [mottle('#40362e', 18)] },
+  hotate: { form: 'hotate' },
+  zuwaigani: { form: 'kani_long' },
+  benizuwai: { form: 'kani_long' },
+  oogani: { form: 'kani_long' },
+
   umi_bouzu: { legacy: 'round' },
   tengu_same: { legacy: 'shark' },
   shinkai_ryu: { legacy: 'oarfish' },
