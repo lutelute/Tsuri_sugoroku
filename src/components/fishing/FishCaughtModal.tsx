@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { Fish, FishRarity, FishingRig } from '../../game/types';
 import { playChime, playFanfare, playGood } from '../../utils/sound';
 import { FISH_SELL_PRICE } from '../../game/constants';
@@ -7,6 +7,9 @@ import Button from '../shared/Button';
 import FishIllustration from '../shared/FishIllustration';
 import Ruby from '../shared/Ruby';
 import Confetti from '../fx/Confetti';
+import HoloFoil from '../fx/HoloFoil';
+import ScreenFlash from '../fx/ScreenFlash';
+import { useReducedMotion } from '../fx/useReducedMotion';
 import { useCountUp } from '../fx/useCountUp';
 import { FAIL_HINT } from './miniGameMeta';
 import type { FailReason } from './miniGameMeta';
@@ -112,6 +115,9 @@ function CaughtCard({ fish, size, tairyouCount, tairyouFishIds, isNew, place, pr
   fish: Fish; size: number; tairyouCount: number; tairyouFishIds: string[]; isNew: boolean;
   place?: string; prevBest: number | null; sale: SaleInfo | null; onClose: () => void;
 }) {
+  const [revealed, setRevealed] = useState(false);
+  const reducedMotion = useReducedMotion();
+  const foilTier = fish.rarity === 'mythical' || fish.rarity === 'legendary' ? fish.rarity : null;
   const points = Math.round(fish.points * size);
   const sellPrice = sale ? sale.main : Math.round((FISH_SELL_PRICE[fish.rarity] ?? 200) * size);
   const sizeLabel = size >= 1.5 ? '巨大！' : size >= 1.2 ? '大きい' : size <= 0.7 ? '小さい' : '普通';
@@ -130,24 +136,31 @@ function CaughtCard({ fish, size, tairyouCount, tairyouFishIds, isNew, place, pr
   const busy = huge || tairyouCount > 0;
   const inCity = useGameStore(st => !!st.city);
 
+  const sheet = (
+    <GyotakuSheet
+      fishId={fish.id}
+      rarity={fish.rarity}
+      size={size}
+      place={place}
+      isNew={isNew && prevBest === null}
+      record={record}
+      fast={fast}
+      splash
+    />
+  );
+
   return (
     <>
       {rays && <div className="fg-rays um-result-rays" style={{ background: rays }} aria-hidden />}
-      {kinpaku > 0 && <Confetti variant="kin" mode="burst" count={kinpaku} seed={fish.points + Math.round(size * 100)} originY="34%" />}
+      {!reducedMotion && kinpaku > 0 && (fish.rarity !== 'mythical' || revealed) && <Confetti variant="kin" mode="burst" count={kinpaku} seed={fish.points + Math.round(size * 100)} originY="34%" />}
+      {revealed && fish.rarity === 'mythical' && !reducedMotion && <ScreenFlash color="#fff5d6" opacity={0.48} />}
       <div className={`um-card um-card-${fish.rarity} ${fast ? 'is-fast' : ''} ${busy ? 'is-busy' : ''} animate-bounce-in`}>
         <div className="um-card-grid">
           {/* 魚拓: 和紙の台紙・釣り場の添え書き・朱の落款 */}
           <div className="um-card-art">
-            <GyotakuSheet
-              fishId={fish.id}
-              rarity={fish.rarity}
-              size={size}
-              place={place}
-              isNew={isNew && prevBest === null}
-              record={record}
-              fast={fast}
-              splash
-            />
+            {foilTier
+              ? <HoloFoil key={fish.id} tier={foilTier} reveal={foilTier === 'mythical'} onReveal={() => setRevealed(true)} className="hf-caught">{sheet}</HoloFoil>
+              : sheet}
             <h3 className="font-mincho text-2xl sm:text-3xl font-bold mt-3 text-washi"><Ruby>{fish.name}</Ruby></h3>
             <p className={`um-rarity um-rarity-${fish.rarity}`}>{RARITY_LABELS[fish.rarity]}</p>
           </div>
@@ -301,6 +314,7 @@ export default function FishCaughtModal({ fish, size, escaped, tairyouCount, tai
           <EscapedCard fish={fish} failReason={failReason ?? null} rig={rig} onClose={onClose} />
         ) : (
           <CaughtCard
+            key={fish.id}
             fish={fish}
             size={size}
             tairyouCount={tairyouCount}

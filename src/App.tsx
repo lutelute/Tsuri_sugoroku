@@ -14,6 +14,8 @@ const TownSceneGallery = import.meta.env.DEV && new URLSearchParams(window.locat
 const ArtGallery = import.meta.env.DEV && new URLSearchParams(window.location.search).get('gallery') === 'art' ? lazy(() => import('./components/dev/ArtGallery')) : null;
 // 開発ビルドだけ: 図鑑の魚 300 種の確かめ用の一覧（URL に ?gallery=fish）
 const FishGallery = import.meta.env.DEV && new URLSearchParams(window.location.search).get('gallery') === 'fish' ? lazy(() => import('./components/dev/FishGallery')) : null;
+// 開発ビルドだけ: めずらしさ別の札と台紙（URL に ?gallery=cards）
+const CardGallery = import.meta.env.DEV && new URLSearchParams(window.location.search).get('gallery') === 'cards' ? lazy(() => import('./components/dev/CardGallery')) : null;
 
 export default function App() {
   const screen = useGameStore(s => s.screen);
@@ -53,6 +55,7 @@ export default function App() {
   if (TownSceneGallery) return <Suspense fallback={null}><TownSceneGallery /></Suspense>;
   if (ArtGallery) return <Suspense fallback={null}><ArtGallery /></Suspense>;
   if (FishGallery) return <Suspense fallback={null}><FishGallery /></Suspense>;
+  if (CardGallery) return <Suspense fallback={null}><CardGallery /></Suspense>;
 
   // 認証初期化待ち
   if (!initialized) {

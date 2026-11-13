@@ -1,6 +1,7 @@
 import type { Fish } from '../../game/types';
 import FishIllustration from '../shared/FishIllustration';
 import Ruby from '../shared/Ruby';
+import HoloFoil from '../fx/HoloFoil';
 
 const RARITY_COLORS: Record<string, string> = {
   common: 'border-washi/15 bg-ai-800/40',
@@ -24,11 +25,20 @@ interface FishCardProps {
 export default function FishCard({ fish, caught, isNew, onClick }: FishCardProps) {
   // 影絵は魚の大きさの区分で大きさを変える（小魚は小さく、大物は札いっぱい）
   const k = caught ? 1 : SHADOW_SCALE[fish.appearance?.size ?? 'medium'] ?? 0.82;
+  const foilTier = caught && (fish.rarity === 'mythical' || fish.rarity === 'legendary') ? fish.rarity : null;
+  const content = <>
+    <div className="fd-fishcard-stage">
+      <FishIllustration fishId={fish.id} width={Math.round(72 * k)} height={Math.round(48 * k)} silhouette={!caught} className="fd-fishcard-art" />
+    </div>
+    <div className={`fd-fishcard-name font-mincho ${caught ? 'text-washi' : 'text-washi/40'}`}>
+      {caught ? <Ruby>{fish.name}</Ruby> : '???'}
+    </div>
+  </>;
   return (
     <button
       onClick={onClick}
       data-fish-card={caught ? 'caught' : 'shadow'}
-      className={`fd-fishcard relative rounded-lg px-1.5 pt-2 pb-1.5 border text-center cursor-pointer ${
+      className={`fd-fishcard relative rounded-lg border text-center cursor-pointer ${
         caught ? RARITY_COLORS[fish.rarity] : 'is-shadow'
       }`}
     >
@@ -37,12 +47,9 @@ export default function FishCard({ fish, caught, isNew, onClick }: FishCardProps
           NEW
         </span>
       )}
-      <div className="fd-fishcard-stage">
-        <FishIllustration fishId={fish.id} width={Math.round(72 * k)} height={Math.round(48 * k)} silhouette={!caught} className="fd-fishcard-art" />
-      </div>
-      <div className={`fd-fishcard-name font-mincho ${caught ? 'text-washi' : 'text-washi/40'}`}>
-        {caught ? <Ruby>{fish.name}</Ruby> : '???'}
-      </div>
+      {foilTier
+        ? <HoloFoil tier={foilTier} className="hf-card px-1.5 pt-2 pb-1.5">{content}</HoloFoil>
+        : <div className="px-1.5 pt-2 pb-1.5">{content}</div>}
     </button>
   );
 }

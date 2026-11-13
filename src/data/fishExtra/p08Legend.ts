@@ -436,7 +436,7 @@ export const PACK: FishPack = {
     yaitohata: { form: 'hata', col: { back: '#6f7058', mid: '#a8a387', belly: '#dfd8b8' }, marks: [{ k: 'spots', n: 80, col: '#34382b', r: [0.8, 1.5], y0: 0.02, y1: 0.95 }, { k: 'spots', n: 20, col: '#e2dbc2', r: [1.3, 2.2], y0: 0.3, y1: 0.95 }], stretch: 1.15 },
     ookuchiishinagi: { form: 'hata', col: { back: '#4f5148', mid: '#8d8e7b', belly: '#cfceba' }, stretch: 1.15 },
     aouo: { form: 'ugui', col: { back: '#283f42', mid: '#647a78', belly: '#c3cdc3' }, stretch: 1.1 },
-    oomejirozame: { legacy: 'shark' },
+    oomejirozame: { form: 'same' },
     takitarou: { form: 'itou', col: { back: '#34443b', mid: '#74816c', belly: '#c6c9a3' }, marks: [{ k: 'spots', n: 32, col: '#b9bca0', r: [1.4, 2.2], y0: 0.1, y1: 0.75 }], stretch: 1.2 },
     namitarou: { form: 'koi', col: { back: '#554a37', mid: '#958464', belly: '#d1c09a' }, stretch: 1.2 },
     iwanabouzu: { form: 'itou', col: { back: '#343c2a', mid: '#6b7651', belly: '#d1bb83' }, marks: [{ k: 'spots', n: 32, col: '#d7d0a1', r: [1.2, 2], y0: 0.05, y1: 0.7 }], stretch: 1.1 },

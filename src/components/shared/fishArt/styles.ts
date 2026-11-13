@@ -16,9 +16,10 @@ export const FISH_ART_LABELS: Record<FishArtPref, string> = {
 export const DEFAULT_FISH_ART: FishArtPref = 'hanga';
 
 /** 型では描かず、もとの絵に任せる形 */
-const LEGACY_SHAPES = new Set<FishBodyShape>(['octopus', 'catfish', 'shark', 'whale', 'ray', 'urchin', 'oarfish']);
+const LEGACY_SHAPES = new Set<FishBodyShape>(['whale', 'oarfish']);
 const DEFAULT_FORM: Partial<Record<FishBodyShape, FormId>> = { standard: 'suzuki', elongated: 'kamasu', flat: 'karei', round: 'fugu',
   eel: 'unagi', squid: 'ika', crab: 'kani', shell_bivalve: 'hamaguri', shell_spiral: 'makigai',
+  catfish: 'namazu', shark: 'same', ray: 'ei', urchin: 'uni', octopus: 'tako',
 };
 
 export type ResolvedForm = { entry: FishFormEntry } | { legacy: FishBodyShape };

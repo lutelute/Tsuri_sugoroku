@@ -1,6 +1,6 @@
 // 魚ごとの絵の指定（形の型・模様・色）。型は src/components/shared/fishArt/forms.ts。
 // ここに無い魚は、図鑑の bodyShape から決める（standard→鱸 / elongated→魳 / flat→鰈 / round→河豚、
-// ウナギ・イカ・カニ・二枚貝・巻貝にも既定の型があり、タコ・サメ・エイなどはもとの絵）。
+// ウナギ・イカ・カニ・貝・ナマズ・サメ・エイ・ウニ・タコにも既定の型がある）。
 import type { FishFormEntry, LegacyEntry, Mark } from '../components/shared/fishArt/types';
 import { EXTRA_FORMS } from './fishExtra';
 
@@ -76,7 +76,11 @@ const BASE_FORMS: Record<string, E> = {
   kawaanago: { form: 'haze', col: { back: '#34342a', mid: '#646252', belly: '#a8a594' }, stretch: 0.92 },
   sanshoku: { form: 'sanshouo', col: { back: '#75664b', mid: '#998361', belly: '#bca57d', edge: '#3b3022' }, marks: [{ k: 'mottle', n: 22, col: '#403a2a', op: 0.7, size: 0.7, x0: 0.05, x1: 0.92 }, spots(18, '#d2bc93', [0.8, 1.4])], iris: '#9b855e' },
   kamitsuki: { form: 'kame', col: { back: '#4a5a3a', mid: '#6e7c58', belly: '#9aa080', edge: '#1a2010' } },
-  gigi: { legacy: 'catfish' },
+  gigi: { form: 'namazu' },
+  shimaisaki2: { form: 'gonzui', col: { back: '#30291e', mid: '#534631', belly: '#b7a77a' }, marks: [
+    { k: 'stripe', rel: 0.25, col: '#efd56a', w: 3, x0: 0.04, x1: 0.98, op: 1 },
+    { k: 'stripe', rel: 0.7, col: '#efd56a', w: 3, x0: 0.04, x1: 0.98, op: 1 },
+  ] },
 
   // ---- 海の小物
   aji: { form: 'aji', col: { back: '#5d7f99', mid: '#b9c8d2', belly: '#f1f3f2' }, fin: '#c9c27a', marks: [{ k: 'scutes', col: '#4a5a66' }] },
@@ -291,8 +295,22 @@ const BASE_FORMS: Record<string, E> = {
   benizuwai: { form: 'kani_long' },
   oogani: { form: 'kani_long' },
 
+  // ---- サメ・エイ・ウニの特徴的な型
+  hammerhead: { form: 'shumoku' },
+  jinbeizame: { form: 'jinbe', col: { back: '#304c61', mid: '#567789', belly: '#d9e0db' }, marks: [
+    { k: 'spots', n: 76, col: '#f3efdb', r: [1.1, 1.8], x0: 0.18, x1: 0.96, y0: 0.08, y1: 0.7, op: 1 },
+  ] },
+  manta: { form: 'manta' },
+  itomaki: { form: 'manta' },
+  tobiei: { form: 'manta' },
+  tobiei_r: { form: 'manta' },
+  bafun_uni: { form: 'uni_short' },
+
+  // メンダコの傘状の体は、従来の絵を保つ。
+  mendako: { legacy: 'octopus' },
+  mendako_l: { legacy: 'octopus' },
   umi_bouzu: { legacy: 'round' },
-  tengu_same: { legacy: 'shark' },
+  tengu_same: { form: 'same' },
   shinkai_ryu: { legacy: 'oarfish' },
 };
 

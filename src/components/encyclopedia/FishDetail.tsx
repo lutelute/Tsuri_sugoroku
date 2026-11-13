@@ -4,6 +4,7 @@ import Button from '../shared/Button';
 import FishIllustration from '../shared/FishIllustration';
 import Icon from '../shared/Icon';
 import Ruby from '../shared/Ruby';
+import HoloFoil from '../fx/HoloFoil';
 import { REGION_LABELS, REGION_ORDER } from './encyclopediaFilter';
 
 const RARITY_LABELS: Record<string, { label: string; color: string }> = {
@@ -18,38 +19,45 @@ interface FishDetailProps {
   fish: Fish;
   caught: boolean;
   onClose: () => void;
+  /** 開発用の一覧では、重ねずに同じ詳細を並べる。 */
+  embedded?: boolean;
 }
 
 /** 魚の詳細。魚拓のような和紙の台紙に大きな絵と、筆の名前（縦書き）と朱の印。まだの魚は墨の影だけ。 */
-export default function FishDetail({ fish, caught, onClose }: FishDetailProps) {
+export default function FishDetail({ fish, caught, onClose, embedded = false }: FishDetailProps) {
   const rarity = RARITY_LABELS[fish.rarity];
   const name = caught ? fish.name : '？？？';
   const nameSize = name.length <= 4 ? 28 : name.length <= 6 ? 23 : name.length <= 8 ? 19 : 15;
   const regions = REGION_ORDER.filter(r => fish.regions.includes(r));
 
+  const foilTier = caught && (fish.rarity === 'mythical' || fish.rarity === 'legendary') ? fish.rarity : null;
+  const sheet = (
+    <div className={`fd-gyotaku ${caught ? '' : 'is-shadow'}`}>
+      <div className="fd-gyotaku-name font-brush" style={{ fontSize: nameSize } as CSSProperties}>
+        <Ruby>{name}</Ruby>
+      </div>
+      <div className="fd-gyotaku-fish">
+        <FishIllustration fishId={fish.id} width={240} height={160} silhouette={!caught} framed className="fd-gyotaku-art" />
+      </div>
+      <span className="fd-gyotaku-seal seal font-mincho">{caught ? 'つれた' : 'まだ'}</span>
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60" onClick={onClose}>
+    <div className={embedded ? "hf-detail-embedded" : "fixed inset-0 z-[60] flex items-center justify-center bg-black/60"} onClick={embedded ? undefined : onClose}>
       <div className="panel-ai relative rounded-2xl p-4 sm:p-5 max-w-sm md:max-w-md w-[90%] max-h-[92dvh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <button
+        {!embedded && <button
           onClick={onClose}
           aria-label="閉じる"
           className="absolute top-1.5 right-1.5 z-10 flex items-center justify-center w-11 h-11 rounded-full bg-ai-900/70 border border-kin-500/40 text-washi/80 hover:text-washi transition"
         >
           <Icon name="close" size={18} />
-        </button>
+        </button>}
 
         <p className={`flex items-center min-h-[36px] pr-12 text-sm font-bold font-mincho ${rarity.color}`}>{rarity.label}</p>
 
         {/* 魚拓の台紙: 左に筆の名前（縦書き）、右に大きな絵、隅に朱の印 */}
-        <div className={`fd-gyotaku ${caught ? '' : 'is-shadow'}`}>
-          <div className="fd-gyotaku-name font-brush" style={{ fontSize: nameSize } as CSSProperties}>
-            <Ruby>{name}</Ruby>
-          </div>
-          <div className="fd-gyotaku-fish">
-            <FishIllustration fishId={fish.id} width={240} height={160} silhouette={!caught} framed className="fd-gyotaku-art" />
-          </div>
-          <span className="fd-gyotaku-seal seal font-mincho">{caught ? 'つれた' : 'まだ'}</span>
-        </div>
+        {foilTier ? <HoloFoil tier={foilTier} className="hf-detail">{sheet}</HoloFoil> : sheet}
 
         {caught ? (
           <div className="mt-2 space-y-2 text-sm">
@@ -100,9 +108,9 @@ export default function FishDetail({ fish, caught, onClose }: FishDetailProps) {
           <p className="mt-3 text-sm text-washi/55 text-center"><Ruby>まだ釣っていません</Ruby></p>
         )}
 
-        <Button onClick={onClose} variant="secondary" size="sm" className="w-full mt-4 min-h-[44px]">
+        {!embedded && <Button onClick={onClose} variant="secondary" size="sm" className="w-full mt-4 min-h-[44px]">
           <Ruby>閉じる</Ruby>
-        </Button>
+        </Button>}
       </div>
     </div>
   );

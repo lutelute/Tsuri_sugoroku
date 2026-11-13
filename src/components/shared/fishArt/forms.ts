@@ -962,6 +962,155 @@ const makigai: FormSpec = {
   scale: 0,
 };
 
+// ---------------------------------------------------------------- ナマズ・ゴンズイ
+const namazu: FormSpec = {
+  top: 'M 25,78 C 25,62 49,55 79,60 C 112,60 157,68 199,76',
+  bottom: 'M 200,88 C 166,95 128,101 91,101 C 56,104 30,98 25,87',
+  eye: [43, 71, 3.6], mouth: 'M 25,83 Q 42,91 62,85',
+  gill: ['M 76,65 Q 87,83 75,98'],
+  dorsal: [{ x0: 84, x1: 107, n: 7, h: [4, 17, 20, 17, 12, 7, 2], kind: 'soft', lean: 0.25 }],
+  anal: [{ x0: 100, x1: 199, n: 21, h: [4, 11, 16, 18, 18, 17, 16, 15, 14, 12, 10, 8, 5], kind: 'soft', lean: 0.4 }],
+  pectoral: { base: [75, 90], a0: 0.2, a1: 1.1, len: [21, 30, 27, 14], n: 8 },
+  pelvic: { base: [97, 100], a0: 0.2, a1: 0.8, len: [15, 19, 10], n: 5 },
+  adipose: { x: 159, w: 25, h: 8 },
+  extras: [
+    { d: 'M 198,76 C 211,71 218,65 223,70 C 235,80 233,99 222,103 Q 211,102 200,88 Z', paint: 'fin', w: 0.65, layer: 'under' },
+    { d: 'M 200,79 L 220,73 M 201,82 L 226,81 M 201,85 L 226,91 M 201,88 L 221,99', paint: 'none', w: 0.3, layer: 'under' },
+    { d: 'M 29,80 C 11,67 7,49 19,39 M 34,86 C 18,102 11,115 21,127 M 40,87 Q 34,108 46,116 M 49,87 Q 53,103 66,108', paint: 'none', w: 0.8, layer: 'under' },
+    { d: 'M 30,76 Q 48,61 66,70', paint: 'none', w: 0.35 },
+  ],
+  scale: 0,
+};
+const gonzui: FormSpec = {
+  top: 'M 28,78 C 30,66 51,64 75,67 C 112,70 166,78 222,77',
+  bottom: 'M 222,79 C 194,97 151,98 111,92 C 79,87 43,99 28,86',
+  eye: [44, 74, 3.4], mouth: 'M 28,83 Q 39,88 50,84',
+  gill: ['M 65,72 Q 74,81 67,90'],
+  pectoral: { base: [69, 85], a0: 0.25, a1: 1.05, len: [17, 25, 16, 6], n: 7 },
+  extras: [
+    { d: 'M 72,68 L 80,40 Q 91,50 103,73 Z', paint: 'fin', w: 0.7, layer: 'under' },
+    { d: 'M 106,72 C 146,61 186,79 223,70 Q 235,72 229,82 C 208,109 152,112 105,95 L 107,89 C 153,98 198,96 222,78 C 180,81 140,73 106,77 Z', paint: 'fin', w: 0.65, layer: 'under' },
+    // 鼻・口角・下あごから各側4本、計8本のひげ。
+    { d: 'M 33,75 Q 16,53 25,43 M 39,74 Q 35,54 46,49 M 28,80 C 10,74 6,61 10,55 M 29,84 Q 8,88 9,105 M 35,87 Q 18,104 26,119 M 40,89 Q 34,110 44,119 M 46,89 Q 48,107 60,110 M 49,78 Q 57,57 68,55', paint: 'none', w: 0.65, layer: 'under' },
+    { d: 'M 126,71 L 125,76 M 149,74 L 148,79 M 173,76 L 173,81 M 199,76 L 200,81 M 215,93 L 211,88 M 192,102 L 191,96 M 165,105 L 165,98 M 139,102 L 140,96 M 118,98 L 120,93', paint: 'none', w: 0.3, layer: 'under' },
+  ],
+  scale: 0,
+};
+
+// ---------------------------------------------------------------- サメ（軟条のない硬いひれと、不相称の尾）
+const sharkFins: Extra[] = [
+  { d: 'M 86,60 Q 96,39 105,22 Q 104,43 125,62 Z', paint: 'fin', w: 0.8, layer: 'under' },
+  { d: 'M 151,66 L 162,49 Q 163,61 177,72 Z', paint: 'fin', w: 0.7, layer: 'under' },
+  { d: 'M 194,75 Q 209,52 227,29 Q 225,52 214,70 L 208,77 L 215,81 L 208,86 Q 212,99 221,111 Q 201,103 193,86 Z', paint: 'fin', w: 0.85, layer: 'under' },
+  { d: 'M 124,94 L 149,113 Q 142,100 146,92 Z M 162,91 L 180,103 L 176,87 Z', paint: 'fin', w: 0.65, layer: 'under' },
+  { d: 'M 76,82 Q 87,106 117,127 Q 108,104 101,87 Z', paint: 'fin', w: 0.8 },
+  { d: 'M 196,80 Q 210,68 220,46 M 80,86 Q 91,101 108,117', paint: 'none', w: 0.35 },
+];
+const same: FormSpec = {
+  top: 'M 17,79 C 38,66 60,55 87,56 C 125,56 164,69 195,75',
+  bottom: 'M 195,87 C 160,94 115,101 77,99 C 47,97 27,91 17,83',
+  eye: [42, 75, 3.3], mouth: 'M 23,86 Q 37,94 51,89',
+  gill: ['M 58,73 Q 62,82 58,91', 'M 64,71 Q 68,82 64,93', 'M 70,69 Q 74,82 70,94', 'M 76,68 Q 80,81 76,94', 'M 82,68 Q 86,80 82,92'],
+  extras: sharkFins,
+  scale: 0,
+};
+/** 頭を背面寄りに見せ、両端に目のある横木をT字に張り出す。 */
+const shumoku = v(same, {
+  top: 'M 20,72 L 17,39 Q 26,31 40,36 L 48,65 C 63,58 77,55 90,57 C 127,58 166,70 195,75',
+  bottom: 'M 195,87 C 151,96 110,102 76,97 L 48,91 L 40,121 Q 26,127 17,118 L 20,82',
+  eye: [27, 41, 3.3], eye2: [27, 116, 3.3],
+  mouth: 'M 23,77 Q 28,83 38,80',
+});
+const jinbe = v(same, {
+  top: 'M 18,69 C 32,50 67,48 95,54 C 133,57 168,69 195,75',
+  bottom: 'M 195,87 C 158,96 117,105 72,105 C 40,105 23,98 18,88',
+  eye: [32, 64, 3], mouth: 'M 19,70 Q 13,80 20,92 Q 30,95 40,93',
+  gill: ['M 51,65 Q 57,82 51,97', 'M 58,63 Q 65,82 58,99', 'M 65,62 Q 72,83 65,100', 'M 72,62 Q 79,82 72,100', 'M 79,63 Q 86,81 79,99'],
+});
+
+// ---------------------------------------------------------------- エイ（頭が左の背面観）
+const rayTail: Extra[] = [
+  { d: 'M 133,70 C 164,70 182,83 201,82 Q 221,81 235,73 C 220,87 207,88 198,87 C 174,86 156,78 133,81 Z', paint: 'body', w: 0.65, layer: 'under' },
+  { d: 'M 171,78 L 188,74 L 179,82 Z', paint: 'edge', w: 0.4, layer: 'under' },
+];
+const ei: FormSpec = {
+  top: 'M 28,75 Q 48,58 64,39 L 99,17 Q 116,42 145,69 Q 150,72 151,75',
+  bottom: 'M 151,75 Q 150,78 145,81 Q 116,108 99,133 L 64,111 Q 48,92 28,75',
+  eye: [58, 62, 4], eye2: [58, 88, 4],
+  extras: [
+    ...rayTail,
+    { d: 'M 68,59 Q 81,58 80,64 Q 74,69 68,64 Z M 68,86 Q 81,81 80,88 Q 75,94 68,91 Z', paint: 'dark', w: 0.5 },
+    { d: 'M 79,72 Q 109,56 101,28 M 79,78 Q 109,94 101,122 M 90,75 Q 118,72 140,75', paint: 'none', w: 0.4 },
+  ],
+  scale: 0,
+};
+const manta: FormSpec = {
+  top: 'M 39,65 Q 54,49 71,51 C 96,37 126,17 155,8 Q 144,39 133,56 Q 144,63 150,75',
+  bottom: 'M 150,75 Q 144,87 133,94 Q 144,111 155,142 C 126,133 96,113 71,99 Q 54,101 39,85',
+  eye: [48, 59, 3.5], eye2: [48, 91, 3.5],
+  mouth: 'M 41,67 Q 47,75 41,83',
+  extras: [
+    rayTail[0],
+    { d: 'M 48,57 C 32,50 17,50 17,62 Q 18,72 29,68 C 21,67 23,60 29,61 L 43,70 Z M 48,93 C 32,100 17,100 17,88 Q 18,78 29,82 C 21,83 23,90 29,89 L 43,80 Z', paint: 'body', w: 0.75, layer: 'under' },
+    { d: 'M 63,62 Q 95,55 143,20 Q 121,52 100,65 Z M 63,88 Q 95,95 143,130 Q 121,98 100,85 Z', paint: 'belly', w: 0 },
+    { d: 'M 76,72 Q 108,68 137,74 M 76,78 Q 108,82 137,76', paint: 'none', w: 0.4 },
+    { d: 'M 60,59 Q 72,58 70,63 Q 65,66 60,63 Z M 60,91 Q 72,92 70,87 Q 65,84 60,87 Z', paint: 'dark', w: 0.35 },
+  ],
+  scale: 0,
+};
+
+// ---------------------------------------------------------------- ウニ（殻の外周と表面の棘）
+const dotPath = (x: number, y: number, r: number): string =>
+  `M ${x - r},${y} a ${r},${r} 0 1,0 ${r * 2},0 a ${r},${r} 0 1,0 ${-r * 2},0 Z`;
+const urchinSpines = (short: boolean): Extra[] => {
+  const n = short ? 60 : 48;
+  const point = (a: number, r: number): string => `${(120 + Math.cos(a) * r).toFixed(2)},${(75 + Math.sin(a) * r).toFixed(2)}`;
+  const rim = Array.from({ length: n }, (_, i): Extra => {
+    const a = i * Math.PI * 2 / n, tip = short ? 44 + (i % 3) * 2 : 57 + (i % 4) * 3;
+    return { d: `M ${point(a - 0.045, 33)} L ${point(a, tip)} L ${point(a + 0.045, 33)} Z`, paint: i % 3 ? 'body' : 'fin', w: 0.45, layer: 'under' };
+  });
+  const surface = Array.from({ length: 35 }, (_, i): Extra => {
+    const a = i * 2.39996, r = 7 + Math.sqrt(i / 34) * 26;
+    return { d: `M ${point(a - 0.045, r)} L ${point(a + 0.06, r + (short ? 4 : 8))} L ${point(a + 0.09, r)} Z`, paint: i % 4 ? 'body' : 'belly', w: 0.4 };
+  });
+  return [...rim, ...surface];
+};
+const uni: FormSpec = {
+  top: 'M 83,75 C 83,26 157,26 157,75',
+  bottom: 'M 157,75 C 157,124 83,124 83,75',
+  extras: urchinSpines(false),
+  scale: 0,
+};
+const uni_short = v(uni, { extras: urchinSpines(true) });
+
+// ---------------------------------------------------------------- タコ（丸い外套と、先の巻いた8本の腕）
+const octopusArms: Extra[] = [-1, 1].flatMap(side => {
+  const sy = (y: number) => side < 0 ? y : 150 - y;
+  // 各側4本。根元・中ほど・巻き先をずらし、輪郭を分離する。
+  const paths = [
+    `M 131,${sy(58)} C 118,${sy(42)} 114,${sy(17)} 96,${sy(14)} C 79,${sy(10)} 75,${sy(27)} 86,${sy(31)} Q 94,${sy(33)} 94,${sy(25)} C 88,${sy(29)} 85,${sy(23)} 91,${sy(21)} C 105,${sy(18)} 107,${sy(50)} 116,${sy(67)} Z`,
+    `M 119,${sy(62)} C 97,${sy(51)} 84,${sy(32)} 64,${sy(32)} C 45,${sy(31)} 44,${sy(48)} 55,${sy(51)} Q 65,${sy(54)} 66,${sy(45)} C 58,${sy(49)} 54,${sy(43)} 61,${sy(40)} C 75,${sy(35)} 92,${sy(64)} 110,${sy(73)} Z`,
+    `M 112,${sy(68)} C 87,${sy(61)} 64,${sy(43)} 39,${sy(43)} C 19,${sy(43)} 16,${sy(58)} 27,${sy(62)} Q 36,${sy(65)} 40,${sy(56)} C 32,${sy(60)} 26,${sy(55)} 34,${sy(51)} C 52,${sy(44)} 80,${sy(72)} 110,${sy(79)} Z`,
+    `M 124,${sy(74)} C 88,${sy(75)} 55,${sy(58)} 24,${sy(61)} C 7,${sy(63)} 7,${sy(71)} 17,${sy(72)} Q 26,${sy(74)} 29,${sy(66)} C 22,${sy(70)} 16,${sy(67)} 23,${sy(65)} C 46,${sy(60)} 85,${sy(88)} 125,${sy(83)} Z`,
+  ];
+  const cups: Pt[] = [[112, 49], [108, 39], [103, 29], [98, 53], [89, 46], [79, 40], [89, 65], [77, 59], [65, 53], [52, 48], [91, 77], [76, 72], [61, 68], [47, 64], [34, 63]];
+  return [
+    ...paths.map((d, i): Extra => ({ d, paint: i % 2 ? 'belly' : 'body', w: 0.7, layer: 'under' })),
+    { d: cups.map(([x, y]) => dotPath(x, sy(y), 1.7)).join(' '), paint: 'glow' as const, w: 0.3, layer: 'under' as const },
+  ];
+});
+const tako: FormSpec = {
+  top: 'M 108,65 Q 115,52 134,53 C 149,25 180,22 201,38 C 218,49 222,64 222,75',
+  bottom: 'M 222,75 C 222,105 202,122 177,119 Q 150,117 134,97 Q 115,98 108,85',
+  eye: [122, 66, 6],
+  extras: [
+    ...octopusArms,
+    { d: 'M 139,55 Q 151,76 138,96 M 158,43 Q 184,33 201,52', paint: 'none', w: 0.45 },
+    { d: 'M 131,87 Q 115,91 108,99 Q 116,103 126,99 L 140,92 Z', paint: 'belly', w: 0.5 },
+  ],
+  scale: 0,
+};
+
 export const FORMS = {
   tai, kinme, ishidai, amadai, suzuki, himeji, ishimochi, mebaru, kasago, minokasago, hata,
   aji, hiraaji, buri, hirenaga, saba, sawara, maguro, kihada, shiira, kajiki,
@@ -971,5 +1120,6 @@ export const FORMS = {
   haze, mutsugoro, kajika, tobiuo, houbou, ankou, coelacanth,
   ebi, tenaga, iseebi, kame, awabi, sanshouo,
   unagi, utsubo, dojou, ika, kouika, kani, kani_long, hotate, hamaguri, makigai,
+  namazu, gonzui, same, shumoku, jinbe, ei, manta, uni, uni_short, tako,
 } satisfies Record<string, FormSpec>;
 export type FormId = keyof typeof FORMS;

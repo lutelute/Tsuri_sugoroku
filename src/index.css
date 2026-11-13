@@ -3089,3 +3089,216 @@ rt {
   35% { transform: scale(0.93); }
   40%, 100% { transform: scale(1); }
 }
+
+
+/* ===== hf-: 螺鈿の箔と金箔（釣りすごろくの和紙札） ===== */
+.hf-surface {
+  position: relative;
+  isolation: isolate;
+  border-radius: 0.5rem;
+  --hf-peak: 0.68;
+  --hf-play: paused;
+}
+.hf-legendary { --hf-peak: 0.3; }
+/* 中身は切らず、箔だけを台紙に収める。NEW の印や大物の魚も保つ。 */
+.hf-foil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  user-select: none;
+}
+.hf-sheen {
+  position: absolute;
+  inset: -55%;
+  opacity: 0.3;
+  background: linear-gradient(125deg,
+    transparent 34%, #167dff80 39%, #00ebd9 43%, #b7ff7c 46%,
+    #ffe974 48%, #fffdf1 50%, #ff54bd 52%, #985aff 55%,
+    #33cfff 58%, transparent 65%);
+  --hf-motion: hf-sweep;
+  --hf-duration: 6.7s;
+}
+.hf-sheen-cross {
+  background: linear-gradient(35deg,
+    transparent 38%, #ffba4380 42%, #ff5aa9 46%, #f9e4ff 49%,
+    #3be8ff 52%, #8d6bff 55%, transparent 61%);
+  --hf-motion: hf-cross-sweep;
+  --hf-duration: 8.3s;
+  --hf-delay: -3.1s;
+  opacity: 0.22;
+}
+.hf-legendary .hf-sheen {
+  opacity: 0.14;
+  background: linear-gradient(125deg, transparent 39%, #d6a02d80 45%,
+    #ffe49b 48%, #fff9db 50%, #e8bc4e 52%, transparent 59%);
+  --hf-duration: 8.6s;
+}
+.hf-rim {
+  position: absolute;
+  inset: 1px;
+  border: 1px solid var(--color-kin-500);
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px #ffe8a059;
+}
+.hf-mythical .hf-rim {
+  border: 4px double #ffe49a;
+  box-shadow: inset 0 0 9px #ffd260a6, 0 0 7px #ffe9a680;
+  --hf-motion: hf-rim-pulse;
+  --hf-duration: 4.6s;
+}
+.hf-rays {
+  position: absolute;
+  inset: -65%;
+  opacity: 0.2;
+  background: repeating-conic-gradient(from -15deg,
+    #ffdd76 0deg 3deg, #fff3ce99 3deg 5deg, transparent 5deg 25deg);
+  --hf-motion: hf-ray-turn;
+  --hf-duration: 48s;
+}
+.hf-star, .hf-sand {
+  position: absolute;
+  width: var(--hf-size);
+  height: var(--hf-size);
+  opacity: 0.55;
+}
+.hf-star {
+  background: radial-gradient(circle, #fff 0 17%, #fff3bb 35%, #ffd05a 67%, #ffc14a00 78%);
+  clip-path: polygon(50% 0, 61% 36%, 100% 50%, 61% 64%, 50% 100%, 39% 64%, 0 50%, 39% 36%);
+  --hf-motion: hf-twinkle;
+}
+.hf-star-cross {
+  clip-path: polygon(43% 0, 57% 0, 58% 42%, 100% 43%, 100% 57%, 58% 58%, 57% 100%, 43% 100%, 42% 58%, 0 57%, 0 43%, 42% 42%);
+}
+.hf-sand {
+  background: linear-gradient(135deg, #fffbe7, #f9ce58 52%, #c18a21);
+  box-shadow: 0 0 3px #ffdf8b;
+  --hf-motion: hf-sand-drift;
+}
+.hf-legendary .hf-sand { opacity: 0.35; }
+.hf-seal {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  width: 28px;
+  height: 32px;
+  color: var(--color-washi);
+  background: var(--color-shu-700);
+  border: 1px solid var(--color-shu-400);
+  outline: 1px solid var(--color-shu-700);
+  outline-offset: 1px;
+  border-radius: 2px;
+  transform: rotate(-6deg);
+  font-size: 21px;
+  line-height: 1;
+}
+.hf-seal-glint {
+  position: absolute;
+  inset: -35%;
+  background: linear-gradient(120deg, transparent 38%, #fff7d4 50%, transparent 62%);
+  opacity: 0;
+  --hf-motion: hf-seal-shine;
+  --hf-duration: 7.1s;
+  --hf-delay: -1.3s;
+}
+/* 落款は読み上げ対象外の意匠。小さな札でも魚名を隠さない。 */
+.hf-seal rt { display: none; }
+.hf-card .hf-seal { top: 6px; right: 6px; width: 16px; height: 19px; font-size: 14px; }
+.hf-card .hf-star { width: calc(var(--hf-size) * 0.75); height: calc(var(--hf-size) * 0.75); }
+.hf-detail .hf-seal { top: 12px; right: 12px; }
+.hf-caught .hf-seal { top: 10px; right: auto; left: 48px; }
+.hf-caught { border-radius: 6px; }
+.hf-burst {
+  position: absolute;
+  inset: -12%;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, transparent 47%, #fff9dfcc 51%, #fff 54%, #ffda6e 57%, transparent 63%);
+  opacity: 0;
+  --hf-motion: hf-burst-expand;
+  --hf-duration: 1.15s;
+  /* hf-turn の終了と同時に光輪を広げる。画面外では遅延も停止。 */
+  --hf-delay: 2.4s;
+}
+/* グラデーション・影は固定。transform と opacity だけを動かす。
+   監視結果が来るまでは静止。画面外は全粒・落款・光輪も途中で止める。 */
+.hf-surface[data-hf-reduced="false"][data-hf-visible] .hf-motion {
+  animation: var(--hf-motion, none) var(--hf-duration, 5s) ease-in-out var(--hf-delay, 0s) infinite both var(--hf-play);
+}
+.hf-surface[data-hf-visible="true"] { --hf-play: running; }
+.hf-surface[data-hf-reduced="false"][data-hf-visible] .hf-rays { animation-timing-function: linear; }
+.hf-reveal[data-hf-reduced="false"][data-hf-visible] {
+  animation: hf-turn 2.4s ease-out 1 both var(--hf-play);
+}
+.hf-reveal[data-hf-reduced="false"][data-hf-visible] > .hf-burst {
+  animation-iteration-count: 1;
+  animation-timing-function: ease-out;
+}
+@keyframes hf-sweep {
+  0%, 100% { transform: translate(-32%, -20%); opacity: 0; }
+  12% { transform: translate(-26%, -16%); opacity: 0.12; }
+  38% { transform: translate(-5%, -3%); opacity: var(--hf-peak); }
+  48% { transform: translate(4%, 2%); opacity: var(--hf-peak); }
+  68%, 99% { transform: translate(32%, 20%); opacity: 0; }
+}
+@keyframes hf-cross-sweep {
+  0%, 100% { transform: translate(28%, -22%); opacity: 0.04; }
+  28% { transform: translate(8%, -5%); opacity: 0.36; }
+  43% { transform: translate(2%, -1%); opacity: 0.52; }
+  62%, 82% { transform: translate(-28%, 22%); opacity: 0; }
+}
+@keyframes hf-twinkle {
+  0%, 52%, 100% { transform: scale(0.25) rotate(-12deg); opacity: 0; }
+  65% { transform: scale(1.4) rotate(0); opacity: 1; }
+  76% { transform: scale(0.65) rotate(9deg); opacity: 0.3; }
+  82% { transform: scale(1.05) rotate(12deg); opacity: 0.85; }
+}
+@keyframes hf-sand-drift {
+  0% { transform: translate(-5px, 12px) rotate(0); opacity: 0; }
+  22% { opacity: 0.85; }
+  44% { opacity: 0.2; }
+  62% { opacity: 0.95; }
+  100% { transform: translate(10px, -20px) rotate(110deg); opacity: 0; }
+}
+@keyframes hf-rim-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+@keyframes hf-ray-turn {
+  from { transform: rotate(0); }
+  to { transform: rotate(360deg); }
+}
+@keyframes hf-seal-shine {
+  0%, 72% { transform: translateX(-80%); opacity: 0; }
+  82% { opacity: 0.95; }
+  92%, 100% { transform: translateX(80%); opacity: 0; }
+}
+@keyframes hf-burst-expand {
+  0% { transform: scale(0.25); opacity: 0; }
+  12% { opacity: 0.95; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+@keyframes hf-turn {
+  0% { transform: perspective(900px) rotateY(-78deg) rotateZ(-3deg); opacity: 0; }
+  20% { opacity: 1; }
+  70% { transform: perspective(900px) rotateY(7deg) rotateZ(1deg); opacity: 1; }
+  100% { transform: perspective(900px) rotateY(0) rotateZ(0); opacity: 1; }
+}
+/* フックに加え、設定変更の直後も必ず完成した静止画にする。 */
+@media (prefers-reduced-motion: reduce) {
+  .hf-surface.hf-reveal,
+  .hf-surface .hf-motion { animation: none !important; }
+}
+.hf-gallery { height: 100dvh; overflow-y: auto; padding: 20px; }
+.hf-gallery-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 16px; max-width: 760px; }
+.hf-gallery-cards .fd-fishcard { width: 100%; min-height: 100px; }
+.hf-gallery-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 20px; max-width: 960px; margin-top: 24px; }
+.hf-detail-embedded { min-width: 0; }
+.hf-detail-embedded > .panel-ai { width: 100%; max-width: none; max-height: none; }
+/* ===== hf- ここまで ===== */
