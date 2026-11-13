@@ -710,7 +710,7 @@ export const PACK: FishPack = {
     mimizuhaze: { form: 'haze', col: { back: '#514230', mid: '#8b7355', belly: '#c6b390' }, marks: [{ k: 'spots', n: 25, col: '#514534', r: [0.6, 1.3], y0: 0.12, y1: 0.78 }], eye: 0.65, stretch: 0.5 },
     abehaze: { form: 'haze', col: { back: '#514230', mid: '#8b7355', belly: '#c6b390' }, marks: [{ k: 'bands', n: 6, col: '#54432e', w: 3, op: 0.65 }] },
     hinahaze: { form: 'haze', col: { back: '#a49a7e', mid: '#d3c9a9', belly: '#ede6d4' }, marks: [{ k: 'spots', n: 25, col: '#514534', r: [0.6, 1.3], y0: 0.12, y1: 0.78 }] },
-    satsukihaze: { form: 'bora', col: { back: '#52676a', mid: '#b7c4c0', belly: '#e9efea' }, marks: [{ k: 'stripe', rel: 0.5, col: '#48504b', w: 1.6, op: 0.7 }], stretch: 0.8 },
+    satsukihaze: { form: 'haze', col: { back: '#52676a', mid: '#b7c4c0', belly: '#e9efea' }, marks: [{ k: 'stripe', rel: 0.5, col: '#48504b', w: 1.6, op: 0.7 }], stretch: 0.8 },
     nikuhaze: { form: 'haze', col: { back: '#aa8178', mid: '#d3afa2', belly: '#ead0bc' }, stretch: 0.65 },
     shirouo: { form: 'shirauo', col: { back: '#a1b8ae', mid: '#d2dfd5', belly: '#eef1df' } },
     edohaze: { form: 'haze', col: { back: '#71624a', mid: '#b5a381', belly: '#ddd2b6' }, marks: [{ k: 'bands', n: 6, col: '#54432e', w: 3, op: 0.65 }] },
