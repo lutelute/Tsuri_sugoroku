@@ -222,7 +222,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kasurihata', name: 'カスリハタ', rarity: 'rare', points: 800,
-      regions: ['kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '灰色の体に眼より大きな黒褐色の斑紋が散る大型のハタ。南日本のサンゴ礁や岩穴に身を隠し、魚や甲殻類を捕らえる。',
       emoji: '🐟',
       appearance: { bodyColor: '#a6a58d', accentColor: '#ddd7b9', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'huge' },
@@ -231,7 +231,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'chairomaruhata', name: 'チャイロマルハタ', rarity: 'rare', points: 700,
-      regions: ['chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '体やひれに橙褐色の丸い斑点が散る大型のハタ。南日本の浅い海やマングローブの汽水域に入り、小魚や甲殻類を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#b3ac86', accentColor: '#e3dbb7', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'large' },
@@ -240,7 +240,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'barahata', name: 'バラハタ', rarity: 'rare', points: 640,
-      regions: ['kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '赤褐色の体に小斑点が散り、尾びれの両端が長く伸びるハタ。サンゴ礁の中層も泳ぎ、沖釣りや磯釣りでかかることがある。',
       emoji: '🐟',
       appearance: { bodyColor: '#d08167', accentColor: '#ebc29a', bodyShape: 'standard', pattern: 'spots', finStyle: 'long', size: 'large' },
@@ -258,7 +258,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'ishifuedai', name: 'イシフエダイ', rarity: 'rare', points: 650,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '暗い青色の細長い体に大きな口をもつ南方の魚。岩礁やサンゴ礁の周辺にすみ、魚を追い、釣りや刺し網で漁獲される。',
       emoji: '🐟',
       appearance: { bodyColor: '#738eaa', accentColor: '#cbd4ce', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'normal', size: 'large' },
@@ -267,7 +267,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'ooguchiishichibiki', name: 'オオグチイシチビキ', rarity: 'rare', points: 700,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '大きく裂ける口と、赤みを帯びた細長い体をもつ魚。南日本の深い岩礁域にすみ、白身は刺身やバター焼きに利用される。',
       emoji: '🐟',
       appearance: { bodyColor: '#cf9897', accentColor: '#ecd6c3', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'normal', size: 'large' },
@@ -276,7 +276,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'sujinamemongara', name: 'スジナメモンガラ', rarity: 'rare', points: 580,
-      regions: ['kanto', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kyushu'], minEquipmentLevel: 2,
       description: '八丈島や琉球列島のサンゴ礁外縁にすむモンガラカワハギの仲間。体の上半分に細い褐色の線が入り、動物プランクトンを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#b7aa8b', accentColor: '#e3d6b9', bodyShape: 'flat', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
@@ -312,7 +312,7 @@ export const PACK: FishPack = {
     // legendary: 6 種
     {
       id: 'oonibe', name: 'オオニベ', rarity: 'legendary', points: 1600,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '宮崎で親しまれる、全長一・五メートルを超える大型のニベ。銀灰色の体をもち、白身は刺身や焼き物、蒸し物で味わえる。',
       emoji: '🐟',
       appearance: { bodyColor: '#a8b3ae', accentColor: '#e4e7d8', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'huge' },
@@ -320,7 +320,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'tamakai', name: 'タマカイ', rarity: 'legendary', points: 2000,
-      regions: ['kanto', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
       description: 'サンゴ礁の岩穴などに暮らす、二メートルを超える巨大なハタ。成魚は灰褐色のまだら模様で、大きな口で魚や甲殻類をのみ込む。',
       emoji: '🐟',
       appearance: { bodyColor: '#8e9480', accentColor: '#c8c9a9', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'huge' },

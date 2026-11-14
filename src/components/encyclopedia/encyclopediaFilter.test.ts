@@ -56,6 +56,34 @@ describe('図鑑をしぼる札（encyclopediaFilter）', () => {
     expect(RARITY_ORDER.every(r => p1[r].found === p1[r].total && p1[r].total > 0)).toBe(true);
   });
 
+  it('ひらがな・カタカナの部分一致で探し、前後の空白を無視する', () => {
+    const fish = { ...FISH_DATABASE[0], name: 'マアジ' };
+    const enc = { [fish.id]: true };
+    for (const query of ['あじ', 'アジ', ' まあじ　']) {
+      expect(filterFish([fish], NO_FILTER, enc, query)).toEqual([fish]);
+    }
+    expect(filterFish([fish], NO_FILTER, enc, 'さば')).toEqual([]);
+    expect(filterFish(FISH_DATABASE, NO_FILTER, {}, '　 ')).toEqual(FISH_DATABASE);
+  });
+
+  it('未発見の名前と伏せられた名前は検索結果に出さない', () => {
+    const fish = { ...FISH_DATABASE[0], name: 'マアジ' };
+    expect(filterFish([fish], NO_FILTER, {}, 'あじ')).toEqual([]);
+    expect(filterFish([fish], NO_FILTER, { [fish.id]: false }, 'あじ')).toEqual([]);
+    for (const name of ['？？？', '???']) {
+      expect(filterFish([{ ...fish, name }], NO_FILTER, { [fish.id]: true }, name)).toEqual([]);
+    }
+  });
+
+  it('名前検索と札を重ねてしぼっても、もとの順を保つ', () => {
+    const all = Object.fromEntries(FISH_DATABASE.map(f => [f.id, true]));
+    const filter = { ...NO_FILTER, region: 'kanto' as const };
+    const expected = FISH_DATABASE.filter(f => f.regions.includes('kanto') && f.name.includes('アジ'));
+    expect(expected.length).toBeGreaterThan(0);
+    expect(filterFish(FISH_DATABASE, filter, all, 'あじ')).toEqual(expected);
+    expect(filterFish(FISH_DATABASE, { ...NO_FILTER, found: 'yet' }, all, 'あじ')).toEqual([]);
+  });
+
   it('札の文・地方・すみかの漢字には、すべてふりがなが振られる', () => {
     const texts = [
       ...Object.values(FILTER_TEXT), ...Object.values(REGION_LABELS), ...HABITAT_GROUPS.map(g => g.label),

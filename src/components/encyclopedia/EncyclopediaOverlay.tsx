@@ -86,7 +86,8 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
   );
   const initEnc = isStandalone ? null : (initialEncyclopedias[viewingPlayerIndex] ?? null);
   const [filter, setFilter] = useState<FishFilter>(NO_FILTER);
-  const filtered = useMemo(() => filterFish(FISH_DATABASE, filter, encyclopedia), [filter, encyclopedia]);
+  const [query, setQuery] = useState('');
+  const filtered = useMemo(() => filterFish(FISH_DATABASE, filter, encyclopedia, query), [filter, encyclopedia, query]);
   const progress = useMemo(() => rarityProgress(FISH_DATABASE, encyclopedia), [encyclopedia]);
   const caughtCount = FISH_DATABASE.filter(f => encyclopedia[f.id]).length;
   const totalCount = FISH_DATABASE.length;
@@ -224,6 +225,17 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
           })}
         </div>
 
+        <label className="block px-3 sm:px-4 pt-3">
+          <span className="block mb-1 text-xs text-washi/70 font-mincho"><Ruby>{FILTER_TEXT.search}</Ruby></span>
+          <input
+            type="search"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="つったさかな（ひらがなでもOK）"
+            className="w-full min-h-[44px] rounded-lg border border-washi/20 bg-ai-950 px-3 text-base text-washi placeholder:text-washi/45 focus:outline-none focus:ring-2 focus:ring-washi/50"
+          />
+        </label>
+
         {/* しぼる札: 地方・すみか・見つけたか */}
         <div className="px-3 sm:px-4 pt-3 space-y-1.5">
           <ChipRow label={FILTER_TEXT.region}>
@@ -254,7 +266,7 @@ export default function EncyclopediaOverlay({ onClose, standaloneEncyclopedia, o
           {filtered.length === 0 && (
             <div className="text-center py-10">
               <p className="text-sm text-washi/55 mb-3"><Ruby>{FILTER_TEXT.none}</Ruby></p>
-              <Button onClick={() => setFilter(NO_FILTER)} variant="secondary" size="sm" className="min-h-[44px]"><Ruby>{FILTER_TEXT.reset}</Ruby></Button>
+              <Button onClick={() => { setFilter(NO_FILTER); setQuery(''); }} variant="secondary" size="sm" className="min-h-[44px]"><Ruby>{FILTER_TEXT.reset}</Ruby></Button>
             </div>
           )}
           {RARITY_ORDER.map(rarity => {

@@ -65,7 +65,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'akatanago', name: 'アカタナゴ', rarity: 'common', points: 150,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '赤みを帯びた体をもつウミタナゴの仲間で、海藻のある浅い岩場にすむ。小エビを使う浮き釣りの対象になり、稚魚を産む。',
       emoji: '🐟',
       appearance: { bodyColor: '#b7836b', accentColor: '#e8c8ac', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -81,7 +81,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'sujiishimochi', name: 'スジイシモチ', rarity: 'common', points: 110,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '体側に暗い縦線が走るテンジクダイの仲間。浅い岩礁やサンゴの周りにすみ、雄が口の中に卵を収めて守る。',
       emoji: '🐟',
       appearance: { bodyColor: '#bccbcb', accentColor: '#eef1df', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -98,7 +98,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'isokasago', name: 'イソカサゴ', rarity: 'common', points: 130,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '赤褐色のまだら模様をもち、岩の割れ目などに隠れる小型のカサゴ類。小さな甲殻類を食べ、背びれのとげに毒がある。',
       emoji: '🐟',
       appearance: { bodyColor: '#dc8b70', accentColor: '#f3d1b0', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'small' },
@@ -114,7 +114,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'ayaanahaze', name: 'アヤアナハゼ', rarity: 'common', points: 150,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '赤みのある体と、高く伸びた第一背びれの前部が特徴。岩礁の海藻の周りにすみ、小魚や甲殻類を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#b76b50', accentColor: '#eac4a0', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
@@ -166,7 +166,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kumohaze', name: 'クモハゼ', rarity: 'common', points: 150,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '体側に雲のような暗い模様が並ぶ小さなハゼ。暖かい海の潮だまりや石の多い浅場にすみ、底の小動物を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#bba985', accentColor: '#e5dcc1', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -175,7 +175,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kutsuwahaze', name: 'クツワハゼ', rarity: 'common', points: 100,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '淡い体色に細かな斑点が散る、浅い海のハゼ。岩やサンゴの周りの砂礫底で見られ、底にすむ小動物を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#bba985', accentColor: '#e5dcc1', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -183,7 +183,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'hoshihaze', name: 'ホシハゼ', rarity: 'common', points: 110,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '黒っぽい体に青白く光る小さな点が散るハゼ。内湾の岩場や石の下にすみ、底を移動しながら小動物を探す。',
       emoji: '🐟',
       appearance: { bodyColor: '#4b5050', accentColor: '#93998c', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -218,7 +218,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'nishikihaze', name: 'ニシキハゼ', rarity: 'common', points: 150,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '体側に橙色の帯が走る、細長いハゼの仲間。岩礁に近い砂底にすみ、小さな甲殻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#dcb297', accentColor: '#f5e5d1', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
@@ -226,7 +226,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'isohaze', name: 'イソハゼ', rarity: 'common', points: 100,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '赤褐色の小さな斑点が見られる、数センチほどのハゼ。潮だまりの石やサンゴのかけらの陰にすみ、小さな動物を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#bba985', accentColor: '#e5dcc1', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -235,7 +235,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'isoginpo', name: 'イソギンポ', rarity: 'common', points: 110,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '目の上に枝分かれした皮弁をもつ、丸い頭の小魚。岩の穴や貝殻を隠れ家にして、浅い磯で小さな動物などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -251,7 +251,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'tosakaginpo', name: 'トサカギンポ', rarity: 'common', points: 130,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '頭の上にとさかのような皮弁がある、汽水域にも入る小魚。カキ殻や石の隙間にすみ、付着藻類や小動物を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -259,7 +259,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kaeruuo', name: 'カエルウオ', rarity: 'common', points: 140,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '大きな目と丸い頭をもち、波がかかる浅い岩場にすむ。岩の表面の藻類をかじり、潮だまりの縁でも姿を見られる。',
       emoji: '🐟',
       appearance: { bodyColor: '#919472', accentColor: '#d9d7b5', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -267,7 +267,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'rousokuginpo', name: 'ロウソクギンポ', rarity: 'common', points: 150,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '目の上に細い皮弁を立てた、小さなイソギンポの仲間。潮だまりの穴を隠れ家にして、岩に付いた藻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -283,7 +283,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'hoshiginpo', name: 'ホシギンポ', rarity: 'common', points: 110,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '茶褐色の体に小さな白点が散り、目の上に長い皮弁がある。波の当たる岩場や防波堤の際、潮だまりで見られる。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -291,7 +291,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'sujiginpo', name: 'スジギンポ', rarity: 'common', points: 120,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '体側に暗い帯をもつイソギンポの仲間。暖かい海の浅い岩場にすみ、潮だまりの穴や石の隙間へ身を隠す。',
       emoji: '🐟',
       appearance: { bodyColor: '#bba985', accentColor: '#e5dcc1', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -299,7 +299,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'nijiginpo', name: 'ニジギンポ', rarity: 'common', points: 130,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '体側に暗い縦帯が走る細長い魚で、港の中でも見られる。空き貝殻などの穴を利用して産卵し、雄が卵を守る。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -307,7 +307,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'hebiginpo', name: 'ヘビギンポ', rarity: 'common', points: 140,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '背びれが三つに分かれた、浅い岩場の小魚。胸びれで岩の上に体を支えながら、小さな甲殻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -339,7 +339,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'honbera', name: 'ホンベラ', rarity: 'common', points: 120,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '細身で口が小さいベラの仲間。浅い岩場や海藻の周りで小動物をついばみ、小針を使った餌釣りによくかかる。',
       emoji: '🐟',
       appearance: { bodyColor: '#919472', accentColor: '#d9d7b5', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -357,7 +357,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'akasasanohabera', name: 'アカササノハベラ', rarity: 'common', points: 140,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '赤褐色の体をした、口先のとがるベラ。浅い岩礁で甲殻類などを食べ、オキアミやイソメを使う磯の餌釣りにもかかる。',
       emoji: '🐟',
       appearance: { bodyColor: '#b76b50', accentColor: '#eac4a0', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'medium' },
@@ -366,7 +366,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'hoshisasanohabera', name: 'ホシササノハベラ', rarity: 'common', points: 150,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '体側に白っぽい小斑点が見られるベラの仲間。岩場で小さな甲殻類などを探し、イソメやオキアミを使った釣りで出会える。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'medium' },
@@ -375,7 +375,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'nishikibera', name: 'ニシキベラ', rarity: 'common', points: 100,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '緑や赤の模様が目立つ、暖かい海のベラ。岩礁や海藻の周りで小動物を食べ、小針のオキアミ餌にもよくかかる。',
       emoji: '🐟',
       appearance: { bodyColor: '#6ca592', accentColor: '#c6dcb4', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
@@ -384,7 +384,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kaminaribera', name: 'カミナリベラ', rarity: 'common', points: 110,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '細身の体をした小型のベラで、浅い岩礁の周りを泳ぐ。群れで見られることもあり、小さな甲殻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#6ca592', accentColor: '#c6dcb4', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -392,7 +392,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'ohagurobera', name: 'オハグロベラ', rarity: 'common', points: 120,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '厚い唇と大きめの口をもち、雄は黒みの強い体色になる。海藻のある岩場にすみ、エビなどを餌にした釣りにもかかる。',
       emoji: '🐟',
       appearance: { bodyColor: '#4b5050', accentColor: '#93998c', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'medium' },
@@ -400,7 +400,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'nagasakisuzumedai', name: 'ナガサキスズメダイ', rarity: 'common', points: 130,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '黒褐色の体をしたスズメダイの仲間で、幼魚は鮮やかな青色。暖かい海の岩礁にすみ、岩の上などに産んだ卵を雄が守る。',
       emoji: '🐟',
       appearance: { bodyColor: '#788a92', accentColor: '#d1dade', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'small' },
@@ -409,7 +409,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'sorasuzumedai', name: 'ソラスズメダイ', rarity: 'common', points: 140,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '鮮やかな青い体と黄色い尾びれが目立つ小魚。浅い岩礁で群れ、水中のプランクトンを食べて小針の餌釣りにもかかる。',
       emoji: '🐟',
       appearance: { bodyColor: '#3479d2', accentColor: '#9bc8e1', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -418,7 +418,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'matsubasuzumedai', name: 'マツバスズメダイ', rarity: 'common', points: 150,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '灰褐色の体と、上下の先が長く伸びる尾びれをもつ。暖かい海の岩礁の上で群れ、水中のプランクトンを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#788a92', accentColor: '#d1dade', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -426,7 +426,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'oyabiccha', name: 'オヤビッチャ', rarity: 'common', points: 100,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '銀色の体に五本の黒い帯があり、背中は黄色みを帯びる。暖かい海の港や岩場で群れ、小さな針の餌釣りにかかる。',
       emoji: '🐟',
       appearance: { bodyColor: '#bccbcb', accentColor: '#eef1df', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
@@ -435,7 +435,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kurohoshiishimochi', name: 'クロホシイシモチ', rarity: 'common', points: 110,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '目の後ろに黒い点がある、沿岸で群れる小魚。堤防のサビキ釣りにもかかり、繁殖期には雄が口の中で卵を守る。',
       emoji: '🐟',
       appearance: { bodyColor: '#dcb297', accentColor: '#f5e5d1', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -444,7 +444,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'oosujiishimochi', name: 'オオスジイシモチ', rarity: 'common', points: 120,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '赤褐色の太い縦線が体を走るテンジクダイの仲間。岩陰にすみ、夜に小さな甲殻類などを食べ、雄が口で卵を守る。',
       emoji: '🐟',
       appearance: { bodyColor: '#dcb297', accentColor: '#f5e5d1', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -453,7 +453,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kosujiishimochi', name: 'コスジイシモチ', rarity: 'common', points: 130,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '体に細い暗色の縦線が並ぶ小型の魚。岩礁のくぼみなどに隠れて暮らし、雄が卵を口に含んで育てる。',
       emoji: '🐟',
       appearance: { bodyColor: '#dcb297', accentColor: '#f5e5d1', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -470,7 +470,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'amimehagi', name: 'アミメハギ', rarity: 'common', points: 150,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '小さな体に網目のような模様をもつカワハギの仲間。海藻の茂る浅場にすみ、口で海藻をくわえて休むことがある。',
       emoji: '🐟',
       appearance: { bodyColor: '#919472', accentColor: '#d9d7b5', bodyShape: 'flat', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -478,7 +478,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'yosogi', name: 'ヨソギ', rarity: 'common', points: 100,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: 'カワハギに似るが小型で、体がやや細長い魚。沿岸の岩場や砂底で小動物をついばみ、細い仕掛けの餌釣りにもかかる。',
       emoji: '🐟',
       appearance: { bodyColor: '#bba985', accentColor: '#e5dcc1', bodyShape: 'flat', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -564,7 +564,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'ayamekasago', name: 'アヤメカサゴ', rarity: 'uncommon', points: 360,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '赤い体に黄色い模様が入る、鮮やかなカサゴの仲間。沖の岩礁にすみ、魚の切り身を使う底釣りにかかり、煮付けにされる。',
       emoji: '🐟',
       appearance: { bodyColor: '#dc8b70', accentColor: '#f3d1b0', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'medium' },
@@ -572,7 +572,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'fusakasago', name: 'フサカサゴ', rarity: 'uncommon', points: 240,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '頭に房状の皮弁が多く、赤褐色の体で岩場に紛れる魚。甲殻類や小魚を食べ、背びれのとげに毒がある。',
       emoji: '🐟',
       appearance: { bodyColor: '#b76b50', accentColor: '#eac4a0', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'medium' },
@@ -597,7 +597,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'benkeihaze', name: 'ベンケイハゼ', rarity: 'uncommon', points: 330,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '赤みのある体をした、岩の隙間を好む小さなハゼ。穴の奥に身を隠すことが多く、小さな甲殻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#dc8b70', accentColor: '#f3d1b0', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -605,7 +605,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'ichimonjihaze', name: 'イチモンジハゼ', rarity: 'uncommon', points: 360,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '体側を一本の暗い縦帯が通る小さなハゼ。岩の張り出しの下や割れ目にすみ、岩の面に付くようにして休む。',
       emoji: '🐟',
       appearance: { bodyColor: '#dcb297', accentColor: '#f5e5d1', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -613,7 +613,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'himeginpo', name: 'ヒメギンポ', rarity: 'uncommon', points: 240,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '背びれが三つに分かれ、繁殖期の雄は頭が黒く体が赤くなる。浅い岩場にすみ、小さな甲殻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#b76b50', accentColor: '#eac4a0', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -669,7 +669,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'itohikibera', name: 'イトヒキベラ', rarity: 'uncommon', points: 300,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '雄の鮮やかな体色と長く伸びる腹びれが目立つ小型のベラ。岩礁の上を泳ぎ、水中の小さな動物を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#c36d8a', accentColor: '#edc2ca', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -677,7 +677,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'honsomewakebera', name: 'ホンソメワケベラ', rarity: 'uncommon', points: 330,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '青白い体に太い黒帯が走る細身のベラ。ほかの魚の体表に付いた寄生虫などを食べ、掃除魚として知られる。',
       emoji: '🐟',
       appearance: { bodyColor: '#8eb9d1', accentColor: '#ddebf1', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -686,7 +686,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'otomebera', name: 'オトメベラ', rarity: 'uncommon', points: 360,
-      regions: ['kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '緑色の体に赤い模様が映える、暖かい海のベラ。浅いサンゴ礁や岩礁を泳ぎ、底の小さな甲殻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#6ca592', accentColor: '#c6dcb4', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
@@ -695,7 +695,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'sedakasuzumedai', name: 'セダカスズメダイ', rarity: 'uncommon', points: 240,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '体高があり、成魚は暗い褐色になるスズメダイ。浅い岩場に縄張りをもち、岩の表面に育つ藻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -703,7 +703,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'rokusensuzumedai', name: 'ロクセンスズメダイ', rarity: 'uncommon', points: 270,
-      regions: ['kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '体の黒い横帯に加えて、尾びれの付け根にも黒い模様がある。暖かい海の岩礁やサンゴ礁で群れ、プランクトンなどを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#bccbcb', accentColor: '#eef1df', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
@@ -721,7 +721,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'mitsuboshikurosuzumedai', name: 'ミツボシクロスズメダイ', rarity: 'uncommon', points: 330,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '黒い体に白い斑が目立つスズメダイの仲間。幼魚はイソギンチャクの周りで群れ、水中のプランクトンを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#4b5050', accentColor: '#93998c', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
@@ -730,7 +730,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kinsenishimochi', name: 'キンセンイシモチ', rarity: 'uncommon', points: 360,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '白っぽい体を金色の細い縦線が走る小魚。岩礁やサンゴの周りで見られ、雄が口の中で卵を守る。',
       emoji: '🐟',
       appearance: { bodyColor: '#ddd0a8', accentColor: '#f3eed8', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -738,7 +738,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'aosujitenjikudai', name: 'アオスジテンジクダイ', rarity: 'uncommon', points: 240,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '目を通る青く光る線が目立つテンジクダイの仲間。岩の陰やサンゴの周りにすみ、小さな甲殻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#b7836b', accentColor: '#e8c8ac', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -746,7 +746,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kuroishimochi', name: 'クロイシモチ', rarity: 'uncommon', points: 270,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '黒褐色や黄色など、体色に変化のあるテンジクダイの仲間。内湾の岩陰などにすみ、雄が口に卵を含んで守る。',
       emoji: '🐟',
       appearance: { bodyColor: '#4b5050', accentColor: '#93998c', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -754,7 +754,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'ginisoiwashi', name: 'ギンイソイワシ', rarity: 'uncommon', points: 300,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '銀色の縦帯をもつ細長い小魚で、背びれは二つに分かれる。港や浅い沿岸で群れ、小さな針のサビキ釣りにもかかる。',
       emoji: '🐟',
       appearance: { bodyColor: '#bccbcb', accentColor: '#eef1df', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -762,7 +762,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'himeji', name: 'ヒメジ', rarity: 'uncommon', points: 330,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '赤みのある体と、あごの下の二本のひげをもつ魚。岩場に近い砂底でひげを使って餌を探し、底釣りにもかかる。',
       emoji: '🐟',
       appearance: { bodyColor: '#dc8b70', accentColor: '#f3d1b0', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -771,7 +771,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'aosahagi', name: 'アオサハギ', rarity: 'uncommon', points: 360,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '丸みの強い平たい体をした、小さなカワハギの仲間。海藻の茂る浅場にすみ、藻の色に紛れて小さな動物をついばむ。',
       emoji: '🐟',
       appearance: { bodyColor: '#6ca592', accentColor: '#c6dcb4', bodyShape: 'flat', pattern: 'gradient', finStyle: 'normal', size: 'small' },
@@ -780,7 +780,7 @@ export const PACK: FishPack = {
     // rare: 20種
     {
       id: 'kokutenbenkeihaze', name: 'コクテンベンケイハゼ', rarity: 'rare', points: 550,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '淡い体色をもち、えらぶた付近の大きな黒斑が目立つハゼ。浅い岩礁の穴に隠れ、小さな甲殻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#ddd0a8', accentColor: '#f3eed8', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -788,7 +788,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'okinawabenihaze', name: 'オキナワベニハゼ', rarity: 'rare', points: 600,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '赤みのある半透明の体をした、とても小さなハゼ。暖かい海の岩陰やサンゴの隙間にすみ、小動物を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#dc8b70', accentColor: '#f3d1b0', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -812,7 +812,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kuroheriitohikibera', name: 'クロヘリイトヒキベラ', rarity: 'rare', points: 750,
-      regions: ['kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '雄の鮮やかな赤い体色と、暗い縁取りのあるひれが目立つベラ。岩礁やサンゴ礁の上を泳ぎ、小さな動物を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#c36d8a', accentColor: '#edc2ca', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
@@ -837,7 +837,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'okinawasuzumedai', name: 'オキナワスズメダイ', rarity: 'rare', points: 600,
-      regions: ['kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '細身で、黒みのある体をしたスズメダイの仲間。暖かい海の岩礁の上に群れ、水中のプランクトンを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#788a92', accentColor: '#d1dade', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'small' },
@@ -854,7 +854,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kasuriishimochi', name: 'カスリイシモチ', rarity: 'rare', points: 700,
-      regions: ['kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '暗褐色の体をもち、体側の線や尾の付け根の黒斑が目立つこともある。サンゴ礁や岩場の暗い隙間に潜むテンジクダイの仲間。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -862,7 +862,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'houraihimeji', name: 'ホウライヒメジ', rarity: 'rare', points: 750,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: 'あごに二本のひげがあり、尾の付け根に大きな黒い鞍状斑をもつ。岩場に近い砂礫底で、ひげを使い小動物を探す。',
       emoji: '🐟',
       appearance: { bodyColor: '#dc8b70', accentColor: '#f3d1b0', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'large' },
@@ -871,7 +871,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'okinahimeji', name: 'オキナヒメジ', rarity: 'rare', points: 800,
-      regions: ['kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: 'あごに二本のひげをもち、尾の付け根の黒斑が側線より上に収まる。サンゴ礁や岩礁にすみ、底の小動物を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#b76b50', accentColor: '#eac4a0', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'large' },
@@ -880,7 +880,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'migimaki', name: 'ミギマキ', rarity: 'rare', points: 550,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '黄色い体に斜めの黒い帯が走り、厚い唇が赤く見える魚。岩礁の周りにすみ、底の小さな甲殻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#c9a04a', accentColor: '#f3dfa0', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'large' },
@@ -888,7 +888,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'yuudachitakanoha', name: 'ユウダチタカノハ', rarity: 'rare', points: 600,
-      regions: ['chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '銀灰色の体に斜めの黒い帯が走るタカノハダイの仲間。やや深い岩礁にすみ、食用には煮付けやフライなどにされる。',
       emoji: '🐟',
       appearance: { bodyColor: '#bccbcb', accentColor: '#eef1df', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'large' },
@@ -896,7 +896,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kihassoku', name: 'キハッソク', rarity: 'rare', points: 650,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '暗褐色の体を黄色い縦線が走る魚。岩の隙間に潜んで小魚や甲殻類を食べ、皮膚から毒を含む粘液を出すことがある。',
       emoji: '🐟',
       appearance: { bodyColor: '#4b5050', accentColor: '#93998c', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
@@ -905,7 +905,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'nunosarashi', name: 'ヌノサラシ', rarity: 'rare', points: 700,
-      regions: ['kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '茶褐色の体に大きめの白斑が散る、岩陰にすむ魚。小魚などを捕食し、皮膚から毒を含む粘液を出すことがある。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'medium' },
@@ -914,7 +914,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'rurihata', name: 'ルリハタ', rarity: 'rare', points: 750,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '青い体と黄色い背中が鮮やかな、小型のハタの仲間。岩礁の割れ目に隠れ、小魚や甲殻類を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#3479d2', accentColor: '#9bc8e1', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
@@ -950,7 +950,7 @@ export const PACK: FishPack = {
     // legendary: 8種
     {
       id: 'borokasago', name: 'ボロカサゴ', rarity: 'legendary', points: 1300,
-      regions: ['chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '体じゅうの皮弁が海藻のように見えるカサゴの仲間。岩場で揺れる海藻に紛れるように動き、近づいた小魚などを飲み込む。',
       emoji: '🐟',
       appearance: { bodyColor: '#a87d9b', accentColor: '#d7b9c8', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'medium' },
@@ -958,7 +958,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'tsumajirookoze', name: 'ツマジロオコゼ', rarity: 'legendary', points: 1400,
-      regions: ['chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
+      regions: ['chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
       description: '高い背びれと薄い体をもち、枯れ葉のように揺れるオコゼの仲間。浅いサンゴ礁や岩場で小動物を捕らえ、とげに毒がある。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'standard', pattern: 'stripes', finStyle: 'spiky', size: 'medium' },
@@ -966,7 +966,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'hadakahaokoze', name: 'ハダカハオコゼ', rarity: 'legendary', points: 1500,
-      regions: ['kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '葉のように薄い体をもち、白や赤など体色に変化がある魚。サンゴ礁でじっと小魚を待ち伏せし、背びれのとげには毒がある。',
       emoji: '🐟',
       appearance: { bodyColor: '#ddd0a8', accentColor: '#f3eed8', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'small' },
@@ -974,7 +974,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'kumadorikaeruankou', name: 'クマドリカエルアンコウ', rarity: 'legendary', points: 1600,
-      regions: ['chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
+      regions: ['chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
       description: '顔や体の模様が歌舞伎の隈取りを思わせる魚。サンゴ礁や岩場で胸びれを使って移動し、頭の疑似餌を振って小魚を誘う。',
       emoji: '🐟',
       appearance: { bodyColor: '#ddd0a8', accentColor: '#f3eed8', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
@@ -983,7 +983,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'irokaeruankou', name: 'イロカエルアンコウ', rarity: 'legendary', points: 1700,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '黄色や橙色、黒色など体色の変化が多いカエルアンコウの仲間。岩場で体を周囲に紛れ込ませ、頭の疑似餌で小魚を誘う。',
       emoji: '🐟',
       appearance: { bodyColor: '#dc9951', accentColor: '#f6d398', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'medium' },
@@ -991,7 +991,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'oomonkaeruankou', name: 'オオモンカエルアンコウ', rarity: 'legendary', points: 1800,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
       description: '大きく育ち、海綿のような姿で岩場に紛れるカエルアンコウの仲間。胸びれを足のように使い、近づいた魚を大きな口で捕らえる。',
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'large' },
@@ -1000,7 +1000,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'benikaeruankou', name: 'ベニカエルアンコウ', rarity: 'legendary', points: 1900,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '皮膚の突起が多く、海綿などに紛れて暮らすカエルアンコウの仲間。岩場で胸びれを使って体を支え、頭の疑似餌で獲物を誘う。',
       emoji: '🐟',
       appearance: { bodyColor: '#c36d8a', accentColor: '#edc2ca', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'medium' },
@@ -1008,7 +1008,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'darumaokoze', name: 'ダルマオコゼ', rarity: 'legendary', points: 2000,
-      regions: ['kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
+      regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
       description: '丸みのある太い体で岩やサンゴの隙間に隠れる魚。小魚やエビを待ち伏せし、背びれのとげに毒があるため触らない。',
       emoji: '🐟',
       appearance: { bodyColor: '#b76b50', accentColor: '#eac4a0', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'medium' },

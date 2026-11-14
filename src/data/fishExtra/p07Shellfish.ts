@@ -147,7 +147,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'shoujingani', name: 'ショウジンガニ', rarity: 'common', points: 140,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '波の当たる磯の岩の隙間にすむ赤褐色のカニ。各地で磯のカニとして食用にされ、みそ汁にするとだしが出る。',
       emoji: '🦀',
       appearance: { bodyColor: '#aa7153', accentColor: '#dac49a', bodyShape: 'crab', pattern: 'spots', finStyle: 'small', size: 'small' },
@@ -165,7 +165,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'chousenhamaguri', name: 'チョウセンハマグリ', rarity: 'common', points: 80,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '波が打ち寄せる外海の砂浜にすむ、殻の厚いハマグリの仲間。鹿島灘などで漁獲され、焼き貝や吸い物に使われる。',
       emoji: '🐚',
       appearance: { bodyColor: '#d3b891', accentColor: '#f1dfbf', bodyShape: 'shell_bivalve', pattern: 'gradient', finStyle: 'small', size: 'medium' },
@@ -253,7 +253,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'hiougi', name: 'ヒオウギ', rarity: 'common', points: 100,
-      regions: ['chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '橙色や紫色など、個体ごとに鮮やかな殻の色を持つ二枚貝。入り江などで養殖され、蒸し貝やバター焼きに利用される。',
       emoji: '🐚',
       appearance: { bodyColor: '#e28a45', accentColor: '#f5c879', bodyShape: 'shell_bivalve', pattern: 'gradient', finStyle: 'small', size: 'small' },
@@ -392,7 +392,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'asahigani', name: 'アサヒガニ', rarity: 'uncommon', points: 220,
-      regions: ['chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '赤橙色の縦長の甲羅を持ち、砂に潜ることができるカニ。暖かい海の砂底で獲られ、塩ゆでや蒸し物に利用される。',
       emoji: '🦀',
       appearance: { bodyColor: '#e09a71', accentColor: '#f2cf9f', bodyShape: 'crab', pattern: 'spots', finStyle: 'small', size: 'medium' },
@@ -489,7 +489,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'akazaebi', name: 'アカザエビ', rarity: 'rare', points: 525,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: '長いはさみ脚を持つ赤橙色のエビで、深い海の砂泥底にすむ。駿河湾などの底びき網で獲られ、焼き物や蒸し物に使われる。',
       emoji: '🦐',
       appearance: { bodyColor: '#e59b7a', accentColor: '#f4cfab', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'small', size: 'medium' },

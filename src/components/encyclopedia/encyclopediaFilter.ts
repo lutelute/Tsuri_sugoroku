@@ -44,8 +44,11 @@ export interface FishFilter {
 export const NO_FILTER: FishFilter = { region: 'all', habitat: 'all', rarity: 'all', found: 'all' };
 
 /** しぼった魚の並び（もとの順のまま） */
-export function filterFish(list: Fish[], f: FishFilter, encyclopedia: Record<string, boolean>): Fish[] {
+export function filterFish(list: Fish[], f: FishFilter, encyclopedia: Record<string, boolean>, query = ''): Fish[] {
+  const katakana = (text: string) => text.replace(/[ぁ-ゖ]/g, c => String.fromCharCode(c.charCodeAt(0) + 0x60));
+  const search = katakana(query.trim());
   return list.filter(fish => {
+    if (search && (!encyclopedia[fish.id] || /^[?？]+$/.test(fish.name) || !katakana(fish.name).includes(search))) return false;
     if (f.region !== 'all' && !fish.regions.includes(f.region)) return false;
     if (f.habitat !== 'all' && habitatGroupOf(fish.habitat) !== f.habitat) return false;
     if (f.rarity !== 'all' && fish.rarity !== f.rarity) return false;
@@ -67,6 +70,7 @@ export function rarityProgress(list: Fish[], encyclopedia: Record<string, boolea
 
 /** しぼる札まわりの文 */
 export const FILTER_TEXT = {
+  search: '名前でさがす',
   region: '地方',
   habitat: 'すみか',
   all: 'すべて',

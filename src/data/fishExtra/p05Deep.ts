@@ -35,7 +35,7 @@ export const PACK: FishPack = {
     // common: 25種
     {
       id: 'toujin', name: 'トウジン', rarity: 'common', points: 100,
-      regions: ['tohoku', 'kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: 'とがった鼻先と細く伸びる尾をもつソコダラの仲間。深場の釣りや底曳き網で揚がり、白身を煮つけやみそ汁にする。',
       emoji: '🐟',
       appearance: { bodyColor: '#667681', accentColor: '#b5bec2', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'long', size: 'large' },
@@ -43,7 +43,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'heridara', name: 'ヘリダラ', rarity: 'common', points: 110,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '大きな目と先細りの尾が目立つ深海魚。駿河湾などの底曳き網で揚がり、身はフライやムニエルに利用できる。',
       emoji: '🐟',
       appearance: { bodyColor: '#969397', accentColor: '#cfcbcc', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'long', size: 'medium' },
@@ -51,7 +51,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'ibarahige', name: 'イバラヒゲ', rarity: 'common', points: 120,
-      regions: ['hokkaido', 'tohoku', 'kanto', 'shikoku'], minEquipmentLevel: 1,
+      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'shikoku'], minEquipmentLevel: 1,
       description: '表面に小さなとげのある硬いうろこをもつ。北日本の深海にすみ、メヌケ釣りなどで混じることがある。',
       emoji: '🐟',
       appearance: { bodyColor: '#303a46', accentColor: '#606974', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'long', size: 'large' },
@@ -67,7 +67,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'onihige', name: 'オニヒゲ', rarity: 'common', points: 100,
-      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: 'とがった鼻先とざらつくうろこをもつソコダラ。底曳き網や釣りで漁獲され、すり身の原料にもなる。',
       emoji: '🐟',
       appearance: { bodyColor: '#303a46', accentColor: '#606974', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'long', size: 'large' },
@@ -75,7 +75,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'miyakohige', name: 'ミヤコヒゲ', rarity: 'common', points: 110,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '長い頭から糸のような尾へと細くなる深海魚。房総半島から土佐湾などにすみ、深場の釣りで揚がる。',
       emoji: '🐟',
       appearance: { bodyColor: '#8b7b68', accentColor: '#c9bcaa', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'long', size: 'large' },
@@ -83,7 +83,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'tenagadara', name: 'テナガダラ', rarity: 'common', points: 120,
-      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '鼻先が丸く、胸びれが長いソコダラの仲間。底曳き網や刺し網に混じり、白身の魚として食用になる。',
       emoji: '🐟',
       appearance: { bodyColor: '#969397', accentColor: '#cfcbcc', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'long', size: 'large' },
@@ -91,7 +91,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'akagarei', name: 'アカガレイ', rarity: 'common', points: 130,
-      regions: ['hokkaido', 'tohoku', 'chubu', 'kinki', 'chugoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['hokkaido', 'tohoku', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '目のない側の体が赤みを帯びるカレイ。日本海などの深い砂泥底で底曳き網に入り、煮つけや干物にされる。',
       emoji: '🐟',
       appearance: { bodyColor: '#8b7b68', accentColor: '#c9bcaa', bodyShape: 'flat', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -107,7 +107,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'babagarei', name: 'ババガレイ', rarity: 'common', points: 110,
-      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '厚い体を多くのぬめりが覆うカレイ。三陸ではナメタガレイと呼ばれ、冬の煮つけとして親しまれている。',
       emoji: '🐟',
       appearance: { bodyColor: '#8b7b68', accentColor: '#c9bcaa', bodyShape: 'flat', pattern: 'gradient', finStyle: 'normal', size: 'large' },
@@ -149,7 +149,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'yumekasago', name: 'ユメカサゴ', rarity: 'common', points: 120,
-      regions: ['tohoku', 'kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '赤い体の背側に暗いまだら模様がある小型のカサゴ。深場の底曳き網や釣りで揚がり、唐揚げや煮つけにする。',
       emoji: '🐟',
       appearance: { bodyColor: '#d47c79', accentColor: '#efd1bf', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'small' },
@@ -157,7 +157,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'oomehata', name: 'オオメハタ', rarity: 'common', points: 130,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '大きな目と銀色の体をもち、下あごの先には一対のとげがある。深場の釣りや底曳き網でとれ、干物や煮つけにする。',
       emoji: '🐟',
       appearance: { bodyColor: '#bacad0', accentColor: '#edf1ed', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'small' },
@@ -173,7 +173,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'nagaoomehata', name: 'ナガオオメハタ', rarity: 'common', points: 110,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: 'オオメハタの仲間では体が細長く、小ぶりな魚。深場の釣りや底曳き網で揚がり、白身を干物などに利用する。',
       emoji: '🐟',
       appearance: { bodyColor: '#bacad0', accentColor: '#edf1ed', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'small' },
@@ -181,7 +181,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'ginmedai', name: 'ギンメダイ', rarity: 'common', points: 120,
-      regions: ['tohoku', 'kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '銀色の体と大きな目が目立つ、深い海底近くの魚。底曳き網や釣りでとれ、水分の多い身は揚げ物などにする。',
       emoji: '🐟',
       appearance: { bodyColor: '#bacad0', accentColor: '#edf1ed', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -189,7 +189,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'hime', name: 'ヒメ', rarity: 'common', points: 130,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '赤や黄色を帯びる細長い魚で、背中に小さな脂びれがある。深場の底曳き網で揚がり、干物やすり身に利用される。',
       emoji: '🐟',
       appearance: { bodyColor: '#d47c79', accentColor: '#efd1bf', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'normal', size: 'small' },
@@ -205,7 +205,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'sokohoubou', name: 'ソコホウボウ', rarity: 'common', points: 110,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '大きな頭と胸びれをもつホウボウの仲間。深い砂泥底から底曳き網で揚がり、白身はフライや煮つけに向く。',
       emoji: '🐟',
       appearance: { bodyColor: '#d47c79', accentColor: '#efd1bf', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'medium' },
@@ -239,7 +239,7 @@ export const PACK: FishPack = {
     // uncommon: 28種
     {
       id: 'sokokurodara', name: 'ソコクロダラ', rarity: 'uncommon', points: 270,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '黒っぽい体をした大型のチゴダラの仲間。深い大陸斜面にすみ、水揚げは少ないが白身を鍋やフライに利用する。',
       emoji: '🐟',
       appearance: { bodyColor: '#303a46', accentColor: '#606974', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'large' },
@@ -263,7 +263,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'nanyoukinme', name: 'ナンヨウキンメ', rarity: 'uncommon', points: 240,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: 'キンメダイよりも体高があり、赤い体をした近縁種。伊豆諸島や高知沖などの深場で、延縄や釣りの対象になる。',
       emoji: '🐟',
       appearance: { bodyColor: '#dc5554', accentColor: '#f2b8a6', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'large' },
@@ -272,7 +272,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'fuusenkinme', name: 'フウセンキンメ', rarity: 'uncommon', points: 270,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '大きな目と赤い体をもち、キンメダイと見分けにくい魚。伊豆周辺などの深場の漁に混じり、煮つけなどにされる。',
       emoji: '🐟',
       appearance: { bodyColor: '#d47c79', accentColor: '#efd1bf', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -280,7 +280,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'hashikinme', name: 'ハシキンメ', rarity: 'uncommon', points: 300,
-      regions: ['tohoku', 'kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '頭部がごつごつして、背びれの中央のとげが長く伸びる。深場で漁獲され、伊豆では食用にもされる赤い魚。',
       emoji: '🐟',
       appearance: { bodyColor: '#dc5554', accentColor: '#f2b8a6', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -288,7 +288,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'hiuchidai', name: 'ヒウチダイ', rarity: 'uncommon', points: 330,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '平たく体高のある体をもち、側線に大きなうろこが並ぶ。深場の底曳き網で揚がり、産地では食用として親しまれる。',
       emoji: '🐟',
       appearance: { bodyColor: '#d47c79', accentColor: '#efd1bf', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -370,7 +370,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'irakoanago', name: 'イラコアナゴ', rarity: 'uncommon', points: 270,
-      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '深海にすむ細長い魚で、マアナゴとは別の仲間。北海道や三陸の底曳き網でとれ、蒲焼きなどの加工品にも使われる。',
       emoji: '🐟',
       appearance: { bodyColor: '#8b7b68', accentColor: '#c9bcaa', bodyShape: 'eel', pattern: 'gradient', finStyle: 'long', size: 'large' },
@@ -402,7 +402,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'fuuryuuuo', name: 'フウリュウウオ', rarity: 'uncommon', points: 270,
-      regions: ['chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '平たい小さな体と脚のように見えるひれをもつ。南日本の深海底にすむアカグツの仲間で、普通は食用にされない。',
       emoji: '🐟',
       appearance: { bodyColor: '#d47c79', accentColor: '#efd1bf', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'small' },
@@ -410,7 +410,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'honfusaankou', name: 'ホンフサアンコウ', rarity: 'uncommon', points: 300,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '丸みのある体を細かなとげが覆う、海底暮らしのアンコウ。頭の前にある小さな疑似餌で獲物を誘う。',
       emoji: '🐟',
       appearance: { bodyColor: '#dc8853', accentColor: '#f1d3aa', bodyShape: 'round', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -418,7 +418,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'midorifusaankou', name: 'ミドリフサアンコウ', rarity: 'uncommon', points: 330,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '名前に反して体は赤く、小さな釣りざお状の突起をもつ。胸びれで海底をはうように動き、底曳き網でとれる。',
       emoji: '🐟',
       appearance: { bodyColor: '#d47c79', accentColor: '#efd1bf', bodyShape: 'round', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -426,7 +426,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'benimatoudai', name: 'ベニマトウダイ', rarity: 'uncommon', points: 240,
-      regions: ['chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
+      regions: ['chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
       description: '赤い体に大きな目をもち、口を前へ突き出せる深海魚。土佐湾などの深い海底近くにすみ、底曳き網で採集される。',
       emoji: '🐟',
       appearance: { bodyColor: '#d47c79', accentColor: '#efd1bf', bodyShape: 'flat', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
@@ -450,7 +450,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'onisokohoubou', name: 'オニソコホウボウ', rarity: 'uncommon', points: 330,
-      regions: ['chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '鼻先と背びれのとげが発達したホウボウの仲間。深い砂地で底曳き網に入り、産地では白身を食用にする。',
       emoji: '🐟',
       appearance: { bodyColor: '#d47c79', accentColor: '#efd1bf', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'medium' },
@@ -467,7 +467,7 @@ export const PACK: FishPack = {
     // rare: 20種
     {
       id: 'hadakaiwashi', name: 'ハダカイワシ', rarity: 'rare', points: 600,
-      regions: ['kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 3,
       description: 'うろこがはがれやすく、腹側に発光器が並ぶ小魚。昼は深い海にすみ、夜には浮上してプランクトンを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#667681', accentColor: '#b5bec2', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -500,7 +500,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'susukihadaka', name: 'ススキハダカ', rarity: 'rare', points: 600,
-      regions: ['kanto', 'kinki'], minEquipmentLevel: 3,
+      regions: ['kanto', 'chubu', 'kinki'], minEquipmentLevel: 3,
       description: '尾の付け根の上下にある発光器の並びで雌雄を区別できる。熊野灘などで採集される、中深層性の小魚。',
       emoji: '🐟',
       appearance: { bodyColor: '#bacad0', accentColor: '#edf1ed', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
@@ -540,7 +540,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'houraieso', name: 'ホウライエソ', rarity: 'rare', points: 640,
-      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: '口からはみ出す大きな牙と、長く伸びる背びれの先端が目立つ。深い海を泳ぎ、魚などを捕らえて食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#667681', accentColor: '#b5bec2', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'medium' },
@@ -596,7 +596,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'yabaneunagi', name: 'ヤバネウナギ', rarity: 'rare', points: 600,
-      regions: ['kanto', 'kyushu'], minEquipmentLevel: 3,
+      regions: ['kanto', 'chubu', 'kyushu'], minEquipmentLevel: 3,
       description: '短い体の後半で背びれと尻びれが広がり、矢羽のように見える。小笠原や九州南東の深海から採集されている。',
       emoji: '🐟',
       appearance: { bodyColor: '#303a46', accentColor: '#606974', bodyShape: 'eel', pattern: 'gradient', finStyle: 'long', size: 'small' },
@@ -604,7 +604,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'nutaunagi', name: 'ヌタウナギ', rarity: 'rare', points: 640,
-      regions: ['chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
+      regions: ['chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
       description: 'あごをもたず、刺激を受けると多量の粘液を出す魚。海底で動物を食べ、地域によっては筒などを使って漁獲される。',
       emoji: '🐟',
       appearance: { bodyColor: '#8b7b68', accentColor: '#c9bcaa', bodyShape: 'eel', pattern: 'gradient', finStyle: 'long', size: 'medium' },
@@ -661,7 +661,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'fukurounagi', name: 'フクロウナギ', rarity: 'legendary', points: 1500,
-      regions: ['tohoku', 'kanto', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
+      regions: ['tohoku', 'kanto', 'chubu', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
       description: '袋のように広がる大きな口と、細く長い尾をもつ。海の中深層にすむウナギの仲間で、小さな甲殻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#303a46', accentColor: '#606974', bodyShape: 'eel', pattern: 'gradient', finStyle: 'long', size: 'large' },
@@ -709,7 +709,7 @@ export const PACK: FishPack = {
     },
     {
       id: 'horaanago', name: 'ホラアナゴ', rarity: 'legendary', points: 1700,
-      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
+      regions: ['hokkaido', 'tohoku', 'kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 4,
       description: '深海にすむ大きな口のウナギの仲間。魚やイカなどを丸のみにし、深場の釣りでかかることがある。',
       emoji: '🐟',
       appearance: { bodyColor: '#303a46', accentColor: '#606974', bodyShape: 'eel', pattern: 'gradient', finStyle: 'long', size: 'large' },
