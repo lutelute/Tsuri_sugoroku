@@ -293,7 +293,7 @@ const BASE_FORMS: Record<string, E> = {
   hotate: { form: 'hotate' },
   zuwaigani: { form: 'kani_long' },
   benizuwai: { form: 'kani_long' },
-  oogani: { form: 'kani_long' },
+  oogani: { form: 'kani_taka' },
 
   // ---- サメ・エイ・ウニの特徴的な型
   hammerhead: { form: 'shumoku' },

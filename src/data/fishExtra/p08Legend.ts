@@ -375,7 +375,7 @@ export const PACK: FishPack = {
     {
       id: 'namitarou', name: 'ナミタロウ', rarity: 'mythical', points: 4500,
       regions: ['chubu'], minEquipmentLevel: 5,
-      description: '新潟県糸魚川市の高浪の池で語られる巨大魚。四メートルほどの魚がすむといわれ、浪太郎の愛称で親しまれるが、正体は不明。',
+      description: '新潟県糸魚川市の高浪の池で語られる巨大魚。二〜四メートルの魚を見たという話が残り、地元では「みどり」の愛称でも呼ばれるが、正体は不明。',
       emoji: '🐟',
       appearance: { bodyColor: '#958464', accentColor: '#d1c09a', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'huge' },
       weight: { min: 50, max: 200 }, season: '通年', habitat: '湖沼', difficulty: 5,

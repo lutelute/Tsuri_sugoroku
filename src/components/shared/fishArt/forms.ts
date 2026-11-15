@@ -924,11 +924,61 @@ const kani: FormSpec = {
   extras: [...crabLegs(false), ...crabClaws, ...crabShell],
   scale: 0,
 };
-const kani_long = v(kani, {
-  top: 'M 71,78 L 76,64 Q 85,49 103,50 L 112,46 L 128,46 L 137,50 Q 155,49 164,64 L 169,78',
-  bottom: 'M 169,78 Q 172,99 152,109 Q 120,119 88,109 Q 68,99 71,78',
-  extras: [...crabLegs(true), ...crabClaws, ...crabShell],
+/** 折れ線を、太さ w0 から w1 へ細る帯にする（長い脚・腕）。 */
+const limb = (pts: Pt[], w0: number, w1: number): string => {
+  const n = pts.length, l: Pt[] = [], r: Pt[] = [];
+  pts.forEach((p, i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+    const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1;
+    const w = (w0 + (w1 - w0) * i / (n - 1)) / 2;
+    l.push([p[0] - dy / len * w, p[1] + dx / len * w]);
+    r.push([p[0] + dy / len * w, p[1] - dx / len * w]);
+  });
+  const f = (q: Pt) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`;
+  return `M ${l.map(f).join(' L ')} L ${r.reverse().map(f).join(' L ')} Z`;
+};
+const mirror = (side: number) => (p: Pt): Pt => side < 0 ? p : [240 - p[0], p[1]];
+/** 長い歩脚: 付け根 → ひざ（上へ張り出す）→ 節 → 先（下へ）。左右4本ずつ。 */
+const longLegs = (base: Pt[], knee: Pt[], tip: Pt[], w: number): Extra[] => [-1, 1].flatMap(side => base.map((b, i): Extra => {
+  const k = knee[i], t = tip[i];
+  const mid: Pt = [k[0] + (t[0] - k[0]) * 0.45 - 3, k[1] + (t[1] - k[1]) * 0.45];
+  return { d: limb([b, k, mid, t].map(mirror(side)), w, 1.4), paint: 'body', w: 0.75, layer: 'under' };
+}));
+/** 細長いはさみ脚: 付け根 → ひじ → 掌、その先に2本の指。 */
+const longClaws = (base: Pt, elbow: Pt, hand: Pt, w: number): Extra[] => [-1, 1].flatMap(side => {
+  const m = mirror(side), [hx, hy] = hand;
+  const f1: Pt = [hx - 5, hy - 13], f2: Pt = [hx + 5, hy - 12];
+  return [
+    { d: limb([base, elbow, hand].map(m), w, w * 1.15), paint: 'body', w: 0.75, layer: 'under' },
+    { d: limb([hand, f1].map(m), w * 0.75, 1), paint: 'body', w: 0.7, layer: 'under' },
+    { d: limb([hand, f2].map(m), w * 0.6, 1), paint: 'body', w: 0.7, layer: 'under' },
+  ];
 });
+/** ズワイガニ: 丸みのある三角の甲羅、細く長い脚、小さめのはさみ。 */
+const kani_long: FormSpec = {
+  top: 'M 82,80 Q 84,58 104,50 L 112,47 L 128,47 L 136,50 Q 156,58 158,80',
+  bottom: 'M 158,80 Q 160,102 140,110 Q 120,116 100,110 Q 80,102 82,80',
+  eye: [112, 42, 3.4], eye2: [128, 42, 3.4], mouth: 'M 113,58 Q 120,61 127,58',
+  extras: [
+    ...longLegs([[84, 70], [83, 82], [85, 93], [91, 103]], [[46, 38], [28, 62], [28, 96], [44, 122]], [[20, 70], [10, 104], [16, 136], [36, 147]], 7),
+    ...longClaws([100, 56], [86, 40], [80, 24], 7),
+    { d: 'M 109,51 L 110,41 L 115,41 L 116,51 Z M 124,51 L 125,41 L 130,41 L 131,51 Z', paint: 'body', w: 0.6, layer: 'under' },
+    { d: 'M 92,78 Q 96,62 110,60 M 130,60 Q 144,62 148,78 M 92,95 Q 120,113 148,95 M 106,73 L 120,68 L 134,73 M 112,74 L 114,88 L 126,88 L 128,74', paint: 'none', w: 0.6 },
+  ],
+  scale: 0,
+};
+/** タカアシガニ: 洋梨形の小さな甲羅と、画面いっぱいに広がる脚・細長いはさみ。 */
+const kani_taka: FormSpec = {
+  top: 'M 97,82 Q 96,64 107,55 L 113,40 L 117,52 L 123,52 L 127,40 L 133,55 Q 144,64 143,82',
+  bottom: 'M 143,82 Q 145,99 132,105 Q 120,109 108,105 Q 95,99 97,82',
+  eye: [111, 56, 2.8], eye2: [129, 56, 2.8], mouth: 'M 115,66 Q 120,68 125,66',
+  extras: [
+    ...longLegs([[99, 72], [98, 82], [100, 91], [105, 99]], [[42, 20], [18, 50], [14, 92], [34, 124]], [[8, 58], [3, 104], [7, 140], [28, 148]], 5.5),
+    ...longClaws([108, 62], [80, 34], [68, 14], 4.5),
+    { d: 'M 104,74 Q 108,63 118,62 M 122,62 Q 132,63 136,74 M 104,92 Q 120,104 136,92 M 112,77 L 120,72 L 128,77', paint: 'none', w: 0.55 },
+  ],
+  scale: 0,
+};
 
 // ---------------------------------------------------------------- 貝
 /** 左の蝶番から扇状に広がる殻。放射肋は外縁に向かって太く開く。 */
@@ -1122,7 +1172,7 @@ export const FORMS = {
   hirame, karei, shitabirame, kochi, managatsuo, matoudai, fugu, matsukasa, kawahagi, manbou,
   haze, mutsugoro, kajika, tobiuo, houbou, ankou, coelacanth,
   ebi, tenaga, iseebi, kame, awabi, sanshouo,
-  unagi, utsubo, dojou, ika, kouika, kani, kani_long, hotate, hamaguri, makigai,
+  unagi, utsubo, dojou, ika, kouika, kani, kani_long, kani_taka, hotate, hamaguri, makigai,
   namazu, gonzui, same, shumoku, jinbe, ei, manta, uni, uni_short, tako,
 } satisfies Record<string, FormSpec>;
 export type FormId = keyof typeof FORMS;
