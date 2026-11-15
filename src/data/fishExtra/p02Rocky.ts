@@ -127,6 +127,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#919472', accentColor: '#d9d7b5', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'medium' },
       weight: { min: 0.01, max: 0.15 }, season: '春〜秋', habitat: '磯', difficulty: 1,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/アナハゼ',
     },
     {
       id: 'akaobishimahaze', name: 'アカオビシマハゼ', rarity: 'common', points: 110,
@@ -248,6 +249,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#e8d776', accentColor: '#fff0b7', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
       weight: { min: 0.003, max: 0.02 }, season: '春〜秋', habitat: '堤防', difficulty: 3,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ナベカ',
     },
     {
       id: 'tosakaginpo', name: 'トサカギンポ', rarity: 'common', points: 130,
@@ -304,6 +306,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
       weight: { min: 0.003, max: 0.025 }, season: '春〜秋', habitat: '堤防', difficulty: 1,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ニジギンポ',
     },
     {
       id: 'hebiginpo', name: 'ヘビギンポ', rarity: 'common', points: 140,
@@ -312,6 +315,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
       weight: { min: 0.001, max: 0.01 }, season: '春〜秋', habitat: '磯', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ヘビギンポ',
     },
     {
       id: 'ginpo', name: 'ギンポ', rarity: 'common', points: 150,
@@ -320,6 +324,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#84715a', accentColor: '#c7b995', bodyShape: 'eel', pattern: 'spots', finStyle: 'small', size: 'medium' },
       weight: { min: 0.01, max: 0.15 }, season: '春〜秋', habitat: '堤防', difficulty: 3,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ギンポ',
     },
     {
       id: 'dainanginpo', name: 'ダイナンギンポ', rarity: 'common', points: 100,
@@ -582,7 +587,7 @@ export const PACK: FishPack = {
     {
       id: 'setokajika', name: 'セトカジカ', rarity: 'uncommon', points: 270,
       regions: ['chubu'], minEquipmentLevel: 2,
-      description: '小石の多い海底にすむ、小さなカジカの仲間。岩に卵を産み付け、雌が卵を守る様子が観察されている。',
+      description: '小石の多い海底にすむ、小さなカジカの仲間。石のすき間に隠れ、小さな甲殻類などを食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#dcb297', accentColor: '#f5e5d1', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'small' },
       weight: { min: 0.001, max: 0.008 }, season: '冬〜春', habitat: '磯', difficulty: 3,
@@ -813,7 +818,7 @@ export const PACK: FishPack = {
     {
       id: 'kuroheriitohikibera', name: 'クロヘリイトヒキベラ', rarity: 'rare', points: 750,
       regions: ['kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 2,
-      description: '雄の鮮やかな赤い体色と、暗い縁取りのあるひれが目立つベラ。岩礁やサンゴ礁の上を泳ぎ、小さな動物を食べる。',
+      description: '雄の鮮やかな体色と、暗い縁取りのあるひれが目立つベラ。岩礁やサンゴ礁の上を泳ぎ、小さな動物を食べる。',
       emoji: '🐟',
       appearance: { bodyColor: '#c36d8a', accentColor: '#edc2ca', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
       weight: { min: 0.005, max: 0.04 }, season: '夏〜秋', habitat: '磯', difficulty: 3,

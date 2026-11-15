@@ -369,6 +369,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#b59a65', accentColor: '#be985b', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'medium' },
       weight: { min: 0.02, max: 0.2 }, season: '通年', habitat: '磯', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ホシゴンベ',
     },
     {
       id: 'togechouchouuo', name: 'トゲチョウチョウウオ', rarity: 'common', points: 90,
@@ -662,6 +663,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#e9c5a1', accentColor: '#dfbc8e', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'small' },
       weight: { min: 0.005, max: 0.04 }, season: '通年', habitat: '磯', difficulty: 1,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/クダゴンベ',
     },
     {
       id: 'gomachouchouuo', name: 'ゴマチョウチョウウオ', rarity: 'uncommon', points: 240,
@@ -938,6 +940,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#77a8af', accentColor: '#789f9f', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'small', size: 'large' },
       weight: { min: 0.2, max: 3 }, season: '通年', habitat: '外洋', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/オキザヨリ',
     },
     // legendary: 10種
     {

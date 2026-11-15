@@ -150,6 +150,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#b6c7be', accentColor: '#eef0e4', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'large' },
       weight: { min: 0.3, max: 2 }, season: '春〜初夏', habitat: '河川', difficulty: 4,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/サツキマス',
     },
     {
       id: 'reikutorauto', name: 'レイクトラウト', rarity: 'rare', points: 760,
@@ -219,6 +220,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#becfcd', accentColor: '#edf0e6', bodyShape: 'standard', pattern: 'gradient', finStyle: 'long', size: 'large' },
       weight: { min: 0.1, max: 6 }, season: '夏〜秋', habitat: '河口', difficulty: 3,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/イセゴイ',
     },
     {
       id: 'kasurihata', name: 'カスリハタ', rarity: 'rare', points: 800,

@@ -35,6 +35,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#a28e60', accentColor: '#e8dec0', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
       weight: { min: 0.05, max: 0.8 }, season: '春〜秋', habitat: '河川', difficulty: 1,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/オオキンブナ',
     },
     {
       id: 'kamatsuka', name: 'カマツカ', rarity: 'common', points: 130,
@@ -43,6 +44,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#b7ac82', accentColor: '#eee6ca', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'medium' },
       weight: { min: 0.01, max: 0.12 }, season: '春〜秋', habitat: '清流', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/カマツカ_(魚)',
     },
     {
       id: 'tsuchifuki', name: 'ツチフキ', rarity: 'common', points: 140,
@@ -132,6 +134,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#afbeb7', accentColor: '#edf1e7', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'large' },
       weight: { min: 0.2, max: 2.0 }, season: '春', habitat: '河川', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/マルタ_(魚)',
     },
     {
       id: 'wataka', name: 'ワタカ', rarity: 'common', points: 140,
@@ -266,6 +269,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#b7ac82', accentColor: '#eee6ca', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'small' },
       weight: { min: 0.003, max: 0.035 }, season: '春〜秋', habitat: '河川', difficulty: 1,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ウキゴリ',
     },
     {
       id: 'shimaukigori', name: 'シマウキゴリ', rarity: 'common', points: 140,

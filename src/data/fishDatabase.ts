@@ -294,7 +294,7 @@ const BASE_FISH: Fish[] = [
     emoji: '🌟',
     appearance: { bodyColor: '#90a0b8', accentColor: '#d0dce8', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'medium' },
     weight: { min: 0.5, max: 4.0 }, season: '夏~秋', habitat: '沖合', difficulty: 4,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/シマアジ_(魚)',
+    wikiUrl: 'https://ja.wikipedia.org/wiki/シマアジ',
   },
   {
     id: 'tachiuo', name: 'タチウオ', rarity: 'rare', points: 500,
@@ -350,7 +350,7 @@ const BASE_FISH: Fish[] = [
     emoji: '🦅',
     appearance: { bodyColor: '#5a4a3a', accentColor: '#a08050', bodyShape: 'standard', pattern: 'spots', finStyle: 'large', size: 'huge' },
     weight: { min: 2.0, max: 15.0 }, season: '春~秋', habitat: '渓流', difficulty: 5,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/イトウ_(魚)',
+    wikiUrl: 'https://ja.wikipedia.org/wiki/イトウ',
   },
 
   // ===== Mythical (2種, 3000-5000pt) =====
@@ -559,7 +559,7 @@ const BASE_FISH: Fish[] = [
     emoji: '💛',
     appearance: { bodyColor: '#3a5aa0', accentColor: '#e8c840', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'small' },
     weight: { min: 0.1, max: 0.4 }, season: '夏', habitat: '磯', difficulty: 1,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/タカベ_(魚)',
+    wikiUrl: 'https://ja.wikipedia.org/wiki/タカベ',
   },
   {
     id: 'nibe', name: 'ニベ', rarity: 'common', points: 100,
@@ -810,7 +810,7 @@ const BASE_FISH: Fish[] = [
     emoji: '🔴',
     appearance: { bodyColor: '#c04030', accentColor: '#e07060', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'medium' },
     weight: { min: 0.3, max: 2.0 }, season: '夏', habitat: '磯', difficulty: 2,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/アカハタ_(魚)',
+    wikiUrl: 'https://ja.wikipedia.org/wiki/アカハタ_(魚類)',
   },
   {
     id: 'oyanirami', name: 'オヤニラミ', rarity: 'common', points: 100,
@@ -935,7 +935,7 @@ const BASE_FISH: Fish[] = [
     emoji: '🎵',
     appearance: { bodyColor: '#4a3a2a', accentColor: '#7a6a5a', bodyShape: 'standard', pattern: 'none', finStyle: 'spiky', size: 'small' },
     weight: { min: 0.03, max: 0.2 }, season: '夏', habitat: '河川', difficulty: 1,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/ギギ_(魚)',
+    wikiUrl: 'https://ja.wikipedia.org/wiki/ギギ',
   },
   {
     id: 'donko', name: 'ドンコ', rarity: 'common', points: 80,
@@ -980,7 +980,6 @@ const BASE_FISH: Fish[] = [
     emoji: '🦑',
     appearance: { bodyColor: '#c0b0a0', accentColor: '#8a7a6a', bodyShape: 'squid', pattern: 'gradient', finStyle: 'small', size: 'small' },
     weight: { min: 0.01, max: 0.05 }, season: '冬', habitat: '堤防', difficulty: 1,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/ヒイカ',
   },
   {
     id: 'mongouika', name: 'モンゴウイカ', rarity: 'common', points: 120,
@@ -1180,7 +1179,6 @@ const BASE_FISH: Fish[] = [
     emoji: '🔶',
     appearance: { bodyColor: '#c06040', accentColor: '#e09070', bodyShape: 'standard', pattern: 'gradient', finStyle: 'large', size: 'small' },
     weight: { min: 0.2, max: 1.0 }, season: '冬', habitat: '沖合', difficulty: 2,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/ウスメバル',
   },
   {
     id: 'akamatsu', name: 'アカムツ', rarity: 'uncommon', points: 380,
@@ -1279,7 +1277,7 @@ const BASE_FISH: Fish[] = [
     emoji: '🔴',
     appearance: { bodyColor: '#c04030', accentColor: '#e07060', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'medium' },
     weight: { min: 0.5, max: 3.0 }, season: '夏', habitat: '磯', difficulty: 2,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/アカハタ_(魚)',
+    wikiUrl: 'https://ja.wikipedia.org/wiki/アカハタ_(魚類)',
   },
   {
     id: 'oomonhata', name: 'オオモンハタ', rarity: 'uncommon', points: 320,
@@ -1305,7 +1303,7 @@ const BASE_FISH: Fish[] = [
     emoji: '🧔',
     appearance: { bodyColor: '#c08060', accentColor: '#e0a880', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'small' },
     weight: { min: 0.1, max: 0.5 }, season: '夏', habitat: '磯', difficulty: 2,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/オジサン_(魚)',
+    wikiUrl: 'https://ja.wikipedia.org/wiki/オジサン',
   },
   {
     id: 'niji_hata', name: 'キジハタ', rarity: 'uncommon', points: 350,
@@ -1341,7 +1339,6 @@ const BASE_FISH: Fish[] = [
     emoji: '🎯',
     appearance: { bodyColor: '#c0a098', accentColor: '#e0c8c0', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
     weight: { min: 0.3, max: 2.0 }, season: '夏', habitat: '沖合', difficulty: 2,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/メイチダイ',
   },
   {
     id: 'shimofuri', name: 'シモフリフグ', rarity: 'uncommon', points: 280,
@@ -1350,7 +1347,6 @@ const BASE_FISH: Fish[] = [
     emoji: '🐡',
     appearance: { bodyColor: '#2a3a4a', accentColor: '#e0e8f0', bodyShape: 'round', pattern: 'spots', finStyle: 'small', size: 'medium' },
     weight: { min: 0.3, max: 2.0 }, season: '冬', habitat: '沖合', difficulty: 2,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/シモフリフグ',
   },
   {
     id: 'managatsuo3', name: 'マトウダイ', rarity: 'uncommon', points: 300,
@@ -1601,7 +1597,6 @@ const BASE_FISH: Fish[] = [
     emoji: '🌺',
     appearance: { bodyColor: '#d08080', accentColor: '#f0a8a8', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
     weight: { min: 0.2, max: 1.5 }, season: '秋', habitat: '沖合', difficulty: 2,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/チダイ',
   },
   {
     id: 'shitabirame', name: 'シタビラメ', rarity: 'uncommon', points: 280,
@@ -1699,7 +1694,6 @@ const BASE_FISH: Fish[] = [
     emoji: '🍲',
     appearance: { bodyColor: '#5a4a3a', accentColor: '#8a7a6a', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'large' },
     weight: { min: 1.0, max: 8.0 }, season: '冬', habitat: '磯', difficulty: 3,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/マハタモドキ',
   },
   {
     id: 'hotaruika2', name: 'ミミイカ', rarity: 'uncommon', points: 200,
@@ -1708,7 +1702,6 @@ const BASE_FISH: Fish[] = [
     emoji: '👂',
     appearance: { bodyColor: '#a09080', accentColor: '#c8b8a8', bodyShape: 'squid', pattern: 'none', finStyle: 'small', size: 'small' },
     weight: { min: 0.01, max: 0.04 }, season: '春', habitat: '砂浜', difficulty: 1,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/ミミイカ',
   },
   {
     id: 'tobiei', name: 'トビエイ', rarity: 'uncommon', points: 250,
@@ -1836,6 +1829,7 @@ const BASE_FISH: Fish[] = [
     emoji: '👹',
     appearance: { bodyColor: '#a02020', accentColor: '#d04040', bodyShape: 'standard', pattern: 'gradient', finStyle: 'spiky', size: 'medium' },
     weight: { min: 0.5, max: 3.0 }, season: '冬', habitat: '深海', difficulty: 4,
+    wikiUrl: 'https://ja.wikipedia.org/wiki/オニキンメ',
   },
   {
     id: 'tai_chibi', name: 'イシガキダイ', rarity: 'rare', points: 600,
@@ -1995,7 +1989,7 @@ const BASE_FISH: Fish[] = [
     emoji: '🍖',
     appearance: { bodyColor: '#2a4060', accentColor: '#6080a0', bodyShape: 'standard', pattern: 'spots', finStyle: 'spiky', size: 'medium' },
     weight: { min: 1.0, max: 8.0 }, season: '秋', habitat: '沖合', difficulty: 3,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/スマ_(魚)',
+    wikiUrl: 'https://ja.wikipedia.org/wiki/スマ',
   },
   {
     id: 'akasaba', name: 'ゴマハタ', rarity: 'rare', points: 600,
@@ -2038,7 +2032,6 @@ const BASE_FISH: Fish[] = [
     emoji: '👸',
     appearance: { bodyColor: '#d0a0a0', accentColor: '#f0c0c0', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'small' },
     weight: { min: 0.05, max: 0.3 }, season: '秋', habitat: '沖合', difficulty: 2,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/ヒメコダイ',
   },
   {
     id: 'nishin', name: 'ニシン', rarity: 'rare', points: 500,
@@ -2206,7 +2199,6 @@ const BASE_FISH: Fish[] = [
     emoji: '💎',
     appearance: { bodyColor: '#1a3a2a', accentColor: '#4a7a5a', bodyShape: 'flat', pattern: 'gradient', finStyle: 'small', size: 'medium' },
     weight: { min: 0.1, max: 0.5 }, season: '冬', habitat: '磯', difficulty: 4,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/エゾアワビ',
   },
   {
     id: 'oogai', name: 'タイラギ', rarity: 'rare', points: 600,
@@ -2253,7 +2245,7 @@ const BASE_FISH: Fish[] = [
     emoji: '🔴',
     appearance: { bodyColor: '#6a7a7a', accentColor: '#a0b0b0', bodyShape: 'standard', pattern: 'gradient', finStyle: 'large', size: 'huge' },
     weight: { min: 5.0, max: 30.0 }, season: '夏', habitat: '河口', difficulty: 5,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/アカメ_(魚)',
+    wikiUrl: 'https://ja.wikipedia.org/wiki/アカメ',
   },
   {
     id: 'honmaguro_oo', name: '超大型クロマグロ', rarity: 'legendary', points: 2000,
@@ -2388,7 +2380,6 @@ const BASE_FISH: Fish[] = [
     emoji: '🦈',
     appearance: { bodyColor: '#5a5a4a', accentColor: '#8a8a7a', bodyShape: 'flat', pattern: 'spots', finStyle: 'small', size: 'large' },
     weight: { min: 1.0, max: 8.0 }, season: '冬', habitat: '深海', difficulty: 4,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/サメガレイ',
   },
   {
     id: 'mendako_l', name: '超大型メンダコ', rarity: 'legendary', points: 1300,
@@ -2557,6 +2548,7 @@ const BASE_FISH: Fish[] = [
     emoji: '🌑',
     appearance: { bodyColor: '#0a0a10', accentColor: '#2a2a30', bodyShape: 'round', pattern: 'none', finStyle: 'normal', size: 'huge' },
     weight: { min: 100.0, max: 500.0 }, season: '通年', habitat: '沖合', difficulty: 5,
+    wikiUrl: 'https://ja.wikipedia.org/wiki/海坊主',
   },
   {
     id: 'namazu_shin', name: '地震鯰(神)', rarity: 'mythical', points: 4500,
@@ -2644,7 +2636,7 @@ const BASE_FISH: Fish[] = [
     emoji: '🐠',
     appearance: { bodyColor: '#4080c0', accentColor: '#e0a060', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'small' },
     weight: { min: 0.1, max: 0.5 }, season: '夏', habitat: '磯', difficulty: 1,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/タカサゴ_(魚)',
+    wikiUrl: 'https://ja.wikipedia.org/wiki/タカサゴ',
   },
   {
     id: 'mehikari2', name: 'ニギス', rarity: 'uncommon', points: 200,
@@ -2662,7 +2654,6 @@ const BASE_FISH: Fish[] = [
     emoji: '🌹',
     appearance: { bodyColor: '#d07070', accentColor: '#f0a0a0', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
     weight: { min: 0.2, max: 1.5 }, season: '秋', habitat: '沖合', difficulty: 2,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/チダイ',
   },
   {
     id: 'namerou', name: 'マルアジ', rarity: 'uncommon', points: 220,
@@ -2671,7 +2662,6 @@ const BASE_FISH: Fish[] = [
     emoji: '🐟',
     appearance: { bodyColor: '#6080a0', accentColor: '#90b0c0', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'small' },
     weight: { min: 0.05, max: 0.4 }, season: '夏', habitat: '堤防', difficulty: 1,
-    wikiUrl: 'https://ja.wikipedia.org/wiki/マルアジ',
   },
   {
     id: 'renkokin', name: 'レンコダイ', rarity: 'uncommon', points: 280,

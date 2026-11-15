@@ -56,7 +56,7 @@ export const PACK: FishPack = {
     {
       id: 'hoshinohaze', name: 'ホシノハゼ', rarity: 'common', points: 130,
       regions: ['kanto', 'chubu', 'kinki', 'chugoku', 'shikoku', 'kyushu'], minEquipmentLevel: 1,
-      description: '砂底や砂礫底で見られ、体に青く輝く小点があるハゼ。小さな甲殻類などを食べ、砂地の観察で出会える。',
+      description: '砂底や砂礫底で見られ、体に小さな斑点が散るハゼ。小さな甲殻類などを食べ、砂地の観察で出会える。',
       emoji: '🐟',
       appearance: { bodyColor: '#8b9370', accentColor: '#c6cbaa', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'small' },
       weight: { min: 0.002, max: 0.025 }, season: '通年', habitat: '砂浜', difficulty: 2,
@@ -163,6 +163,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#b7c4c0', accentColor: '#e9efea', bodyShape: 'elongated', pattern: 'stripes', finStyle: 'normal', size: 'large' },
       weight: { min: 0.1, max: 3.0 }, season: '通年', habitat: '河口', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/メナダ',
     },
     {
       id: 'kobora', name: 'コボラ', rarity: 'common', points: 100,

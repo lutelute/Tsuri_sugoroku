@@ -247,6 +247,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#91afc0', accentColor: '#e6edf0', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'large' },
       weight: { min: 0.5, max: 5 }, season: '夏〜秋', habitat: '沖合', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ハガツオ',
     },
     {
       id: 'kitanohokke', name: 'キタノホッケ', rarity: 'common', points: 110,
@@ -551,12 +552,13 @@ export const PACK: FishPack = {
       wikiUrl: 'https://ja.wikipedia.org/wiki/カッポレ',
     },
     {
-      id: 'nanyougingameaji', name: 'ナンヨウギンガメアジ', rarity: 'rare', points: 640,
-      regions: ['kanto', 'chubu', 'kyushu'], minEquipmentLevel: 3,
-      description: '大きな目と銀色の平たい体を持つアジの仲間。南の海で大きな群れをつくり、夜に小魚を捕食し、ルアーにも反応する。',
+      id: 'minamigingameaji', name: 'ミナミギンガメアジ', rarity: 'rare', points: 640,
+      regions: ['shikoku', 'kyushu'], minEquipmentLevel: 3,
+      description: 'ギンガメアジによく似た大型のアジの仲間。南の海のサンゴ礁や沿岸にすみ、日本では南日本でまれに記録される。ルアー釣りに掛かることもある。',
       emoji: '🐟',
       appearance: { bodyColor: '#bacbd0', accentColor: '#8b989a', bodyShape: 'flat', pattern: 'gradient', finStyle: 'normal', size: 'large' },
       weight: { min: 0.5, max: 10 }, season: '通年', habitat: '沖合', difficulty: 4,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ミナミギンガメアジ',
     },
     {
       id: 'onihiraaji', name: 'オニヒラアジ', rarity: 'rare', points: 680,
@@ -678,6 +680,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#8a9a9e', accentColor: '#e6e8e5', bodyShape: 'round', pattern: 'gradient', finStyle: 'normal', size: 'huge' },
       weight: { min: 50, max: 1000 }, season: '通年', habitat: '外洋', difficulty: 4,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ウシマンボウ',
     },
     {
       id: 'yarimanbou', name: 'ヤリマンボウ', rarity: 'rare', points: 640,
@@ -695,6 +698,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#8a9a9e', accentColor: '#e6e8e5', bodyShape: 'round', pattern: 'gradient', finStyle: 'normal', size: 'large' },
       weight: { min: 0.3, max: 3 }, season: '通年', habitat: '外洋', difficulty: 4,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/クサビフグ',
     },
     {
       id: 'akamanbou', name: 'アカマンボウ', rarity: 'rare', points: 720,
@@ -712,6 +716,7 @@ export const PACK: FishPack = {
       emoji: '🦈',
       appearance: { bodyColor: '#91afc0', accentColor: '#e6edf0', bodyShape: 'shark', pattern: 'gradient', finStyle: 'normal', size: 'huge' },
       weight: { min: 10, max: 150 }, season: '通年', habitat: '外洋', difficulty: 4,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/アオザメ',
     },
     {
       id: 'nezumizame', name: 'ネズミザメ', rarity: 'rare', points: 600,
@@ -739,6 +744,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#91afc0', accentColor: '#345b82', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'huge' },
       weight: { min: 10, max: 80 }, season: '夏〜秋', habitat: '外洋', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/バショウカジキ',
     },
     {
       id: 'mekajiki', name: 'メカジキ', rarity: 'legendary', points: 1800,
@@ -747,6 +753,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#91927a', accentColor: '#555c51', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'huge' },
       weight: { min: 30, max: 300 }, season: '通年', habitat: '外洋', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/メカジキ',
     },
     {
       id: 'makajiki', name: 'マカジキ', rarity: 'legendary', points: 1900,
@@ -763,6 +770,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#91afc0', accentColor: '#3a536e', bodyShape: 'standard', pattern: 'stripes', finStyle: 'normal', size: 'huge' },
       weight: { min: 30, max: 400 }, season: '夏〜秋', habitat: '外洋', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/クロカジキ',
     },
     {
       id: 'fuuraikajiki', name: 'フウライカジキ', rarity: 'legendary', points: 1600,
@@ -771,6 +779,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#91afc0', accentColor: '#496176', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'huge' },
       weight: { min: 5, max: 35 }, season: '通年', habitat: '外洋', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/フウライカジキ',
     },
     {
       id: 'bakeaozame', name: 'バケアオザメ', rarity: 'legendary', points: 1700,
@@ -779,6 +788,7 @@ export const PACK: FishPack = {
       emoji: '🦈',
       appearance: { bodyColor: '#56636b', accentColor: '#b2b9b8', bodyShape: 'shark', pattern: 'gradient', finStyle: 'long', size: 'huge' },
       weight: { min: 20, max: 180 }, season: '通年', habitat: '外洋', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/バケアオザメ',
     },
     {
       id: 'kurotogarizame', name: 'クロトガリザメ', rarity: 'legendary', points: 1500,
@@ -796,6 +806,7 @@ export const PACK: FishPack = {
       emoji: '🦈',
       appearance: { bodyColor: '#8a9a9e', accentColor: '#e6e8e5', bodyShape: 'shark', pattern: 'gradient', finStyle: 'long', size: 'huge' },
       weight: { min: 20, max: 200 }, season: '通年', habitat: '外洋', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/マオナガ',
     },
     {
       id: 'hachiware', name: 'ハチワレ', rarity: 'legendary', points: 1500,
@@ -820,6 +831,7 @@ export const PACK: FishPack = {
       emoji: '🦈',
       appearance: { bodyColor: '#91927a', accentColor: '#e2dfca', bodyShape: 'shark', pattern: 'gradient', finStyle: 'normal', size: 'huge' },
       weight: { min: 20, max: 150 }, season: '通年', habitat: '外洋', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ヨゴレ_(魚類)',
     },
     {
       id: 'ubazame', name: 'ウバザメ', rarity: 'legendary', points: 1800,
@@ -837,6 +849,7 @@ export const PACK: FishPack = {
       emoji: '🦈',
       appearance: { bodyColor: '#91927a', accentColor: '#e2dfca', bodyShape: 'shark', pattern: 'stripes', finStyle: 'normal', size: 'huge' },
       weight: { min: 30, max: 500 }, season: '通年', habitat: '外洋', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/イタチザメ',
     },
     // mythical: 5種
     {
@@ -947,7 +960,7 @@ export const PACK: FishPack = {
     shimagatsuo: {form: 'managatsuo',col: {back: '#29333b',mid: '#56636b',belly: '#b2b9b8'},stretch: 1.1,fin: '#5c626a'},
     tsubodai: {form: 'matoudai',col: {back: '#4d5141',mid: '#91927a',belly: '#e2dfca'},stretch: 1.1,eye: 1.1,fin: '#858775'},
     kappore: {form: 'hiraaji',col: {back: '#29333b',mid: '#56636b',belly: '#b2b9b8'},fin: '#404e57'},
-    nanyougingameaji: {form: 'hiraaji',col: {back: '#546c78',mid: '#bacbd0',belly: '#f0f1eb'},eye: 1.2,fin: '#8b989a'},
+    minamigingameaji: {form: 'hiraaji',col: {back: '#546c78',mid: '#bacbd0',belly: '#f0f1eb'},eye: 1.2,fin: '#8b989a'},
     onihiraaji: {form: 'hiraaji',col: {back: '#546c78',mid: '#bacbd0',belly: '#f0f1eb'},fin: '#c2bb69'},
     kasumiaji: {form: 'hiraaji',col: {back: '#244b68',mid: '#91afc0',belly: '#e6edf0'},fin: '#277aa2',marks: [{k: 'spots',n: 32,col: '#2679aa',r: [0.8,1.5],y0: 0.15,y1: 0.8},{k: 'spots',n: 16,col: '#303f46',r: [0.8,1.5],y0: 0.15,y1: 0.8}]},
     koshinaga: {form: 'maguro',col: {back: '#244b68',mid: '#91afc0',belly: '#e6edf0'},fin: '#576a7c',stretch: 0.95},

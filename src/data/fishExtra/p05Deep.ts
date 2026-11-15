@@ -40,6 +40,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#667681', accentColor: '#b5bec2', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'long', size: 'large' },
       weight: { min: 0.2, max: 2 }, season: '通年', habitat: '深海', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/トウジン_(魚)',
     },
     {
       id: 'heridara', name: 'ヘリダラ', rarity: 'common', points: 110,
@@ -56,6 +57,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#303a46', accentColor: '#606974', bodyShape: 'elongated', pattern: 'gradient', finStyle: 'long', size: 'large' },
       weight: { min: 0.3, max: 4 }, season: '通年', habitat: '深海', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/イバラヒゲ',
     },
     {
       id: 'munedara', name: 'ムネダラ', rarity: 'common', points: 130,
@@ -244,6 +246,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#303a46', accentColor: '#606974', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'large' },
       weight: { min: 0.4, max: 6 }, season: '通年', habitat: '深海', difficulty: 3,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ソコクロダラ',
     },
     {
       id: 'karafutosokodara', name: 'カラフトソコダラ', rarity: 'uncommon', points: 300,
@@ -285,6 +288,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#dc5554', accentColor: '#f2b8a6', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
       weight: { min: 0.2, max: 1.8 }, season: '通年', habitat: '深海', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ハシキンメ',
     },
     {
       id: 'hiuchidai', name: 'ヒウチダイ', rarity: 'uncommon', points: 330,
@@ -335,6 +339,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#8b7b68', accentColor: '#c9bcaa', bodyShape: 'eel', pattern: 'spots', finStyle: 'long', size: 'huge' },
       weight: { min: 0.5, max: 8 }, season: '通年', habitat: '深海', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/タナカゲンゲ',
     },
     {
       id: 'shirogenge', name: 'シロゲンゲ', rarity: 'uncommon', points: 270,
@@ -367,6 +372,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#667681', accentColor: '#b5bec2', bodyShape: 'eel', pattern: 'gradient', finStyle: 'long', size: 'medium' },
       weight: { min: 0.05, max: 0.7 }, season: '通年', habitat: '深海', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/コンゴウアナゴ',
     },
     {
       id: 'irakoanago', name: 'イラコアナゴ', rarity: 'uncommon', points: 270,
@@ -391,6 +397,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#d9cbc4', accentColor: '#f1e5dc', bodyShape: 'eel', pattern: 'gradient', finStyle: 'long', size: 'huge' },
       weight: { min: 1, max: 15 }, season: '通年', habitat: '深海', difficulty: 3,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ソコボウズ',
     },
     {
       id: 'akagutsu', name: 'アカグツ', rarity: 'uncommon', points: 240,
@@ -407,6 +414,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#d47c79', accentColor: '#efd1bf', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'small' },
       weight: { min: 0.005, max: 0.06 }, season: '通年', habitat: '深海', difficulty: 3,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/フウリュウウオ',
     },
     {
       id: 'honfusaankou', name: 'ホンフサアンコウ', rarity: 'uncommon', points: 300,
@@ -537,6 +545,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#bacad0', accentColor: '#edf1ed', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'small' },
       weight: { min: 0.001, max: 0.008 }, season: '通年', habitat: '深海', difficulty: 3,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/キュウリエソ',
     },
     {
       id: 'houraieso', name: 'ホウライエソ', rarity: 'rare', points: 640,
@@ -545,6 +554,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#667681', accentColor: '#b5bec2', bodyShape: 'elongated', pattern: 'spots', finStyle: 'normal', size: 'medium' },
       weight: { min: 0.02, max: 0.3 }, season: '通年', habitat: '深海', difficulty: 4,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ホウライエソ',
     },
     {
       id: 'togarimuneeso', name: 'トガリムネエソ', rarity: 'rare', points: 680,
@@ -561,6 +571,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#303a46', accentColor: '#606974', bodyShape: 'eel', pattern: 'spots', finStyle: 'long', size: 'medium' },
       weight: { min: 0.005, max: 0.15 }, season: '通年', habitat: '深海', difficulty: 3,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ミツマタヤリウオ',
     },
     {
       id: 'sekitoriiwashi', name: 'セキトリイワシ', rarity: 'rare', points: 600,
@@ -593,6 +604,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#8b7b68', accentColor: '#c9bcaa', bodyShape: 'eel', pattern: 'gradient', finStyle: 'long', size: 'large' },
       weight: { min: 0.01, max: 0.15 }, season: '通年', habitat: '深海', difficulty: 4,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/シギウナギ',
     },
     {
       id: 'yabaneunagi', name: 'ヤバネウナギ', rarity: 'rare', points: 600,
@@ -609,6 +621,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#8b7b68', accentColor: '#c9bcaa', bodyShape: 'eel', pattern: 'gradient', finStyle: 'long', size: 'medium' },
       weight: { min: 0.05, max: 0.5 }, season: '通年', habitat: '深海', difficulty: 3,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ヌタウナギ',
     },
     {
       id: 'murasakinutaunagi', name: 'ムラサキヌタウナギ', rarity: 'rare', points: 680,
@@ -625,6 +638,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#8b7b68', accentColor: '#c9bcaa', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'large' },
       weight: { min: 0.5, max: 5 }, season: '通年', habitat: '深海', difficulty: 2,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ニュウドウカジカ',
     },
     // legendary: 12種
     {
@@ -658,6 +672,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#303a46', accentColor: '#606974', bodyShape: 'round', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
       weight: { min: 0.02, max: 1 }, season: '通年', habitat: '深海', difficulty: 4,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ミツクリエナガチョウチンアンコウ',
     },
     {
       id: 'fukurounagi', name: 'フクロウナギ', rarity: 'legendary', points: 1500,
@@ -666,6 +681,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#303a46', accentColor: '#606974', bodyShape: 'eel', pattern: 'gradient', finStyle: 'long', size: 'large' },
       weight: { min: 0.05, max: 1 }, season: '通年', habitat: '深海', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/フクロウナギ',
     },
     {
       id: 'hanagurofusaankou', name: 'ハナグロフサアンコウ', rarity: 'legendary', points: 1600,
@@ -682,6 +698,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#bacad0', accentColor: '#cc484b', bodyShape: 'oarfish', pattern: 'gradient', finStyle: 'long', size: 'huge' },
       weight: { min: 0.5, max: 6 }, season: '通年', habitat: '深海', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/アカナマダ',
     },
     {
       id: 'furisodeuo', name: 'フリソデウオ', rarity: 'legendary', points: 1400,
@@ -690,6 +707,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#bacad0', accentColor: '#cc484b', bodyShape: 'oarfish', pattern: 'gradient', finStyle: 'long', size: 'large' },
       weight: { min: 0.1, max: 3 }, season: '通年', habitat: '深海', difficulty: 4,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/フリソデウオ',
     },
     {
       id: 'tengunotachi', name: 'テングノタチ', rarity: 'legendary', points: 1500,
@@ -698,6 +716,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#bacad0', accentColor: '#cc484b', bodyShape: 'oarfish', pattern: 'gradient', finStyle: 'long', size: 'huge' },
       weight: { min: 0.5, max: 8 }, season: '通年', habitat: '深海', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/テングノタチ',
     },
     {
       id: 'sankoumenuke', name: 'サンコウメヌケ', rarity: 'legendary', points: 1600,
@@ -740,6 +759,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#d9cbc4', accentColor: '#f1e5dc', bodyShape: 'eel', pattern: 'gradient', finStyle: 'long', size: 'medium' },
       weight: { min: 0.02, max: 0.3 }, season: '通年', habitat: '深海', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ヨミノアシロ',
     },
     {
       id: 'shinkaiyoroidara', name: 'シンカイヨロイダラ', rarity: 'mythical', points: 4000,
@@ -756,6 +776,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#d9cbc4', accentColor: '#f1e5dc', bodyShape: 'standard', pattern: 'gradient', finStyle: 'normal', size: 'medium' },
       weight: { min: 0.02, max: 0.4 }, season: '通年', habitat: '深海', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/シンカイクサウオ',
     },
     {
       id: 'demenigisu', name: 'デメニギス', rarity: 'mythical', points: 4800,
@@ -764,6 +785,7 @@ export const PACK: FishPack = {
       emoji: '🐟',
       appearance: { bodyColor: '#667681', accentColor: '#b5bec2', bodyShape: 'standard', pattern: 'spots', finStyle: 'normal', size: 'small' },
       weight: { min: 0.005, max: 0.05 }, season: '通年', habitat: '深海', difficulty: 5,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/デメニギス',
     },
   ],
   forms: {

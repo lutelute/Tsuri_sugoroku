@@ -179,6 +179,7 @@ export const PACK: FishPack = {
       emoji: '🐚',
       appearance: { bodyColor: '#595b43', accentColor: '#aaa681', bodyShape: 'shell_bivalve', pattern: 'gradient', finStyle: 'small', size: 'small' },
       weight: { min: 0.002, max: 0.012 }, season: '通年', habitat: '河口', difficulty: 3,
+      wikiUrl: 'https://ja.wikipedia.org/wiki/ヤマトシジミ_(貝)',
     },
     {
       id: 'mashijimi', name: 'マシジミ', rarity: 'common', points: 100,
