@@ -23,7 +23,7 @@ const PRICE_SCALE = CITY_ECONOMY.yearScale[PRICE_YEAR - 1];
 export type DiagramId =
   | 'dice-move' | 'fork' | 'fishing-flow' | 'rigs' | 'spot' | 'gear' | 'squares' | 'goal-score'
   | 'destination' | 'build-grow' | 'demand' | 'monopoly' | 'cards' | 'specialty' | 'binbo' | 'seasons' | 'yearend'
-  | 'recovery' | 'mayor' | 'quest' | 'traits' | 'fish-market' | 'rail' | 'advice' | 'path-advice' | 'cpu';
+  | 'recovery' | 'mayor' | 'quest' | 'traits' | 'fish-market' | 'rail' | 'advice' | 'path-advice' | 'cpu' | 'pause-join';
 
 export interface HowToPage {
   id: string;
@@ -76,6 +76,10 @@ export const HOWTO_PAGES: Record<HowToMode, HowToPage[]> = {
     {
       id: 'f-goal', title: 'ゴールと得点', diagram: 'goal-score',
       lines: ['魚の点数・めずらしさ・地方ごとの種類・ゴールの順番で得点が決まる。', `最初の人がゴールしてから${GOAL_CLOSE_ROUNDS}巡で終わり（${MIN_CLOSE_TURN}巡目までは続く）。`],
+    },
+    {
+      id: 'f-pause', title: 'やめる・なかま', diagram: 'pause-join',
+      lines: ['左上の「やめる」で、セーブしてやめるか、ここで順位を決めて終われる。', '「なかま」で途中から仲間を増やせる。登録すると、釣った魚が図鑑に残るよ。'],
     },
   ],
   city: [
@@ -178,6 +182,10 @@ export const HOWTO_PAGES: Record<HowToMode, HowToPage[]> = {
     {
       id: 'c-year', title: '年度末の大決算', diagram: 'yearend',
       lines: ['3月は1年のしめくくり。総資産の番付と称号の発表がある。', '最後の月は最終決算。総資産がいちばん多い人の勝ち！'],
+    },
+    {
+      id: 'c-pause', title: 'やめる・なかま', diagram: 'pause-join',
+      lines: ['左上の「やめる」で、セーブしてやめるか、ここで順位を決めて終われる。', '「なかま」で途中から仲間を増やせる。はじめの町から、はじめのお金で始まるよ。'],
     },
   ],
 };

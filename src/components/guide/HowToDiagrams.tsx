@@ -1155,6 +1155,58 @@ function Mayor() {
   );
 }
 
+/** 丸いボタン（ゲーム画面の左上と同じ形）。中の絵は家（やめる）か人（なかま） */
+function MenuButton({ x, y, kind, label }: { x: number; y: number; kind: 'home' | 'users'; label: string }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <circle r={20} fill="rgba(10,30,52,0.85)" stroke={C.kinD} strokeWidth="1.6" />
+      {kind === 'home' ? (
+        <path d="M -9 -1 L 0 -9 L 9 -1 M -6 -3 V 7 H 6 V -3" fill="none" stroke={C.washi} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      ) : (
+        <g fill="none" stroke={C.washi} strokeWidth="1.9" strokeLinecap="round">
+          <circle cx={-4} cy={-4} r={3.4} /><path d="M -10 7 Q -4 -1 2 7" />
+          <circle cx={5} cy={-3} r={2.8} /><path d="M 2 6 Q 6 0 11 6" />
+        </g>
+      )}
+      <Kana y={33} x={0} size={10} fill={C.kin}>{label}</Kana>
+    </g>
+  );
+}
+
+/** 途中でやめる（セーブしてやめる／ここで順位を決める）と、途中から仲間を増やす */
+function PauseJoin() {
+  return (
+    <>
+      <MenuButton x={34} y={52} kind="home" label="やめる" />
+      <g transform="translate(70 28)" className="gd-fb gd-sq-pop" style={delay(0.4)}>
+        <rect width={76} height={30} rx={7} fill="#fbf6e8" stroke={C.ai} strokeWidth="2" />
+        <Kana x={38} y={13} size={10} fill={C.sumi}>セーブ</Kana>
+        <Kana x={38} y={25} size={8} fill={C.ai}>つづきから</Kana>
+      </g>
+      <g transform="translate(70 66)" className="gd-fb gd-sq-pop" style={delay(0.9)}>
+        <rect width={76} height={30} rx={7} fill="#fbf6e8" stroke={C.shu} strokeWidth="2" />
+        <Kana x={38} y={13} size={10} fill={C.sumi}>おわりにする</Kana>
+        <Kana x={38} y={25} size={8} fill={C.shu}>じゅんいを きめる</Kana>
+      </g>
+      <line x1={164} y1={18} x2={164} y2={142} stroke={C.road} strokeWidth="1.2" strokeDasharray="3 4" />
+      <MenuButton x={194} y={52} kind="users" label="なかま" />
+      {[0, 1].map(i => (
+        <g key={i} transform={`translate(${236 + i * 26} 60)`}><Pin color={PLAYER_COLORS[i]} /></g>
+      ))}
+      <g transform="translate(290 60)">
+        <g className="gd-fb gd-sq-pop" style={delay(1.4)}><Pin color={P3} /></g>
+      </g>
+      <Kana x={290} y={78} size={8} fill={C.kin} className="gd-late-pop">とちゅうから</Kana>
+      <g className="gd-late-pop">
+        <Kana x={244} y={104} size={9}>とうろくすると</Kana>
+        <Kana x={244} y={118} size={9} fill={C.kin}>つった さかなは ずかんに</Kana>
+      </g>
+      <Kana x={82} y={128} size={9} className="gd-late-pop">つぎは タイトルの</Kana>
+      <Kana x={82} y={142} size={9} fill={C.kin} className="gd-late-pop">「つづきから」</Kana>
+    </>
+  );
+}
+
 const DIAGRAMS: Record<DiagramId, { draw: () => ReactNode; cycle: number }> = {
   'dice-move': { draw: DiceMove, cycle: 4.2 },
   fork: { draw: Fork, cycle: 4.6 },
@@ -1182,6 +1234,7 @@ const DIAGRAMS: Record<DiagramId, { draw: () => ReactNode; cycle: number }> = {
   advice: { draw: Advice, cycle: 6 },
   'path-advice': { draw: PathAdvice, cycle: 4.6 },
   cpu: { draw: Cpu, cycle: 6 },
+  'pause-join': { draw: PauseJoin, cycle: 6 },
 };
 
 /** 図解（ページを開いている間だけ動く） */

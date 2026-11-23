@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { useGameStore } from '../../store/useGameStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { PLAYER_DEFAULT_NAMES, PLAYER_COLORS, DEFAULT_MAX_TURNS, MODE_STORAGE_KEY } from '../../game/constants';
-import { lookupUserByUsername, loadUserEquipment, loadUserMoney, loadUserEncyclopedia } from '../../lib/firestore';
-import { verifyAuth } from '../../lib/firebase';
+import { loadUserEquipment, loadUserMoney, loadUserEncyclopedia } from '../../lib/firestore';
+import { verifyAccount } from '../../lib/accountLink';
 import type { PlayerEquipment, GameMode } from '../../game/types';
 import { CITY_DEFAULT_MONTHS, CITY_INITIAL_MONEY } from '../../game/city';
 import { CPU_STYLES, CPU_STYLE_LABEL } from '../../game/cpuAI';
@@ -211,46 +210,24 @@ export default function SetupScreen() {
     newErrors[index] = null;
     setSearchErrors(newErrors);
 
-    try {
-      // まずユーザー名で検索
-      const result = await lookupUserByUsername(username);
-      if (!result) {
-        newErrors[index] = 'ユーザーが見つかりません';
+    // パスワードを確かめてから（lib/accountLink.ts。この端末のログインは変えない）、他のスロットで紐付け済みでないか見る
+    const result = await verifyAccount(username, password);
+    if (!result.ok) {
+      newErrors[index] = result.message;
+      setSearchErrors([...newErrors]);
+    } else {
+      const alreadyLinkedIndex = linkedUsers.findIndex((u, i) => i !== index && u?.uid === result.account.uid);
+      if (alreadyLinkedIndex !== -1) {
+        newErrors[index] = `既にプレイヤー${alreadyLinkedIndex + 1}に紐付け済みです`;
         setSearchErrors([...newErrors]);
       } else {
-        // 既に他のスロットで紐付け済みか確認
-        const alreadyLinkedIndex = linkedUsers.findIndex((u, i) => i !== index && u?.uid === result.uid);
-        if (alreadyLinkedIndex !== -1) {
-          newErrors[index] = `既にプレイヤー${alreadyLinkedIndex + 1}に紐付け済みです`;
-          setSearchErrors([...newErrors]);
-        } else {
-          // パスワード認証（副インスタンスで検証、メインセッションに影響なし）
-          try {
-            const email = `${username.toLowerCase()}@tsuri.local`;
-            const cred = await signInWithEmailAndPassword(verifyAuth, email, password);
-            // 認証成功 → 副インスタンスからログアウト
-            await firebaseSignOut(verifyAuth).catch(() => {});
-            // UIDが一致するか確認
-            if (cred.user.uid !== result.uid) {
-              newErrors[index] = 'ユーザー情報が一致しません';
-              setSearchErrors([...newErrors]);
-            } else {
-              const newLinked = [...linkedUsers];
-              newLinked[index] = result;
-              setLinkedUsers(newLinked);
-              const newNames = [...names];
-              newNames[index] = result.displayName;
-              setNames(newNames);
-            }
-          } catch {
-            newErrors[index] = 'パスワードが正しくありません';
-            setSearchErrors([...newErrors]);
-          }
-        }
+        const newLinked = [...linkedUsers];
+        newLinked[index] = result.account;
+        setLinkedUsers(newLinked);
+        const newNames = [...names];
+        newNames[index] = result.account.displayName;
+        setNames(newNames);
       }
-    } catch {
-      newErrors[index] = '検索に失敗しました';
-      setSearchErrors([...newErrors]);
     }
 
     newSearching[index] = false;

@@ -207,6 +207,12 @@ export interface Player {
   /** CPU 対戦相手か */
   isCpu?: boolean;
   cpuStyle?: CpuStyle;
+  /** 対局を始めたとき（途中から入った人は入ったとき）のお金。途中でつないだ人の「増えた分」を数える（game/midGame.ts） */
+  startMoney?: number;
+  /** 途中から入った人は、入った巡（はじめからいる人は無し） */
+  joinedTurn?: number;
+  /** 対局の途中でアカウントにつないだ（終わったら図鑑とお金の増えた分だけ保存し、道具は保存しない） */
+  lateLink?: boolean;
 }
 
 // ===== 釣りフェーズ =====

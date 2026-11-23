@@ -343,6 +343,11 @@ export const GUIDES: GuideDef[] = [
     when: c => c.phase === 'idle' && c.turn >= 3,
     text: () => ({ title: '遊び方はここ', body: 'わからなくなったら、このボタンで遊び方を見られるよ。' }),
   },
+  {
+    id: 'session-menu', mode: 'both', target: 'session-menu', union: true, delayMs: IDLE_DELAY,
+    when: c => c.phase === 'idle' && c.turn >= 4,
+    text: () => ({ title: 'やめる・なかま', body: '「やめる」でセーブしてやめるか、ここで順位を決めて終われる。「なかま」で途中から仲間を増やせるよ。' }),
+  },
 ];
 
 const GUIDE_BY_ID = new Map(GUIDES.map(g => [g.id, g]));

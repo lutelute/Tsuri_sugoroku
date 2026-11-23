@@ -23,6 +23,7 @@ export function createInitialPlayers(
     // CPU は 堅実 → 独占 → 目的地 の順。名前は性格ごとの人物（お松・権蔵・早太。同じ性格の2人目は別の名前。data/cpuPersonas.ts）
     const cpuNo = isCpu ? cpuCount++ : -1;
     const cpuStyle = isCpu ? CPU_STYLES[cpuNo % CPU_STYLES.length] : undefined;
+    const money = isCity ? CITY_INITIAL_MONEY : savedMoneys?.[i] ?? INITIAL_MONEY;
     return {
     id: i,
     isCpu,
@@ -31,7 +32,8 @@ export function createInitialPlayers(
     color: PLAYER_COLORS[i],
     uid: settings.playerUids[i] ?? undefined,
     currentNode: isCity && NODE_MAP.has(CITY_START_NODE) ? CITY_START_NODE : 'start',
-    money: isCity ? CITY_INITIAL_MONEY : savedMoneys?.[i] ?? INITIAL_MONEY,
+    money,
+    startMoney: money,
     equipment: savedEquipments?.[i] ?? createInitialEquipment(),
     caughtFish: [],
     score: 0,

@@ -45,13 +45,16 @@ import Ruby from '../shared/Ruby';
 import GuideLayer from '../guide/GuideLayer';
 import HowToPlayOverlay from '../guide/HowToPlayOverlay';
 import { HowToButton } from '../guide/GuideButtons';
+import QuitSheet from '../session/QuitSheet';
+import MembersSheet from '../session/MembersSheet';
+import { MEMBERS_TEXT, QUIT_TEXT } from '../session/sessionText';
 
 export default function GameScreen() {
   // 釣りミニゲーム中の高頻度更新(fishingState)で画面全体が再描画されないよう、必要な値だけ購読する
   const {
     turnPhase, players, currentPlayerIndex, nodeActionsThisTurn,
     setTurnPhase, executeNodeAction, endTurn, doActionAgain, rouletteResult,
-    setScreen, endGame, lastMove, isCity, cityToast, dismissCityToast, pendingDiceCount, pendingDiceCap,
+    lastMove, isCity, cityToast, dismissCityToast, pendingDiceCount, pendingDiceCap,
     binboToast, binboEvent, dismissBinboToast, acknowledgeBinboEvent, turn, noticeWaiting, skipMonthEnd, anyCpu, rails,
   } = useGameStore(useShallow(s => ({
     rails: s.city?.rails,
@@ -77,15 +80,14 @@ export default function GameScreen() {
     endTurn: s.endTurn,
     doActionAgain: s.doActionAgain,
     rouletteResult: s.rouletteResult,
-    setScreen: s.setScreen,
-    endGame: s.endGame,
     lastMove: s.lastMove,
   })));
 
   const [showEncyclopedia, setShowEncyclopedia] = useState(false);
   const [showCreel, setShowCreel] = useState(false);
   const [showInventory, setShowInventory] = useState(false);
-  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+  const [showQuit, setShowQuit] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
 
   const player = players[currentPlayerIndex];
   const node = NODE_MAP.get(player?.currentNode || '');
@@ -288,23 +290,27 @@ export default function GameScreen() {
           </div>
         )}
 
-        {/* 左上: メニュー（タイトルに戻る / ゲーム終了） */}
+        {/* 左上: メニュー（やめる＝セーブしてやめる・ここで終わる / なかま＝途中から増やす・登録する） */}
         <div className="absolute left-3 top-2 flex flex-col gap-2 z-20">
           <button
-            onClick={() => setScreen('title')}
-            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex items-center justify-center text-washi transition cursor-pointer"
-            title="タイトルに戻る（中断保存）"
-            aria-label="タイトルに戻る"
+            onClick={() => setShowQuit(true)}
+            data-guide="session-menu"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex flex-col items-center justify-center text-washi transition cursor-pointer leading-none"
+            title="やめる（セーブしてやめる・ここで終わる）"
+            aria-label="やめる"
           >
-            <Icon name="home" size={26} />
+            <Icon name="home" size={20} />
+            <span className="qt-menu-label font-mincho">{QUIT_TEXT.button}</span>
           </button>
           <button
-            onClick={() => setShowQuitConfirm(true)}
-            className="bg-ai-900/55 hover:bg-shu-700/60 backdrop-blur-sm border border-shu-500/40 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex items-center justify-center text-shu-200 transition cursor-pointer"
-            title="ここで終了して結果を見る"
-            aria-label="ここで終了して結果を見る"
+            onClick={() => setShowMembers(true)}
+            data-guide="session-menu"
+            className="bg-ai-900/55 hover:bg-ai-700/70 backdrop-blur-sm border border-kin-500/35 rounded-full w-11 h-11 sm:w-14 sm:h-14 flex flex-col items-center justify-center text-washi transition cursor-pointer leading-none"
+            title="なかま（途中から増やす・登録する）"
+            aria-label="なかま"
           >
-            <Icon name="trophy" size={26} />
+            <Icon name="users" size={20} />
+            <span className="qt-menu-label font-mincho">{MEMBERS_TEXT.button}</span>
           </button>
           <SoundToggle />
           {anyCpu && <CpuSpeedToggle />}
@@ -448,43 +454,12 @@ export default function GameScreen() {
 
       {/* 案内役: 初めての場面の指差し案内と、遊び方の画面 */}
       {/* 魚籠・図鑑・道具箱を開いている間は案内を出さない（後ろの画面を指してしまう） */}
-      {!(showEncyclopedia || showCreel || showInventory) && <GuideLayer />}
+      {!(showEncyclopedia || showCreel || showInventory || showQuit || showMembers) && <GuideLayer />}
       <HowToPlayOverlay />
 
-      {/* 途中終了の確認ダイアログ */}
-      {showQuitConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowQuitConfirm(false)} />
-          <div className="panel-ai relative rounded-2xl border-shu-500/40 shadow-2xl p-6 w-[85%] max-w-sm">
-            <h3 className="font-mincho text-lg font-bold text-shu-300 mb-2 flex items-center gap-2">
-              <Icon name="trophy" size={20} className="text-shu-400" />
-              <Ruby>ここで終了しますか？</Ruby>
-            </h3>
-            <p className="text-sm text-washi/70 mb-1">
-              <Ruby>ゴール前でも現在の釣果で結果画面に進みます。</Ruby>
-            </p>
-            <p className="text-xs text-washi/45 mb-4">
-              <Ruby>図鑑・装備・所持金は通常どおり保存されます。</Ruby>
-            </p>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => setShowQuitConfirm(false)}
-                variant="secondary"
-                className="flex-1"
-              >
-                <Ruby>続ける</Ruby>
-              </Button>
-              <Button
-                onClick={() => { setShowQuitConfirm(false); endGame(); }}
-                variant="danger"
-                className="flex-1"
-              >
-                <Ruby>終了する</Ruby>
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* やめる（セーブしてやめる・ここで終わる）と、なかま（途中から増やす・登録する） */}
+      {showQuit && <QuitSheet onClose={() => setShowQuit(false)} />}
+      {showMembers && <MembersSheet onClose={() => setShowMembers(false)} />}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-export const APP_VERSION = '5.4.6';
+export const APP_VERSION = '5.5.0';
 
 export const ROULETTE_MIN = 1;
 export const ROULETTE_MAX = 6;

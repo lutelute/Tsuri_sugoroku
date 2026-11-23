@@ -801,6 +801,41 @@ const SCENES = [
     },
   },
   {
+    name: 'session-quit', desc: 'やめる（セーブしてやめる・ここで終わる・確かめ）',
+    async run(t) {
+      await t.startGame({ mode: 'fishing' });
+      await t.wait(2200);
+      if (!(await t.clickLabel('やめる'))) t.skip('やめるのボタンが無い');
+      await t.wait(700);
+      await t.shot('えらぶ');
+      if (await t.clickText('ここで終わりにして')) {
+        await t.wait(500);
+        await t.shot('確かめ');
+      }
+    },
+  },
+  {
+    name: 'session-members', desc: 'なかま（途中から増やす・登録する）',
+    async run(t) {
+      await t.startGame({ mode: 'fishing', names: ['たろう', 'お松'], kinds: ['human', 'cpu'] });
+      await t.wait(2200);
+      if (!(await t.clickLabel('なかま'))) t.skip('なかまのボタンが無い');
+      await t.wait(700);
+      await t.shot('一覧');
+      if (await t.clickText('仲間を増やす')) {
+        await t.wait(400);
+        await t.shot('増やす');
+        await t.clickText('仲間に入れる');
+        await t.wait(500);
+        await t.shot('増えた');
+      }
+      if (await t.clickText('登録する')) {
+        await t.wait(400);
+        await t.shot('登録');
+      }
+    },
+  },
+  {
     name: 'fishing-creel', desc: '釣果バッグ（魚籠）',
     async run(t) {
       await t.startGame({ mode: 'fishing' });

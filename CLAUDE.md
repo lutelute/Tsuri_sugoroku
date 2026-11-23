@@ -352,3 +352,15 @@ idle → roulette → path_selection(分岐あり) or node_action →
 ### 確かめ方
 - **見た目を作る・直すときは、まずスキル `tsuri-art`（`.claude/skills/tsuri-art/SKILL.md`）を読む**。描き直さずに使う部品・浮世絵の描き方の型・少ない撮影で確かめる手順・よくある崩れがある。
 - 撮影: `NODE_ENV=development npx vite build --mode development --outDir <tmp>/dist` → `NODE_ENV=development npx vite preview --outDir <tmp>/dist --port 5340 --strictPort`（**preview にも NODE_ENV が要る**）→ `node scripts/shots.mjs --url http://localhost:5340 --out <tmp>/shots --size phone,ipad,ipad-land [--browser webkit] [--only 場面]`。ユーザーは iPad の Safari で遊ぶので、見た目を変えたら WebKit の iPad でも撮る。
+
+
+## v5.5.0 途中でやめる・途中から仲間を増やす（2026-11-23）
+
+詳細は `CHANGELOG.md`。ユーザーの指示: 子どもが遊ぶので途中でセーブかその場で精算して終われるように。プレイヤーは途中から追加できる（入れ替えはなし）。途中で登録した人は、それまでの釣果も図鑑に入れる。竿は引き継がない、お金は増えた分を足す。
+
+- 純粋関数は `src/game/midGame.ts`: `isCalmPhase`（そのまま保存して再開できる段階）・`withLatePlayer`・`withLinkedAccount`・`lateLinkMoney`・`carryRosterIntoSave`（保存できない段階でやめたとき、番のはじめの保存に増えた仲間とつないだアカウントだけ足す）。
+- ストアは `sessionSlice` の `saveAndQuit` / `addLatePlayer` / `linkPlayerAccount`。`startGame` も最初に保存する。`endGame` は `Player.lateLink` の人だけ「図鑑＋お金の増えた分（`startMoney` から）」を保存し、道具は保存しない。
+- `Player` に `startMoney`・`joinedTurn`・`lateLink` を足した（古いセーブには無い。無ければはじめのお金から数える）。
+- 画面は `components/session/`（`QuitSheet`・`MembersSheet`・文は `sessionText.ts`。漢字はふりがなで読めることをテスト）。アカウントの確かめ・作成は `lib/accountLink.ts`（副インスタンスで行い、この端末のログインは変えない。ゲーム設定の画面も同じものを使う）。
+- `syncFromCloud` は図鑑を上書きせずに合わせる（途中の登録でゲストのログインが始まっても、対局中の魚が消えない）。
+- 撮影の場面: `session-quit`・`session-members`。

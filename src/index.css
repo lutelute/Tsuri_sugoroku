@@ -3302,3 +3302,16 @@ rt {
 .hf-detail-embedded { min-width: 0; }
 .hf-detail-embedded > .panel-ai { width: 100%; max-width: none; max-height: none; }
 /* ===== hf- ここまで ===== */
+
+/* ===== 途中でやめる・なかま qt- （components/session/）===== */
+/* 和紙のシートの上の大きな選択肢。藍＝セーブしてやめる、朱＝ここで終わる。左の丸い判に絵を入れる */
+.qt-choice { border: 2px solid rgba(154, 111, 36, 0.55); background: #fffaf0; box-shadow: 0 2px 0 rgba(42, 33, 24, 0.12); }
+.qt-choice:hover { background: #ffffff; }
+.qt-ai { border-color: #2e5e8c; }
+.qt-shu { border-color: #c8402a; }
+.qt-seal { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%; color: #fffaf0; background: #2e5e8c; box-shadow: inset 0 0 0 2px rgba(255, 250, 240, 0.45), 0 1px 0 rgba(42, 33, 24, 0.25); }
+.qt-shu .qt-seal { background: #c8402a; }
+.qt-seal-shu { background: #c8402a; }
+/* ゲーム画面の左上の丸いボタン（字つき）。字は小さい画面でも出す */
+.qt-menu-label { font-size: 10px; line-height: 1; margin-top: 2px; letter-spacing: 0.02em; }
+/* ===== qt- ここまで ===== */

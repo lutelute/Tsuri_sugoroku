@@ -34,12 +34,12 @@ const STATE_KEYS = [
 /** アクション名 / 引数の数（省略できる引数も数える書き方をしているので、引数の増減も分かる） */
 const ACTIONS = [
   'acknowledgeBinboEvent/0', 'acknowledgeCapitalResult/0', 'acknowledgeCityEvent/0', 'acknowledgeCityReport/0',
-  'acknowledgeCityYearEnd/0', 'announce/2', 'applyCapitalChoice/1', 'applyCityEventCard/0', 'applyEventCard/1',
+  'acknowledgeCityYearEnd/0', 'addLatePlayer/1', 'announce/2', 'applyCapitalChoice/1', 'applyCityEventCard/0', 'applyEventCard/1',
   'buyCityCard/1', 'buyEquipment/3', 'catchFish/2', 'cityAcquire/1', 'cityBuild/2', 'cityBuySpecialty/0', 'cityEnact/1', 'cityLayRail/1', 'cityRenovate/1',
   'cityUpgrade/1', 'clearUserData/0', 'cpuFish/0', 'cpuFishTown/0', 'degradeEquipment/0', 'devCityCheat/1', 'dismissBinboToast/0',
   'dismissCityToast/0', 'doActionAgain/0', 'endFishing/0', 'endGame/0', 'endTurn/0', 'equipItem/1', 'executeNodeAction/0',
-  'failFishing/0', 'mergeEquipment/2', 'nextPlayer/0', 'playCityCard/2', 'repairEquipment/2', 'resetGame/0', 'resumeGame/0',
-  'rollDice/1', 'selectPath/1', 'setScreen/1', 'setTurnPhase/1', 'skipMonthEnd/0', 'skipShop/0', 'startBoatFishing/0',
+  'failFishing/0', 'linkPlayerAccount/3', 'mergeEquipment/2', 'nextPlayer/0', 'playCityCard/2', 'repairEquipment/2', 'resetGame/0', 'resumeGame/0',
+  'rollDice/1', 'saveAndQuit/0', 'selectPath/1', 'setScreen/1', 'setTurnPhase/1', 'skipMonthEnd/0', 'skipShop/0', 'startBoatFishing/0',
   'startFishing/2', 'startGame/4', 'syncFromCloud/0', 'unequipItem/1', 'updateFishingState/1', 'warpCurrentPlayerTo/1',
 ];
 
